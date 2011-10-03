@@ -161,6 +161,10 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
         }
 
         for (String line : allEntryObjectsInRadioTVCollection) {
+            line = line.trim();
+            if (line.isEmpty()){
+                continue;
+            }
             String[] splitted = line.split(",");
             String lastModifiedFedoraDate = splitted[2];
             long lastChangedTime;
