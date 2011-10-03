@@ -8,7 +8,7 @@
 
     <groupId>dk.statsbiblioteket.doms.updatetracker</groupId>
     <artifactId>updatetracker</artifactId>
-    <version>0.0.13</version>
+    <version>0.0.13-BRANCH</version>
     <packaging>pom</packaging>
 
     <scm>
