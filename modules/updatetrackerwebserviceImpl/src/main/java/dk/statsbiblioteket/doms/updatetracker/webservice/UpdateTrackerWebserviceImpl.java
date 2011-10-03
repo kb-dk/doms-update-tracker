@@ -23,8 +23,8 @@ import java.util.List;
  * said info.
  */
 @WebService(endpointInterface
-        = "dk.statsbiblioteket.doms.updatetracker.webservice"
-          + ".UpdateTrackerWebservice")
+                    = "dk.statsbiblioteket.doms.updatetracker.webservice"
+                      + ".UpdateTrackerWebservice")
 public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
 
     @Resource
@@ -101,12 +101,19 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
             state = "Published";
         }
         if (state.equals("Published")) {
-            state = "<fedora-model:Active>";
+            state =  "and\n"
+                     + "$object <fedora-model:state> <fedora-model:Active> \n";
+
         } else if (state.equals("InProgress")) {
-            state = "<fedora-model:Inactive>";
-        } else {
-            state = "<fedora-model:Active>";
+            state =  "and\n"
+                     + "$object <fedora-model:state> <fedora-model:Inactive> \n";
+        } else if (state.equals("NotDeleted")){
+            state =  "and\n"
+                   + "( $object <fedora-model:state> <fedora-model:Inactive> \n"
+                   + " or \n"
+                   + " $object <fedora-model:state> <fedora-model:Active> )\n";
         }
+
 
         String query = "select $object $cm $date\n"
                        + "from <#ri>\n"
@@ -118,8 +125,7 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
                        + "and\n"
                        + "$object <http://doms.statsbiblioteket.dk/relations/default/0/1/#isPartOfCollection> <info:fedora/"
                        + collectionPid + ">\n"
-                       + "and\n"
-                       + "$object <fedora-model:state> " + state + "\n"
+                       + state
                        + "and\n"
                        + "$object <fedora-view:lastModifiedDate> $date \n";
 
