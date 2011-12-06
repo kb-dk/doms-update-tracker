@@ -19,8 +19,8 @@
 
 
     <modules>
-        <module>modules/updatetracker-interface</module>
-        <module>modules/updatetracker-service</module>
+        <module>updatetracker-interface</module>
+        <module>updatetracker-service</module>
     </modules>
 
     <dependencyManagement>
