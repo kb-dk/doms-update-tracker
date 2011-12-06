@@ -6,12 +6,12 @@
   <component name="ArtifactManager">
     <artifact type="war" name="updatetracker-service:war">
       <output-path>$PROJECT_DIR$/modules/updatetrackerwebserviceImpl/target</output-path>
-      <root id="archive" name="updatetracker-service-0.0.13-BRANCH.war">
+      <root id="archive" name="updatetracker-service-0.0.14-SNAPSHOT.war">
         <element id="artifact" artifact-name="updatetracker-service:war exploded" />
       </root>
     </artifact>
     <artifact type="exploded-war" name="updatetracker-service:war exploded">
-      <output-path>$PROJECT_DIR$/modules/updatetrackerwebserviceImpl/target/updatetracker-service-0.0.13-BRANCH</output-path>
+      <output-path>$PROJECT_DIR$/modules/updatetrackerwebserviceImpl/target/updatetracker-service-0.0.14-SNAPSHOT</output-path>
       <root id="root">
         <element id="javaee-facet-resources" facet="updatetracker-service/web/Web" />
         <element id="directory" name="WEB-INF">
@@ -41,13 +41,16 @@
             <element id="library" level="project" name="Maven: log4j:log4j:1.2.16" />
             <element id="library" level="project" name="Maven: dk.statsbiblioteket.doms.domsutil.surveyable:domsutil-logappender:0.0.20" />
             <element id="library" level="project" name="Maven: dk.statsbiblioteket.doms.domsutil:domsutil-webservice-common:0.0.20" />
-            <element id="library" level="project" name="Maven: dk.statsbiblioteket.sbutil:sbutil:0.5.2" />
+            <element id="library" level="project" name="Maven: dk.statsbiblioteket.sbutil:sbutil:0.5.5" />
             <element id="library" level="project" name="Maven: commons-logging:commons-logging:1.1.1" />
             <element id="library" level="project" name="Maven: dk.statsbiblioteket.doms.domsutil.surveyable:domsutil-surveyable-interface:0.0.20" />
             <element id="library" level="project" name="Maven: dk.statsbiblioteket.doms.domsutil.surveyable:domsutil-surveyable-impl:0.0.20" />
-            <element id="archive" name="updatetracker-interface-0.0.13-BRANCH.jar">
+            <element id="archive" name="updatetracker-interface-0.0.14-SNAPSHOT.jar">
               <element id="module-output" name="updatetracker-interface" />
             </element>
+            <element id="library" level="project" name="Maven: commons-cli:commons-cli:1.1" />
+            <element id="library" level="project" name="Maven: com.thoughtworks.xstream:xstream:1.2.2" />
+            <element id="library" level="project" name="Maven: xpp3:xpp3_min:1.1.3.4.O" />
           </element>
         </element>
       </root>
@@ -631,17 +634,6 @@
       </JAVADOC>
       <SOURCES>
         <root url="jar://$MAVEN_REPOSITORY$/dk/statsbiblioteket/doms/domsutil/domsutil-webservice-common/0.0.20/domsutil-webservice-common-0.0.20-sources.jar!/" />
-      </SOURCES>
-    </library>
-    <library name="Maven: dk.statsbiblioteket.sbutil:sbutil:0.5.2">
-      <CLASSES>
-        <root url="jar://$MAVEN_REPOSITORY$/dk/statsbiblioteket/sbutil/sbutil/0.5.2/sbutil-0.5.2.jar!/" />
-      </CLASSES>
-      <JAVADOC>
-        <root url="jar://$MAVEN_REPOSITORY$/dk/statsbiblioteket/sbutil/sbutil/0.5.2/sbutil-0.5.2-javadoc.jar!/" />
-      </JAVADOC>
-      <SOURCES>
-        <root url="jar://$MAVEN_REPOSITORY$/dk/statsbiblioteket/sbutil/sbutil/0.5.2/sbutil-0.5.2-sources.jar!/" />
       </SOURCES>
     </library>
     <library name="Maven: dk.statsbiblioteket.sbutil:sbutil:0.5.5">
