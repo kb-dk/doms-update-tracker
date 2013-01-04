@@ -1,15 +1,7 @@
 package dk.statsbiblioteket.doms.updatetracker.webservice;
 
-import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
 import dk.statsbiblioteket.doms.webservices.configuration.ConfigCollection;
 
-import javax.annotation.Resource;
-import javax.jws.WebParam;
-import javax.jws.WebService;
-import javax.servlet.http.HttpServletRequest;
-import javax.xml.ws.WebServiceContext;
-import javax.xml.ws.handler.MessageContext;
-import java.lang.String;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -23,17 +15,14 @@ import java.util.List;
  * said info.
  */
 public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
-
-    @Resource
-    WebServiceContext context;
-
     private DateFormat fedoraFormat = new SimpleDateFormat(
             "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
     private DateFormat alternativefedoraFormat = new SimpleDateFormat(
             "yyyy-MM-dd'T'HH:mm:ss'Z'");
+    private CredentialsGenerator credGenerator;
 
-    public UpdateTrackerWebserviceLib() throws MethodFailedException {
-
+    public UpdateTrackerWebserviceLib(CredentialsGenerator credGenerator) throws MethodFailedException {
+        this.credGenerator = credGenerator;
     }
 
     /**
@@ -87,7 +76,7 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
         Fedora fedora;
         String fedoralocation = ConfigCollection.getProperties().getProperty(
                 "dk.statsbiblioteket.doms.updatetracker.fedoralocation");
-        fedora = new Fedora(getCredentials(), fedoralocation);
+        fedora = new Fedora(credGenerator.getCredentials(), fedoralocation);
 
 
         if (state == null) {
@@ -235,22 +224,4 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
             throw new MethodFailedException("Did not find any elements in the collection","No elements in the collection");
         }
     }
-
-    /**
-     * TODO doc
-     *
-     * @return TODO doc
-     */
-    private Credentials getCredentials() {
-        HttpServletRequest request = (HttpServletRequest) context
-                .getMessageContext()
-                .get(MessageContext.SERVLET_REQUEST);
-        Credentials creds = (Credentials) request.getAttribute("Credentials");
-        if (creds == null) {
-//            log.warn("Attempted call at Central without credentials");
-            creds = new Credentials("", "");
-        }
-        return creds;
-    }
-
 }

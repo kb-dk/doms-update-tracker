@@ -1,7 +1,8 @@
 package dk.statsbiblioteket.doms.updatetracker.webservice;
 
+import dk.statsbiblioteket.doms.updatetracker.webservice.CredentialsGenerator;
+import dk.statsbiblioteket.doms.updatetracker.webservice.UpdateTrackerWebserviceLib;
 import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
-import dk.statsbiblioteket.doms.webservices.configuration.ConfigCollection;
 
 import javax.annotation.Resource;
 import javax.jws.WebParam;
@@ -11,10 +12,7 @@ import javax.xml.ws.WebServiceContext;
 import javax.xml.ws.handler.MessageContext;
 import java.lang.String;
 import java.text.DateFormat;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -37,7 +35,7 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
             "yyyy-MM-dd'T'HH:mm:ss'Z'");
 
     public UpdateTrackerWebserviceImpl() throws MethodFailedException {
-        this.updateTrackerWebservice = new UpdateTrackerWebserviceLib();
+        this.updateTrackerWebservice = new UpdateTrackerWebserviceLib(new WebserviceCredentialsGenerator());
     }
 
     /**
@@ -95,5 +93,20 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
             throws InvalidCredentialsException, MethodFailedException
     {
         return updateTrackerWebservice.getLatestModificationTime(collectionPid, viewAngle, state);
+    }
+
+    private class WebserviceCredentialsGenerator implements CredentialsGenerator {
+        @Override
+        public Credentials getCredentials() {
+            HttpServletRequest request = (HttpServletRequest) context
+                    .getMessageContext()
+                    .get(MessageContext.SERVLET_REQUEST);
+            Credentials creds = (Credentials) request.getAttribute("Credentials");
+            if (creds == null) {
+    //            log.warn("Attempted call at Central without credentials");
+                creds = new Credentials("", "");
+            }
+            return creds;
+        }
     }
 }
