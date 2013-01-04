@@ -83,6 +83,11 @@
             <artifactId>${parent.artifactId}-interface</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>${groupId}</groupId>
+            <artifactId>${parent.artifactId}-lib</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
     </dependencies>
 

@@ -21,6 +21,7 @@
     <modules>
         <module>updatetracker-interface</module>
         <module>updatetracker-service</module>
+        <module>updatetracker-lib</module>
     </modules>
 
     <dependencyManagement>

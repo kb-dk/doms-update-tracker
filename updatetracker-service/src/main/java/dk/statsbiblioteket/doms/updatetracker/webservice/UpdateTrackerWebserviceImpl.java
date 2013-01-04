@@ -29,6 +29,7 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
 
     @Resource
     WebServiceContext context;
+    UpdateTrackerWebservice updateTrackerWebservice;
 
     private DateFormat fedoraFormat = new SimpleDateFormat(
             "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
@@ -36,7 +37,7 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
             "yyyy-MM-dd'T'HH:mm:ss'Z'");
 
     public UpdateTrackerWebserviceImpl() throws MethodFailedException {
-
+        this.updateTrackerWebservice = new UpdateTrackerWebserviceLib();
     }
 
     /**
@@ -69,145 +70,8 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
             throws InvalidCredentialsException, MethodFailedException
 
     {
-
-        return getModifiedObjects(collectionPid,
-                                  viewAngle,
-                                  beginTime,
-                                  state,
-                                  offset,
-                                  limit,
-                                  false);
-    }
-
-    public List<PidDatePidPid> getModifiedObjects(String collectionPid,
-                                                  String viewAngle,
-                                                  long beginTime,
-                                                  String state,
-                                                  Integer offset,
-                                                  Integer limit,
-                                                  boolean reverse
-    )
-            throws InvalidCredentialsException, MethodFailedException {
-        List<PidDatePidPid> result = new ArrayList<PidDatePidPid>();
-
-        List<String> allEntryObjectsInRadioTVCollection;
-        Fedora fedora;
-        String fedoralocation = ConfigCollection.getProperties().getProperty(
-                "dk.statsbiblioteket.doms.updatetracker.fedoralocation");
-        fedora = new Fedora(getCredentials(), fedoralocation);
-
-
-        if (state == null) {
-            state = "Published";
-        }
-        if (state.equals("Published")) {
-            state =  "and\n"
-                     + "$object <fedora-model:state> <fedora-model:Active> \n";
-
-        } else if (state.equals("InProgress")) {
-            state =  "and\n"
-                     + "$object <fedora-model:state> <fedora-model:Inactive> \n";
-        } else if (state.equals("NotDeleted")){
-            state =  "and\n"
-                   + "( $object <fedora-model:state> <fedora-model:Inactive> \n"
-                   + " or \n"
-                   + " $object <fedora-model:state> <fedora-model:Active> )\n";
-        }
-
-
-        String query = "select $object $cm $date\n"
-                       + "from <#ri>\n"
-                       + "where\n"
-                       + "$object <fedora-model:hasModel> $cm\n"
-                       + "and\n"
-                       + "$cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> '"
-                       + viewAngle + "'\n"
-                       + "and\n"
-                       + "$object <http://doms.statsbiblioteket.dk/relations/default/0/1/#isPartOfCollection> <info:fedora/"
-                       + collectionPid + ">\n"
-                       + state
-                       + "and\n"
-                       + "$object <fedora-view:lastModifiedDate> $date \n";
-
-
-        if (beginTime != 0){
-            String beginTimeDate
-                    = fedoraFormat.format(new Date(beginTime));
-            query = query + "and \n $date <mulgara:after> '"+beginTimeDate+"'^^<xml-schema:dateTime> in <#xsd> \n";
-        }
-
-
-        if (reverse){
-            query = query + "order by $date desc";
-        } else {
-            query = query + "order by $date asc";
-        }
-
-        if (limit != 0) {
-            query = query + "\n limit " + limit;
-        }
-        if (offset != 0) {
-            query = query + "\n offset " + offset;
-        }
-
-
-        try {
-            allEntryObjectsInRadioTVCollection
-                    = fedora.query(query);
-        } catch (BackendInvalidCredsException e) {
-            throw new InvalidCredentialsException("Invalid credentials", "", e);
-        } catch (BackendMethodFailedException e) {
-            throw new MethodFailedException("Method failed", "", e);
-        }
-
-        for (String line : allEntryObjectsInRadioTVCollection) {
-            line = line.trim();
-            if (line.isEmpty()){
-                continue;
-            }
-            String[] splitted = line.split(",");
-            String lastModifiedFedoraDate = splitted[2];
-            long lastChangedTime;
-            try {
-                lastModifiedFedoraDate = normalizeFedoraDate(lastModifiedFedoraDate);
-                lastChangedTime = fedoraFormat.parse(
-                        lastModifiedFedoraDate).getTime();
-            } catch (ParseException e) {
-                throw new MethodFailedException(
-                        "Failed to parse date for object",
-                        e.getMessage(),
-                        e);
-            }
-
-            if (lastChangedTime < beginTime) {
-                continue;
-            }
-
-            PidDatePidPid objectThatChanged = new PidDatePidPid();
-            String pid = splitted[0];
-            String entryCMPid = splitted[1];
-            objectThatChanged.setPid(pid);
-            objectThatChanged.setCollectionPid(collectionPid);
-            objectThatChanged.setEntryCMPid(entryCMPid);
-            objectThatChanged.setLastChangedTime(lastChangedTime);
-
-            result.add(objectThatChanged);
-        }
-
-        return result;
-    }
-
-    private String normalizeFedoraDate(String lastModifiedFedoraDate) {
-        if (lastModifiedFedoraDate.matches(".*\\.d{3}Z$")){
-            return lastModifiedFedoraDate;
-        } else if (lastModifiedFedoraDate.matches(".*\\.\\d{2}Z$")){
-            return lastModifiedFedoraDate.substring(0,lastModifiedFedoraDate.length()-1)+"0Z";
-        }else if (lastModifiedFedoraDate.matches(".*\\.\\d{1}Z$")){
-            return lastModifiedFedoraDate.substring(0,lastModifiedFedoraDate.length()-1)+"00Z";
-        }else if (lastModifiedFedoraDate.matches(".*:\\d\\dZ$")){
-            return lastModifiedFedoraDate.substring(0,lastModifiedFedoraDate.length()-1)+".000Z";
-        }
-        return lastModifiedFedoraDate;
+        return updateTrackerWebservice.listObjectsChangedSince(collectionPid, viewAngle, beginTime, state, offset,
+                                                               limit);
     }
 
     /**
@@ -230,37 +94,6 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
             java.lang.String state)
             throws InvalidCredentialsException, MethodFailedException
     {
-
-        List<PidDatePidPid> lastChanged = getModifiedObjects(collectionPid,
-                                                             viewAngle,
-                                                             0,
-                                                             state,
-                                                             0,
-                                                             1,
-                                                             true);
-
-        if (!lastChanged.isEmpty()){
-            return lastChanged.get(0).getLastChangedTime();
-        } else {
-            throw new MethodFailedException("Did not find any elements in the collection","No elements in the collection");
-        }
+        return updateTrackerWebservice.getLatestModificationTime(collectionPid, viewAngle, state);
     }
-
-    /**
-     * TODO doc
-     *
-     * @return TODO doc
-     */
-    private Credentials getCredentials() {
-        HttpServletRequest request = (HttpServletRequest) context
-                .getMessageContext()
-                .get(MessageContext.SERVLET_REQUEST);
-        Credentials creds = (Credentials) request.getAttribute("Credentials");
-        if (creds == null) {
-//            log.warn("Attempted call at Central without credentials");
-            creds = new Credentials("", "");
-        }
-        return creds;
-    }
-
 }

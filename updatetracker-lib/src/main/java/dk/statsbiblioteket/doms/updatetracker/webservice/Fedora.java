@@ -23,10 +23,10 @@ public class Fedora {
 
     private WebResource restApi;
     private Credentials credentials;
-    protected java.lang.String location;
+    protected String location;
 
 
-    public Fedora(Credentials creds, java.lang.String ecmLocation) {
+    public Fedora(Credentials creds, String ecmLocation) {
         credentials = creds;
         location = ecmLocation;
 
@@ -34,19 +34,19 @@ public class Fedora {
         restApi = client.resource(location);
     }
 
-    protected java.lang.String credsAsBase64(){
-        java.lang.String preBase64 = credentials.getUsername() + ":"
+    protected String credsAsBase64(){
+        String preBase64 = credentials.getUsername() + ":"
                            + credentials.getPassword();
-        java.lang.String base64 = Base64.encodeBytes(preBase64.getBytes());
+        String base64 = Base64.encodeBytes(preBase64.getBytes());
         return "Basic " + base64;
     }
 
 
-    public List<java.lang.String> query(java.lang.String query)
+    public List<String> query(String query)
             throws BackendInvalidCredsException, BackendMethodFailedException {
         //TODO sanitize label
         try {
-            java.lang.String objects = restApi
+            String objects = restApi
                     .path("/risearch")
                     .queryParam("type", "tuples")
                     .queryParam("lang", "iTQL")
@@ -55,10 +55,10 @@ public class Fedora {
                     .queryParam("stream","on")
                     .queryParam("query", query)
                     .header("Authorization", credsAsBase64())
-                    .post(java.lang.String.class);
-            java.lang.String[] lines = objects.split("\n");
-            List<java.lang.String> foundobjects = new ArrayList<java.lang.String>();
-            for (java.lang.String line : lines) {
+                    .post(String.class);
+            String[] lines = objects.split("\n");
+            List<String> foundobjects = new ArrayList<String>();
+            for (String line : lines) {
                 if (line.startsWith("\"")){
                     continue;
                 }

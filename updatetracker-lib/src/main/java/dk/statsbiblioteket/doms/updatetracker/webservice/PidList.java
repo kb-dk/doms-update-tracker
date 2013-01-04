@@ -55,7 +55,7 @@ import java.lang.String;
 
  */
 @XmlRootElement(name = "pidList", namespace = "")
-public class PidList implements List<java.lang.String> {
+public class PidList implements List<String> {
 
     @XmlElement(name = "pid")
     private List<String> pids;
