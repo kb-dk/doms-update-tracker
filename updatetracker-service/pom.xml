@@ -8,7 +8,7 @@
         <version>0.0.15-SNAPSHOT</version>
     </parent>
 
-    <artifactId>${parent.artifactId}-service</artifactId>
+    <artifactId>${project.parent.artifactId}-service</artifactId>
     <packaging>war</packaging>
 
     <build>
@@ -38,7 +38,7 @@
                         <phase>generate-sources</phase>
                         <configuration>
                             <includeGroupIds>dk.statsbiblioteket.doms.domsutil,${groupId}</includeGroupIds>
-                            <includeArtifactIds>domsutil-surveyable-interface,${parent.artifactId}-interface</includeArtifactIds>
+                            <includeArtifactIds>domsutil-surveyable-interface,${project.parent.artifactId}-interface</includeArtifactIds>
                             <includes>wsdl/*</includes>
                             <outputDirectory>${project.build.directory}/wsdl</outputDirectory>
                         </configuration>
@@ -80,12 +80,12 @@
         </dependency>
         <dependency>
             <groupId>${groupId}</groupId>
-            <artifactId>${parent.artifactId}-interface</artifactId>
+            <artifactId>${project.parent.artifactId}-interface</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>${groupId}</groupId>
-            <artifactId>${parent.artifactId}-lib</artifactId>
+            <artifactId>${project.parent.artifactId}-lib</artifactId>
             <version>${project.version}</version>
         </dependency>
 

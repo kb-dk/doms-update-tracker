@@ -8,7 +8,7 @@
         <version>0.0.15-SNAPSHOT</version>
     </parent>
 
-    <artifactId>${parent.artifactId}-lib</artifactId>
+    <artifactId>${project.parent.artifactId}-lib</artifactId>
 
     <dependencies>
         <dependency>
@@ -42,7 +42,7 @@
         </dependency>
         <dependency>
             <groupId>${groupId}</groupId>
-            <artifactId>${parent.artifactId}-interface</artifactId>
+            <artifactId>${project.parent.artifactId}-interface</artifactId>
             <version>${project.version}</version>
         </dependency>
 
