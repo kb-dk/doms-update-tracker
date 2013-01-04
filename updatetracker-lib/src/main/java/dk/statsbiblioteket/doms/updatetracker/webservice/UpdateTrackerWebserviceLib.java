@@ -191,7 +191,7 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
     }
 
     private String normalizeFedoraDate(String lastModifiedFedoraDate) {
-        if (lastModifiedFedoraDate.matches(".*\\.d{3}Z$")){
+        if (lastModifiedFedoraDate.matches(".*\\.\\d{3}Z$")){
             return lastModifiedFedoraDate;
         } else if (lastModifiedFedoraDate.matches(".*\\.\\d{2}Z$")){
             return lastModifiedFedoraDate.substring(0,lastModifiedFedoraDate.length()-1)+"0Z";
