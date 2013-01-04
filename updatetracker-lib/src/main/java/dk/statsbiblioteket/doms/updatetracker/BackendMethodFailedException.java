@@ -1,9 +1,5 @@
 package dk.statsbiblioteket.doms.updatetracker;
 
-import com.sun.jersey.api.client.UniformInterfaceException;
-
-import java.lang.*;
-import java.lang.String;
 /* $Id: BackendMethodFailedException.java 769 2010-09-24 14:41:24Z jrgatsb $
  * $Revision: 769 $
  * $Date: 2010-09-24 16:41:24 +0200 (Fri, 24 Sep 2010) $
