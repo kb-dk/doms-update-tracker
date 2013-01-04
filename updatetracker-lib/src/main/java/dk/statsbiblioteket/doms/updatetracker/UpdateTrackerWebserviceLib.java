@@ -1,5 +1,9 @@
-package dk.statsbiblioteket.doms.updatetracker.webservice;
+package dk.statsbiblioteket.doms.updatetracker;
 
+import dk.statsbiblioteket.doms.updatetracker.webservice.InvalidCredentialsException;
+import dk.statsbiblioteket.doms.updatetracker.webservice.MethodFailedException;
+import dk.statsbiblioteket.doms.updatetracker.webservice.PidDatePidPid;
+import dk.statsbiblioteket.doms.updatetracker.webservice.UpdateTrackerWebservice;
 import dk.statsbiblioteket.doms.webservices.configuration.ConfigCollection;
 
 import java.text.DateFormat;

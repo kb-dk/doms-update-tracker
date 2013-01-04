@@ -1,7 +1,7 @@
 package dk.statsbiblioteket.doms.updatetracker.webservice;
 
-import dk.statsbiblioteket.doms.updatetracker.webservice.CredentialsGenerator;
-import dk.statsbiblioteket.doms.updatetracker.webservice.UpdateTrackerWebserviceLib;
+import dk.statsbiblioteket.doms.updatetracker.CredentialsGenerator;
+import dk.statsbiblioteket.doms.updatetracker.UpdateTrackerWebserviceLib;
 import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
 
 import javax.annotation.Resource;
