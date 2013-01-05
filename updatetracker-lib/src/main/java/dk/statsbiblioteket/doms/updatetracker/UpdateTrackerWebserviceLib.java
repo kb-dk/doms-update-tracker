@@ -25,7 +25,7 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
             "yyyy-MM-dd'T'HH:mm:ss'Z'");
     private CredentialsGenerator credGenerator;
 
-    public UpdateTrackerWebserviceLib(CredentialsGenerator credGenerator) throws MethodFailedException {
+    public UpdateTrackerWebserviceLib(CredentialsGenerator credGenerator) {
         this.credGenerator = credGenerator;
     }
 
