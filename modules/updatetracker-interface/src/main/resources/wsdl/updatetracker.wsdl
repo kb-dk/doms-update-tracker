@@ -68,6 +68,14 @@
         <part name="parameters" element="tns:getLatestModificationTimeResponse"/>
     </message>
 
+    <message name="regenerateFromDOMS">
+        <part name="parameters" element="tns:regenerateFromDOMS"/>
+    </message>
+    <message name="regenerateFromDOMSResponse">
+        <part name="parameters" element="tns:regenerateFromDOMSResponse"/>
+    </message>
+
+
     <portType name="UpdateTrackerWebservice">
         <documentation>UpdateTracker of the DOMS system
         </documentation>
@@ -87,6 +95,16 @@
             </documentation>
             <input message="tns:getLatestModificationTime"/>
             <output message="tns:getLatestModificationTimeResponse"/>
+            <fault name="InvalidCredentialsException"
+                   message="tns:InvalidCredentialsException"/>
+            <fault name="MethodFailedException"
+                   message="tns:MethodFailedException"/>
+        </operation>
+        <operation name="regenerateFromDOMS">
+            <documentation> TODO javadoc
+            </documentation>
+            <input message="tns:regenerateFromDOMS"/>
+            <output message="tns:regenerateFromDOMSResponse"/>
             <fault name="InvalidCredentialsException"
                    message="tns:InvalidCredentialsException"/>
             <fault name="MethodFailedException"
@@ -114,6 +132,21 @@
             </fault>
         </operation>
         <operation name="getLatestModificationTime">
+            <soap:operation soapAction=""/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+            <fault name="MethodFailedException">
+                <soap:fault name="MethodFailedException" use="literal"/>
+            </fault>
+            <fault name="InvalidCredentialsException">
+                <soap:fault name="InvalidCredentialsException" use="literal"/>
+            </fault>
+        </operation>
+        <operation name="regenerateFromDOMS">
             <soap:operation soapAction=""/>
             <input>
                 <soap:body use="literal"/>

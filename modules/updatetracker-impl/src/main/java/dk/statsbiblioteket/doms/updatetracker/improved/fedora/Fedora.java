@@ -1,6 +1,7 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.fedora;
 
 import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.ViewBundle;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.generated.ObjectFactory;
@@ -10,6 +11,7 @@ import dk.statsbiblioteket.doms.updatetracker.improved.fedora.generated.ViewsTyp
 import dk.statsbiblioteket.doms.webservices.authentication.Base64;
 import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
 
+import java.io.*;
 import java.net.MalformedURLException;
 import java.util.*;
 
@@ -103,11 +105,11 @@ public class Fedora {
     private Set<String> determineEntryAngles(String pid) {
         Set<String> angles = new HashSet<String>();
         String query = "select $angle\n" +
-                       "from <#ri>\n" +
-                       "where \n" +
-                       "<info:fedora/"+pid+"> <fedora-model:hasModel> $cm\n" +
-                       "and\n" +
-                       "$cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> $angle";
+                "from <#ri>\n" +
+                "where \n" +
+                "<info:fedora/"+pid+"> <fedora-model:hasModel> $cm\n" +
+                "and\n" +
+                "$cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> $angle";
 
         String anglesString = risearchApi
                 .queryParam("type", "tuples")
@@ -145,6 +147,63 @@ public class Fedora {
 
         ViewBundle bundle = new ViewBundle(entryPid,viewAngle,pids);
         return bundle;
+    }
+
+
+    public List<ObjectInfo> getAllEntryObjects(){
+        String query = "select $pid $state $lastModified $angle\n" +
+                "from <#ri>\n" +
+                "where\n" +
+                "$pid <fedora-model:state> $state\n" +
+                "and\n" +
+                "$pid <fedora-model:hasModel> $cm\n" +
+                "and\n" +
+                "$cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> $angle\n" +
+                "and\n" +
+                "$pid <fedora-view:lastModifiedDate> $lastModified\n" +
+                "order by $lastModified";
+
+        ClientResponse response = risearchApi
+                .queryParam("type", "tuples")
+                .queryParam("lang", "iTQL")
+                .queryParam("format", "CSV")
+                .queryParam("flush", "true")
+                .queryParam("stream", "on")
+                .queryParam("query", query)
+                .header("Authorization", credsAsBase64())
+                .post(ClientResponse.class);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(response.getEntityInputStream()));
+        //TODO check return code
+
+        ArrayList<ObjectInfo> result = new ArrayList<ObjectInfo>();
+        try {
+            String line = reader.readLine();//discard first line
+            ObjectInfo objectInfo = null;
+
+            while ((line = reader.readLine()) != null){
+                String[] splits = line.split("\\s");
+                //TODO fix for info:fedora
+                String pid = splits[0];
+                String state = splits[1];
+                String lastModified = splits[2];
+                String viewAngle = splits[3];
+                if (objectInfo != null && objectInfo.getObjectPid().equals(pid)){
+                    objectInfo.add(viewAngle);
+                } else {
+                    objectInfo = new ObjectInfo();
+                    objectInfo.setObjectPid(pid);
+                    //TODO parse date
+                    objectInfo.setLastModified(DateUtility.convertStringToDate(lastModified));
+                    objectInfo.setState(state);
+                    objectInfo.add(viewAngle);
+                    result.add(objectInfo);
+                }
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+        }
+        return result;
     }
 
 

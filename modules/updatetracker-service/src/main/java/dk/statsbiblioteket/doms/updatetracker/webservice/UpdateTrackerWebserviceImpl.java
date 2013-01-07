@@ -136,6 +136,12 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
         }
     }
 
+    @Override
+    public void regenerateFromDOMS() throws InvalidCredentialsException, MethodFailedException {
+
+        UpdateTrackingSystem.regenerateFromDOMS();
+    }
+
     private Credentials getCredentials() {
         HttpServletRequest request = (HttpServletRequest) context
                 .getMessageContext()

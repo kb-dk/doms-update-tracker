@@ -2,7 +2,9 @@ package dk.statsbiblioteket.doms.updatetracker.improved;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.database.DomsUpdateTrackerUpdateTrackerPersistentStoreImpl;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStore;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerStorageException;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.ObjectInfo;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedoraJms.FedoraMessageListener;
 import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
 import dk.statsbiblioteket.doms.webservices.configuration.ConfigCollection;
@@ -10,6 +12,7 @@ import org.apache.activemq.ActiveMQConnectionFactory;
 
 import javax.jms.*;
 import java.net.MalformedURLException;
+import java.util.List;
 
 /**
  * This is the system that starts the persistent store and the jms listener and ties them together
@@ -88,4 +91,19 @@ public class UpdateTrackingSystem {
 
     }
 
+    public static void regenerateFromDOMS() throws UpdateTrackerStorageException {
+
+        //Clear the content
+        store.clear();
+
+        List<ObjectInfo> entryObjects = fedora.getAllEntryObjects();
+        for (ObjectInfo entryObject : entryObjects) {
+            store.objectCreated(entryObject.getObjectPid(),entryObject.getLastModified());
+            if (entryObject.getState().equals("A")){
+                store.objectPublished(entryObject.getObjectPid(),entryObject.getLastModified());
+            } else if (entryObject.getState().equals("D")){
+                store.objectDeleted(entryObject.getObjectPid(),entryObject.getLastModified());
+            }
+        }
+    }
 }

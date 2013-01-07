@@ -43,6 +43,10 @@
     <xs:element name="getLatestModificationTime" type="tns:pidPidAngleInput"/>
     <xs:element name="getLatestModificationTimeResponse" type="tns:long"/>
 
+    <xs:element name="regenerateFromDOMS" type="tns:void"/>
+    <xs:element name="regenerateFromDOMSResponse" type="tns:void"/>
+
+
     <!--Simple types-->
     <xs:complexType name="pidPidAngleInput">
         <xs:sequence>
@@ -70,6 +74,13 @@
             <xs:element name="pids" type="xs:string" maxOccurs="unbounded" minOccurs="0"/>
         </xs:sequence>
     </xs:complexType>
+
+    <xs:complexType name="void">
+        <xs:sequence>
+
+        </xs:sequence>
+    </xs:complexType>
+
 
 
     <xs:complexType name="pidDatePidPidList">
