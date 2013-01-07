@@ -7,24 +7,28 @@ import javax.persistence.*;
 import java.util.Date;
 
 /**
- * Created by IntelliJ IDEA.
- * User: abr
- * Date: 4/27/11
- * Time: 1:46 PM
- * To change this template use File | Settings | File Templates.
+ * This is the ENTRIES table in the persistent storage. The ENTRIES table lists the entry objects/
+ * Notice that since entryPid, viewAngle and state are naturalIds, the uniqneness key will be a combination. This
+ * means that there will be multipe "rows" for each entryPid, corresponding to the different states and viewAngles.
  */
 @Entity
 @Table(name = "ENTRIES")
 public class Entry {
     private long id;
 
+    /**The pid of the object*/
     @NaturalId
     private String entryPid;
+
+    /** The viewangle the object is an entry for*/
     @NaturalId
     private String viewAngle;
+
+    /** The state of the object*/
     @NaturalId
     private String state;
 
+    /** The date the object got to this configuration*/
     private Date dateForChange;
 
 

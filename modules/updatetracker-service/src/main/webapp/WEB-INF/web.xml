@@ -65,7 +65,6 @@
     </context-param>
 
 
-
     <servlet>
         <description>JAX-WS endpoint</description>
         <display-name>WSServlet</display-name>
@@ -81,19 +80,19 @@
 
 
     <!--This is the surveyable servlet, the one that initialialises the surveyable classes-->
-        <servlet>
-            <description>JAX-WS endpoint</description>
-            <display-name>WSServletSurveyable</display-name>
-            <servlet-name>WSServletSurveyable</servlet-name>
-            <servlet-class>com.sun.xml.ws.transport.http.servlet.WSServlet
-            </servlet-class>
-            <load-on-startup>1</load-on-startup>
-        </servlet>
-        <servlet-mapping>
-            <servlet-name>WSServletSurveyable</servlet-name>
-            <url-pattern>/surveyable/*</url-pattern>
-        </servlet-mapping>
-      <context-param>
+    <servlet>
+        <description>JAX-WS endpoint</description>
+        <display-name>WSServletSurveyable</display-name>
+        <servlet-name>WSServletSurveyable</servlet-name>
+        <servlet-class>com.sun.xml.ws.transport.http.servlet.WSServlet
+        </servlet-class>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>WSServletSurveyable</servlet-name>
+        <url-pattern>/surveyable/*</url-pattern>
+    </servlet-mapping>
+    <context-param>
         <description>The class that will be exposed for surveillance
         </description>
         <param-name>
@@ -109,7 +108,7 @@
         <description>The name of the service for surveillance purposes
         </description>
         <param-name>
-                dk.statsbiblioteket.doms.surveillance.logappender.LoggerName
+            dk.statsbiblioteket.doms.surveillance.logappender.LoggerName
         </param-name>
         <param-value>
             DomsUpdateTracker
@@ -118,25 +117,25 @@
 
 
     <!--This servlet is used only to load on startup, and configure the logging framework.-->
-        <servlet>
-            <description>The servlet that is loaded on startup, and initializes the logging system</description>
-            <servlet-name>Log4jInitialisation</servlet-name>
-            <servlet-class>dk.statsbiblioteket.doms.webservices.logging.Log4JInitServlet</servlet-class>
-            <init-param>
-                <description>Name of the context param that controls the location of the log4j config file</description>
-                <param-name>
-                    dk.statsbiblioteket.doms.webservices.logging.Log4JInitServlet.log4jConfigurationPropertyKey
-                </param-name>
-                <param-value>
-                    dk.statsbiblioteket.doms.updatetracker.log4jconfig
-                </param-value>
-            </init-param>
-            <load-on-startup>1</load-on-startup>
-        </servlet>
-        <context-param>
-            <description>The location of the log4j config file</description>
-            <param-name>dk.statsbiblioteket.doms.updatetracker.log4jconfig</param-name>
-            <param-value>WEB-INF/log4jproperties.xml</param-value>
-        </context-param>
+    <servlet>
+        <description>The servlet that is loaded on startup, and initializes the logging system</description>
+        <servlet-name>Log4jInitialisation</servlet-name>
+        <servlet-class>dk.statsbiblioteket.doms.webservices.logging.Log4JInitServlet</servlet-class>
+        <init-param>
+            <description>Name of the context param that controls the location of the log4j config file</description>
+            <param-name>
+                dk.statsbiblioteket.doms.webservices.logging.Log4JInitServlet.log4jConfigurationPropertyKey
+            </param-name>
+            <param-value>
+                dk.statsbiblioteket.doms.updatetracker.log4jconfig
+            </param-value>
+        </init-param>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
+    <context-param>
+        <description>The location of the log4j config file</description>
+        <param-name>dk.statsbiblioteket.doms.updatetracker.log4jconfig</param-name>
+        <param-value>WEB-INF/log4jproperties.xml</param-value>
+    </context-param>
 
 </web-app>

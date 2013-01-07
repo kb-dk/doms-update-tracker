@@ -1,6 +1,7 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.fedoraJms;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStore;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerStorageException;
 import dk.statsbiblioteket.doms.updatetracker.improved.jms.*;
 
 import javax.jms.JMSException;
@@ -14,24 +15,21 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * Created by IntelliJ IDEA.
- * User: abr
- * Date: 5/9/11
- * Time: 3:09 PM
- * To change this template use File | Settings | File Templates.
+ * This is the System for listening to fedora JMS ATOM messages
  */
 public class FedoraMessageListener implements MessageListener{
     private UpdateTrackerPersistentStore store;
 
     public FedoraMessageListener(
             UpdateTrackerPersistentStore store) {
-        //To change body of created methods use File | Settings | File Templates.
         this.store = store;
     }
 
 
-
-
+    /**
+     * Listing method
+     * @param message The fedora message
+     */
     @Override
     public void onMessage(Message message) {
         TextMessage msg = null;
@@ -64,6 +62,8 @@ public class FedoraMessageListener implements MessageListener{
                     }
                 }
             }
+
+            //TODO handle other methods like modifyRelations and the like
             if ("modifyObject".equals(method)){
                 parseModifyObject(entry);
             } else if ("modifyDatastreamByValue".equals(method)
@@ -79,12 +79,15 @@ public class FedoraMessageListener implements MessageListener{
 
 
         } catch (JMSException e) {
+            //TODO log this
+            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+        } catch (UpdateTrackerStorageException e) {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
         }
 
     }
 
-    private void parseObjectChanged(EntryType entry) {
+    private void parseObjectChanged(EntryType entry) throws UpdateTrackerStorageException {
         List<Object> properties = entry.getAuthorOrCategoryOrContent();
 
         String pid = null;
@@ -116,7 +119,7 @@ public class FedoraMessageListener implements MessageListener{
         }
     }
 
-    private void parseObjectCreated(EntryType entry) {
+    private void parseObjectCreated(EntryType entry) throws UpdateTrackerStorageException {
         List<Object> properties = entry.getAuthorOrCategoryOrContent();
 
         String pid = null;
@@ -145,11 +148,11 @@ public class FedoraMessageListener implements MessageListener{
 
     }
 
-    private void parseDatastreamChanged(EntryType entry) {
+    private void parseDatastreamChanged(EntryType entry) throws UpdateTrackerStorageException {
         List<Object> properties = entry.getAuthorOrCategoryOrContent();
 
 
-        //TODO
+
         String pid = null;
         String dsid = null;
         Date date = null;
@@ -178,7 +181,7 @@ public class FedoraMessageListener implements MessageListener{
             }
         }
         if (pid != null && date != null && dsid!= null){
-            if (dsid.equals("RELS-EXT") || dsid.equals("RELS-INT")){//published
+            if (dsid.equals("RELS-EXT") || dsid.equals("RELS-INT")){
                 store.objectRelationsChanged(pid,date);
             } else {
                 store.objectChanged(pid,date);
@@ -188,7 +191,7 @@ public class FedoraMessageListener implements MessageListener{
 
     }
 
-    private void parseModifyObject(EntryType entry){
+    private void parseModifyObject(EntryType entry) throws UpdateTrackerStorageException {
         List<Object> properties = entry.getAuthorOrCategoryOrContent();
 
         String pid = null;

@@ -1,4 +1,4 @@
-package dk.statsbiblioteket.doms.updatetracker.improved.fedoraJms;
+package dk.statsbiblioteket.doms.updatetracker.improved.jms;
 
 
 

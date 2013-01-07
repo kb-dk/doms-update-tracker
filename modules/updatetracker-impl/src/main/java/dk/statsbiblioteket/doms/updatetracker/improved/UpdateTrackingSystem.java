@@ -12,21 +12,21 @@ import javax.jms.*;
 import java.net.MalformedURLException;
 
 /**
- * Created by IntelliJ IDEA.
- * User: abr
- * Date: 4/28/11
- * Time: 12:26 PM
- * To change this template use File | Settings | File Templates.
+ * This is the system that starts the persistent store and the jms listener and ties them together
  */
-public class Meat {
+public class UpdateTrackingSystem {
 
 
     private static UpdateTrackerPersistentStore store;
     private static Fedora fedora;
+    private static MessageConsumer consumer;
 
 
+    public static synchronized void startup() throws MalformedURLException, JMSException {
 
-    public static void startup() throws MalformedURLException, JMSException {
+        if (store != null && fedora != null && consumer != null){
+            return;
+        }
 
         String jmsurl = ConfigCollection.getProperties().getProperty(
                 "dk.statsbiblioteket.doms.updatetracker.jms.brokeraddress", "tcp://localhost:61616");
@@ -57,24 +57,17 @@ public class Meat {
         store = new DomsUpdateTrackerUpdateTrackerPersistentStoreImpl(fedora);
 
         //initialise the jms connection to Fedora
-        initialiseJMS(store, jmsurl, jmssubject);
+        consumer = initialiseJMS(jmsurl, jmssubject);
 
-       /* //Try not to get stuff garbage collected here.
-
-        while (true){
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-            }
-        }*/
+        //Tie it all together
+        consumer.setMessageListener(new FedoraMessageListener(store));
     }
 
     public static UpdateTrackerPersistentStore getStore() {
         return store;
     }
 
-    private static void initialiseJMS(UpdateTrackerPersistentStore store, String jmsurl, String jmssubject) throws JMSException {
+    private static MessageConsumer initialiseJMS(String jmsurl, String jmssubject) throws JMSException {
         Connection connection = null;
         Destination destination = null;
 
@@ -91,7 +84,8 @@ public class Meat {
 
         // Create the Consumer
         MessageConsumer consumer = session.createConsumer(destination);
-        consumer.setMessageListener(new FedoraMessageListener(store));
+        return consumer;
+
     }
 
 }

@@ -6,21 +6,29 @@ import org.hibernate.annotations.NaturalId;
 import javax.persistence.*;
 
 /**
- * Created by IntelliJ IDEA.
- * User: abr
- * Date: 4/27/11
- * Time: 1:46 PM
- * To change this template use File | Settings | File Templates.
+ * This is the OBJECTS table. This table lists all the objects in DOMS.
+ *
  */
 @Entity
 @Table(name = "OBJECTS")
 public class DomsObject {
     private long id;
 
+    /**
+     * The pid of the Object
+     */
     @NaturalId
     private String objectPid;
+
+    /**
+     * The pid of the entry object that reference this object
+     */
     @NaturalId
     private String entryPid;
+
+    /**
+     * The viewangle that includes this object
+     */
     @NaturalId
     private String viewAngle;
 

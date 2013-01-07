@@ -4,11 +4,9 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * Created by IntelliJ IDEA.
- * User: abr
- * Date: 5/3/11
- * Time: 1:09 PM
- * To change this template use File | Settings | File Templates.
+ * This is the interface representing the storage system, which holds the updates from doms.
+ * Before using it, be sure to call setup()
+ * The methods represents events that can take place, except the lookup method
  */
 public interface UpdateTrackerPersistentStore {
 
@@ -21,36 +19,28 @@ public interface UpdateTrackerPersistentStore {
      * @param pid
      * @param date
      */
-    void objectCreated(String pid, Date date);
+    void objectCreated(String pid, Date date) throws UpdateTrackerStorageException;
 
     /**
      * Object was changed to the deleted state. Mark any "Deleted" entries to reflect this
      * @param pid the pid of the object
      * @param date the date of the change
      */
-    void objectDeleted(String pid, Date date);
+    void objectDeleted(String pid, Date date) throws UpdateTrackerStorageException;
 
     /**
      * Object was changed to the published state. Mark any "published" entries to this
      * @param pid
      * @param date
      */
-    void objectPublished(String pid, Date date);
+    void objectPublished(String pid, Date date) throws UpdateTrackerStorageException;
 
     /**
      * Object was changed, but remains in the inProgress state
      * @param pid
      * @param date
      */
-    void objectChanged(String pid, Date date);
-
-
-    /**
-     * Find objects from the database. TODO collections viewangles restrict
-     * @param since
-     * @return
-     */
-    List<Entry> lookup(Date since, String viewAngle, int offset, int limit, String state,         boolean newestFirst);
+    void objectChanged(String pid, Date date) throws UpdateTrackerStorageException;
 
 
     /**
@@ -58,5 +48,13 @@ public interface UpdateTrackerPersistentStore {
      * @param pid
      * @param date
      */
-    void objectRelationsChanged(String pid, Date date);
+    void objectRelationsChanged(String pid, Date date) throws UpdateTrackerStorageException;
+
+    /**
+     * Find objects from the database. TODO collections viewangles restrict
+     * @param since
+     * @return
+     */
+    List<Entry> lookup(Date since, String viewAngle, int offset, int limit, String state,         boolean newestFirst) throws UpdateTrackerStorageException;
+
 }

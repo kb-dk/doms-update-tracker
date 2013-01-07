@@ -1,7 +1,8 @@
 package dk.statsbiblioteket.doms.updatetracker.webservice;
 
-import dk.statsbiblioteket.doms.updatetracker.improved.Meat;
+import dk.statsbiblioteket.doms.updatetracker.improved.UpdateTrackingSystem;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.Entry;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerStorageException;
 import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
 
 import javax.annotation.Resource;
@@ -31,23 +32,16 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
     @Resource
     WebServiceContext context;
 
-    private DateFormat fedoraFormat = new SimpleDateFormat(
-            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-    private DateFormat alternativefedoraFormat = new SimpleDateFormat(
-            "yyyy-MM-dd'T'HH:mm:ss'Z'");
-
-    static {
+    public UpdateTrackerWebserviceImpl() throws MethodFailedException {
         try {
-            Meat.startup();
+            UpdateTrackingSystem.startup();
             //TODO
         } catch (MalformedURLException e) {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
         } catch (JMSException e) {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
         }
-    }
 
-    public UpdateTrackerWebserviceImpl() throws MethodFailedException {
     }
 
     /**
@@ -82,7 +76,12 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
     {
         //Filter: state, collection
 
-        List<Entry> entries = Meat.getStore().lookup(new Date(beginTime), viewAngle, offset, limit, state, false);
+        List<Entry> entries = null;
+        try {
+            entries = UpdateTrackingSystem.getStore().lookup(new Date(beginTime), viewAngle, offset, limit, state, false);
+        } catch (UpdateTrackerStorageException e) {
+            throw new MethodFailedException("Failed to query the persistent storage","",e);
+        }
         return convert(entries);
 
     }
@@ -124,7 +123,12 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
             throws InvalidCredentialsException, MethodFailedException
     {
 
-        List<Entry> entries = Meat.getStore().lookup(new Date(0), viewAngle, 0, 1,state,true);
+        List<Entry> entries = null;
+        try {
+            entries = UpdateTrackingSystem.getStore().lookup(new Date(0), viewAngle, 0, 1,state,true);
+        } catch (UpdateTrackerStorageException e) {
+            throw new MethodFailedException("Failed to query the persistent storage","",e);
+        }
         if (entries.size() != 1){
             return 0;
         } else {
@@ -132,18 +136,12 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
         }
     }
 
-    /**
-     * TODO doc
-     *
-     * @return TODO doc
-     */
     private Credentials getCredentials() {
         HttpServletRequest request = (HttpServletRequest) context
                 .getMessageContext()
                 .get(MessageContext.SERVLET_REQUEST);
         Credentials creds = (Credentials) request.getAttribute("Credentials");
         if (creds == null) {
-//            log.warn("Attempted call at Central without credentials");
             creds = new Credentials("", "");
         }
         return creds;
