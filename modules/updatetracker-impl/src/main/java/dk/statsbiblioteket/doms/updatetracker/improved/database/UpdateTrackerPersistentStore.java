@@ -1,5 +1,7 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
+
 import java.util.Date;
 import java.util.List;
 
@@ -14,33 +16,35 @@ public interface UpdateTrackerPersistentStore {
 
     void clear();
 
+    void dumpToStdOut();
+
     /**
      * Invoke to register a new object, that has been created
      * @param pid
      * @param date
      */
-    void objectCreated(String pid, Date date) throws UpdateTrackerStorageException;
+    void objectCreated(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException;
 
     /**
      * Object was changed to the deleted state. Mark any "Deleted" entries to reflect this
      * @param pid the pid of the object
      * @param date the date of the change
      */
-    void objectDeleted(String pid, Date date) throws UpdateTrackerStorageException;
+    void objectDeleted(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException;
 
     /**
      * Object was changed to the published state. Mark any "published" entries to this
      * @param pid
      * @param date
      */
-    void objectPublished(String pid, Date date) throws UpdateTrackerStorageException;
+    void objectPublished(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException;
 
     /**
      * Object was changed, but remains in the inProgress state
      * @param pid
      * @param date
      */
-    void objectChanged(String pid, Date date) throws UpdateTrackerStorageException;
+    void objectChanged(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException;
 
 
     /**

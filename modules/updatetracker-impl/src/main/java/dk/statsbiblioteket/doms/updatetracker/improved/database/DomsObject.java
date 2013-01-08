@@ -107,5 +107,15 @@ public class DomsObject {
         result = 31 * result + (viewAngle != null ? viewAngle.hashCode() : 0);
         return result;
     }
+
+    @Override
+    public String toString() {
+        return "DomsObject{" +
+                "id=" + id +
+                ", objectPid='" + objectPid + '\'' +
+                ", entryPid='" + entryPid + '\'' +
+                ", viewAngle='" + viewAngle + '\'' +
+                '}';
+    }
 }
 

@@ -2,6 +2,7 @@ package dk.statsbiblioteket.doms.updatetracker.improved.fedoraJms;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStore;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerStorageException;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import dk.statsbiblioteket.doms.updatetracker.improved.jms.*;
 
 import javax.jms.JMSException;
@@ -83,11 +84,13 @@ public class FedoraMessageListener implements MessageListener{
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
         } catch (UpdateTrackerStorageException e) {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+        } catch (FedoraFailedException e) {
+            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
         }
 
     }
 
-    private void parseObjectChanged(EntryType entry) throws UpdateTrackerStorageException {
+    private void parseObjectChanged(EntryType entry) throws UpdateTrackerStorageException, FedoraFailedException {
         List<Object> properties = entry.getAuthorOrCategoryOrContent();
 
         String pid = null;
@@ -119,7 +122,7 @@ public class FedoraMessageListener implements MessageListener{
         }
     }
 
-    private void parseObjectCreated(EntryType entry) throws UpdateTrackerStorageException {
+    private void parseObjectCreated(EntryType entry) throws UpdateTrackerStorageException, FedoraFailedException {
         List<Object> properties = entry.getAuthorOrCategoryOrContent();
 
         String pid = null;
@@ -148,7 +151,7 @@ public class FedoraMessageListener implements MessageListener{
 
     }
 
-    private void parseDatastreamChanged(EntryType entry) throws UpdateTrackerStorageException {
+    private void parseDatastreamChanged(EntryType entry) throws UpdateTrackerStorageException, FedoraFailedException {
         List<Object> properties = entry.getAuthorOrCategoryOrContent();
 
 
@@ -191,7 +194,7 @@ public class FedoraMessageListener implements MessageListener{
 
     }
 
-    private void parseModifyObject(EntryType entry) throws UpdateTrackerStorageException {
+    private void parseModifyObject(EntryType entry) throws UpdateTrackerStorageException, FedoraFailedException {
         List<Object> properties = entry.getAuthorOrCategoryOrContent();
 
         String pid = null;

@@ -1,6 +1,7 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.ViewInfo;
 import org.hibernate.*;
 import org.hibernate.cfg.AnnotationConfiguration;
@@ -52,7 +53,7 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
      * @param date the date of the object creation
      */
     @Override
-    public void objectCreated(String pid, Date date) throws UpdateTrackerStorageException {
+    public void objectCreated(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException {
         //Modify the persistent storage, changing the entry for the Inprogress Entry
         objectModified(pid, date, STATE_INPROGRESS);
         objectRelationsChanged(pid, date);
@@ -65,7 +66,7 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
      * @param date the date of the change
      */
     @Override
-    public void objectDeleted(String pid, Date date) throws UpdateTrackerStorageException {
+    public void objectDeleted(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException {
         //Modify the persistent storage, changing the entry for the Deleted Entry
         objectModified(pid, date, STATE_DELETED);
     }
@@ -77,7 +78,7 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
      * @param date the date of the change
      */
     @Override
-    public void objectPublished(String pid, Date date) throws UpdateTrackerStorageException {
+    public void objectPublished(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException {
         //Modify the persistent storage, changing the entry for the Deleted Entry
         objectModified(pid, date, STATE_PUBLISHED);
     }
@@ -89,7 +90,7 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
      * @param date the date of the change
      */
     @Override
-    public void objectChanged(String pid, Date date) throws UpdateTrackerStorageException {
+    public void objectChanged(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException {
         objectModified(pid, date, STATE_INPROGRESS);
     }
 
@@ -101,7 +102,7 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
      * @param date  the date of the change
      * @param state the state of the entries that should be updated
      */
-    private void objectModified(String pid, Date date, String state) throws UpdateTrackerStorageException {
+    private void objectModified(String pid, Date date, String state) throws UpdateTrackerStorageException, FedoraFailedException {
         Session session = sessionFactory.getCurrentSession();
         Transaction transaction = session.beginTransaction();
 
@@ -115,12 +116,14 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
             for (Object result : results) {
                 if (result instanceof DomsObject) {
                     DomsObject result1 = (DomsObject) result;
-                    //Mark them as updated
-                    updateEntry(session,
-                            result1.getEntryPid(),
-                            state,
-                            result1.getViewAngle(),
-                            date);
+                    if (!result1.getEntryPid().equals(pid)) {
+                        //Mark them as updated
+                        updateEntry(session,
+                                result1.getEntryPid(),
+                                state,
+                                result1.getViewAngle(),
+                                date);
+                    }
                 }
             }
 
@@ -138,6 +141,9 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
         } catch (HibernateException e) {
             transaction.rollback();
             throw new UpdateTrackerStorageException("Failed to commit transaction for pid='" + pid + "', state='" + state + "' and date='" + date.toString() + "'", e);
+        } catch (FedoraFailedException e) {
+            transaction.rollback();
+            throw new FedoraFailedException("Rethrowing exception after rolling back", e);
         }
 
 
@@ -177,7 +183,7 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
                     Entry result1 = (Entry) result;
 
                     //Is this entry older than the current change?
-                    if (result1.getDateForChange().before(date)) {
+                    if (result1.getDateForChange().getTime() < date.getTime()) {
                         result1.setDateForChange(date);
 
                         result1.setEntryPid(entryPid);
@@ -230,22 +236,21 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
 
     }
 
-    private void removeFromDomsObjects(Session session, String objectPid, String entryPid, String viewAngle) {
+    private void removeNotListedFromDomsObjects(Session session, List<String> objectPid, String entryPid, String viewAngle) {
 
         List results;
         NaturalIdentifier query = Restrictions.naturalId()
                 .set(ENTRY_PID, entryPid)
                 .set(VIEW_ANGLE, viewAngle);
-        if (objectPid == null) {
-            query = query.set(OBJECT_PID, objectPid);
-        }
 
         results = session.createCriteria(DomsObject.class).add(query).list();
 
         for (Object result : results) {
             if (result instanceof DomsObject) {
                 DomsObject result1 = (DomsObject) result;
-                session.delete(result1);
+                if (!objectPid.contains(result1.getObjectPid())) {
+                    session.delete(result1);
+                }
             }
         }
 
@@ -288,7 +293,7 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
 
 
             //First, remove all the objects in this bundle from the table
-            removeFromDomsObjects(session, null, result.getEntryPid(), result.getViewAngle());
+            removeNotListedFromDomsObjects(session, bundle.getContained(), result.getEntryPid(), result.getViewAngle());
 
             //Add all the objects from the bundle to the objects Table.
             for (String objectPid : bundle.getContained()) {
@@ -317,7 +322,8 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
                     .add(Restrictions.ge(DATE_FOR_CHANGE, since))
                     .add(Restrictions.naturalId().set(VIEW_ANGLE, viewAngle))
                     .setFirstResult(offset)
-                    .setFetchSize(limit);
+                    .setMaxResults(limit);
+
             if (newestFirst) {
                 thing = thing.addOrder(Order.desc(DATE_FOR_CHANGE));
             } else {
@@ -343,7 +349,7 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
 
         } catch (HibernateException e) {
             transaction.rollback();
-            throw new UpdateTrackerStorageException("Failed to query for",e);
+            throw new UpdateTrackerStorageException("Failed to query for", e);
         }
     }
 
@@ -363,6 +369,29 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
         results = session.createCriteria(Entry.class).list();
         for (Object result : results) {
             session.delete(result);
+
+        }
+        transaction.commit();
+
+
+    }
+
+
+    /**
+     * Clear the entire database. Dangerous operation
+     */
+    public void dumpToStdOut() {
+        Session session = sessionFactory.getCurrentSession();
+        Transaction transaction = session.beginTransaction();
+
+        List results = session.createCriteria(DomsObject.class).list();
+        for (Object result : results) {
+            System.out.println(result.toString());
+
+        }
+        results = session.createCriteria(Entry.class).list();
+        for (Object result : results) {
+            System.out.println(result.toString());
 
         }
         transaction.commit();

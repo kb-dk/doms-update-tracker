@@ -2,6 +2,7 @@ package dk.statsbiblioteket.doms.updatetracker.improved.fedora;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.ViewBundle;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.generated.ObjectFactory;
@@ -11,6 +12,7 @@ import dk.statsbiblioteket.doms.updatetracker.improved.fedora.generated.ViewsTyp
 import dk.statsbiblioteket.doms.webservices.authentication.Base64;
 import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
 
+import javax.ws.rs.core.Response;
 import java.io.*;
 import java.net.MalformedURLException;
 import java.util.*;
@@ -34,58 +36,76 @@ public class Fedora {
             throws MalformedURLException {
         this.creds = creds;
         restApi = client.resource(fedoraLocation + "/objects/");
-        risearchApi = client.resource(fedoraLocation + "/risearch/");
+        risearchApi = client.resource(fedoraLocation + "/risearch");
         ecmApi = client.resource(ecmLocation);
     }
 
 
-    public List<ViewInfo> getViewInfo(String pid, Date date) {
+    public List<ViewInfo> getViewInfo(String pid, Date date) throws FedoraFailedException {
 
-        Map<String,List<String>> relations = new HashMap<String,List<String>>();
-        Map<String, List<String>> inverseRelations = new HashMap<String,List<String>>();
+        Map<String, List<String>> relations = new HashMap<String, List<String>>();
+        Map<String, List<String>> inverseRelations = new HashMap<String, List<String>>();
 
         Set<String> entryAngles = determineEntryAngles(pid);
 
         Set<String> angles = new HashSet<String>();
         angles.addAll(entryAngles);
 
+        ObjectProfile profile;
+        try {
+            profile = restApi.path(pid)
+                    .queryParam("asOfDateTime", DateUtility.convertDateToString(date))
+                    .queryParam("format", "xml")
+                    .header("Authorization", credsAsBase64())
+                    .get(ObjectProfile.class);
+        } catch (UniformInterfaceException e) {
+            throw new FedoraFailedException("Failed to query fedora", e);
+        }
 
-        ObjectProfile profile = restApi.path(pid)
-                .queryParam("asOfDateTime", DateUtility.convertDateToString(date))
-                .queryParam("format", "xml")
-                .header("Authorization", credsAsBase64())
-                .get(ObjectProfile.class);
 
         List<String> contentmodels = profile.getObjModels().getModel();
 
 
         for (String contentmodel : contentmodels) {
-            ViewsType viewStream = restApi.path(contentmodel).path("/datastreams/VIEW")
-                    .queryParam("asOfDateTime", DateUtility.convertDateToString(date))
-                    .get(ViewsType.class);
+            ViewsType viewStream;
+            try {
+                contentmodel = contentmodel.replaceAll("info:fedora/","");
+                WebResource.Builder webResource = restApi.path(contentmodel).path("/datastreams/VIEW/content")
+                        .queryParam("asOfDateTime", DateUtility.convertDateToString(date))
+                        .header("Authorization", credsAsBase64());
+                viewStream = webResource
+                        .get(ViewsType.class);
+            } catch (UniformInterfaceException e) {
+                if (e.getResponse().getClientResponseStatus().getStatusCode() != 404 ){
+                    throw new FedoraFailedException("Failed to query fedora", e);
+                } else {
+                    continue;
+                }
+            }
+
             for (ViewangleType viewangleType : viewStream.getViewangle()) {
                 String name = viewangleType.getName();
                 angles.add(name);
 
                 List<String> rels = relations.get(name);
-                if (rels == null){
+                if (rels == null) {
                     rels = new ArrayList<String>();
                 }
                 List<Object> markedRels = viewangleType.getRelations().getAny();
                 for (Object markedRel : markedRels) {
                     rels.add(markedRel.toString());
                 }
-                relations.put(name,rels);
+                relations.put(name, rels);
 
                 List<String> invrels = relations.get(name);
-                if (invrels == null){
+                if (invrels == null) {
                     invrels = new ArrayList<String>();
                 }
                 List<Object> markedInvRels = viewangleType.getInverseRelations().getAny();
                 for (Object markedInvRel : markedInvRels) {
                     rels.add(markedInvRel.toString());
                 }
-                inverseRelations.put(name,rels);
+                inverseRelations.put(name, rels);
             }
         }
 
@@ -102,32 +122,37 @@ public class Fedora {
 
     }
 
-    private Set<String> determineEntryAngles(String pid) {
+    private Set<String> determineEntryAngles(String pid) throws FedoraFailedException {
         Set<String> angles = new HashSet<String>();
         String query = "select $angle\n" +
                 "from <#ri>\n" +
                 "where \n" +
-                "<info:fedora/"+pid+"> <fedora-model:hasModel> $cm\n" +
+                "<info:fedora/" + pid + "> <fedora-model:hasModel> $cm\n" +
                 "and\n" +
                 "$cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> $angle";
 
-        String anglesString = risearchApi
-                .queryParam("type", "tuples")
-                .queryParam("lang", "iTQL")
-                .queryParam("format", "CSV")
-                .queryParam("flush", "true")
-                .queryParam("stream", "on")
-                .queryParam("query", query)
-                .header("Authorization", credsAsBase64())
-                .post(String.class);
+        String anglesString;
+        try {
+            anglesString = risearchApi
+                    .queryParam("type", "tuples")
+                    .queryParam("lang", "iTQL")
+                    .queryParam("format", "CSV")
+                    .queryParam("flush", "true")
+                    .queryParam("stream", "on")
+                    .queryParam("query", query)
+                    .header("Authorization", credsAsBase64())
+                    .post(String.class);
+        } catch (UniformInterfaceException e) {
+            throw new FedoraFailedException("Failed to query fedora", e);
+        }
 
         String[] lines = anglesString.split("\n");
         for (String line : lines) {
-            if (line.startsWith("\"")){
+            if (line.startsWith("\"")) {
                 continue;
             }
 
-            line = line.replaceAll("info:fedora/","");
+            line = line.replaceAll("info:fedora/", "");
 
             angles.add(line);
         }
@@ -150,7 +175,7 @@ public class Fedora {
     }
 
 
-    public List<ObjectInfo> getAllEntryObjects(){
+    public List<ObjectInfo> getAllEntryObjects() throws FedoraFailedException {
         String query = "select $pid $state $lastModified $angle\n" +
                 "from <#ri>\n" +
                 "where\n" +
@@ -172,8 +197,12 @@ public class Fedora {
                 .queryParam("query", query)
                 .header("Authorization", credsAsBase64())
                 .post(ClientResponse.class);
+
+        if (response.getClientResponseStatus().getFamily() != Response.Status.Family.SUCCESSFUL){
+            throw new FedoraFailedException("Failed to query fedora "+response.toString());
+        }
+
         BufferedReader reader = new BufferedReader(new InputStreamReader(response.getEntityInputStream()));
-        //TODO check return code
 
         ArrayList<ObjectInfo> result = new ArrayList<ObjectInfo>();
         try {
@@ -181,10 +210,12 @@ public class Fedora {
             ObjectInfo objectInfo = null;
 
             while ((line = reader.readLine()) != null){
-                String[] splits = line.split("\\s");
-                //TODO fix for info:fedora
+                String[] splits = line.split(",");
+
                 String pid = splits[0];
+                pid = pid.replaceAll("info:fedora/","");
                 String state = splits[1];
+                state = state.replaceAll("info:fedora/fedora-system:def/model#","");
                 String lastModified = splits[2];
                 String viewAngle = splits[3];
                 if (objectInfo != null && objectInfo.getObjectPid().equals(pid)){
@@ -192,7 +223,7 @@ public class Fedora {
                 } else {
                     objectInfo = new ObjectInfo();
                     objectInfo.setObjectPid(pid);
-                    //TODO parse date
+
                     objectInfo.setLastModified(DateUtility.convertStringToDate(lastModified));
                     objectInfo.setState(state);
                     objectInfo.add(viewAngle);
@@ -201,7 +232,7 @@ public class Fedora {
             }
 
         } catch (IOException e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+            throw new FedoraFailedException("Failed to read query result",e);
         }
         return result;
     }

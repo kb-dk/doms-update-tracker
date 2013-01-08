@@ -121,4 +121,16 @@ public class Entry {
         result = 31 * result + (dateForChange != null ? dateForChange.hashCode() : 0);
         return result;
     }
+
+
+    @Override
+    public String toString() {
+        return "Entry{" +
+                "id=" + id +
+                ", entryPid='" + entryPid + '\'' +
+                ", viewAngle='" + viewAngle + '\'' +
+                ", state='" + state + '\'' +
+                ", dateForChange=" + dateForChange +
+                '}';
+    }
 }
