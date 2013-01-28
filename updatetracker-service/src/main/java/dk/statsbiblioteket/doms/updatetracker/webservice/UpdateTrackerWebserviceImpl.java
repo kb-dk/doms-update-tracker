@@ -23,8 +23,8 @@ import java.util.List;
  * said info.
  */
 @WebService(endpointInterface
-                    = "dk.statsbiblioteket.doms.updatetracker.webservice"
-                      + ".UpdateTrackerWebservice")
+        = "dk.statsbiblioteket.doms.updatetracker.webservice"
+        + ".UpdateTrackerWebservice")
 public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
 
     @Resource
@@ -71,12 +71,12 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
     {
 
         return getModifiedObjects(collectionPid,
-                                  viewAngle,
-                                  beginTime,
-                                  state,
-                                  offset,
-                                  limit,
-                                  false);
+                viewAngle,
+                beginTime,
+                state,
+                offset,
+                limit,
+                false);
     }
 
     public List<PidDatePidPid> getModifiedObjects(String collectionPid,
@@ -102,39 +102,41 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
         }
         if (state.equals("Published")) {
             state =  "and\n"
-                     + "$object <fedora-model:state> <fedora-model:Active> \n";
+                    + "$object <fedora-model:state> <fedora-model:Active> \n";
 
         } else if (state.equals("InProgress")) {
             state =  "and\n"
-                     + "$object <fedora-model:state> <fedora-model:Inactive> \n";
+                    + "$object <fedora-model:state> <fedora-model:Inactive> \n";
         } else if (state.equals("NotDeleted")){
             state =  "and\n"
-                   + "( $object <fedora-model:state> <fedora-model:Inactive> \n"
-                   + " or \n"
-                   + " $object <fedora-model:state> <fedora-model:Active> )\n";
+                    + "( $object <fedora-model:state> <fedora-model:Inactive> \n"
+                    + " or \n"
+                    + " $object <fedora-model:state> <fedora-model:Active> )\n";
         }
 
 
         String query = "select $object $cm $date\n"
-                       + "from <#ri>\n"
-                       + "where\n"
-                       + "$object <fedora-model:hasModel> $cm\n"
-                       + "and\n"
-                       + "$cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> '"
-                       + viewAngle + "'\n"
-                       + "and\n"
-                       + "$object <http://doms.statsbiblioteket.dk/relations/default/0/1/#isPartOfCollection> <info:fedora/"
-                       + collectionPid + ">\n"
-                       + state
-                       + "and\n"
-                       + "$object <fedora-view:lastModifiedDate> $date \n";
+                + "from <#ri>\n"
+                + "where\n"
+                + "$object <fedora-model:hasModel> $cm\n"
+                + "and\n"
+                + "$cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> '"
+                + viewAngle + "'\n"
+                + "and\n"
+                + "$object <http://doms.statsbiblioteket.dk/relations/default/0/1/#isPartOfCollection> <info:fedora/"
+                + collectionPid + ">\n"
+                + state
+                + "and\n"
+                + "$object <fedora-view:lastModifiedDate> $date \n";
 
 
+/*      This does not work, takes much to long, so fake the thing instead
         if (beginTime != 0){
             String beginTimeDate
                     = fedoraFormat.format(new Date(beginTime));
             query = query + "and \n $date <mulgara:after> '"+beginTimeDate+"'^^<xml-schema:dateTime> in <#xsd> \n";
         }
+*/
 
 
         if (reverse){
@@ -143,12 +145,17 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
             query = query + "order by $date asc";
         }
 
-        if (limit != 0) {
+//      These are ignored, as there are logical issues with the sorting and limit, when records can move
+
+        if (limit == 1) { //Anything else is not meaningful
             query = query + "\n limit " + limit;
         }
+/*
         if (offset != 0) {
             query = query + "\n offset " + offset;
         }
+*/
+
 
 
         try {
@@ -172,6 +179,11 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
                 lastModifiedFedoraDate = normalizeFedoraDate(lastModifiedFedoraDate);
                 lastChangedTime = fedoraFormat.parse(
                         lastModifiedFedoraDate).getTime();
+
+                //Check if this line should be included in the result
+                if (lastChangedTime < beginTime){
+                    continue;
+                }
             } catch (ParseException e) {
                 throw new MethodFailedException(
                         "Failed to parse date for object",
@@ -232,12 +244,12 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
     {
 
         List<PidDatePidPid> lastChanged = getModifiedObjects(collectionPid,
-                                                             viewAngle,
-                                                             0,
-                                                             state,
-                                                             0,
-                                                             1,
-                                                             true);
+                viewAngle,
+                0,
+                state,
+                0,
+                1,
+                true);
 
         if (!lastChanged.isEmpty()){
             return lastChanged.get(0).getLastChangedTime();
