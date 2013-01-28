@@ -147,7 +147,7 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
 
 //      These are ignored, as there are logical issues with the sorting and limit, when records can move
 
-        if (limit == 1) { //Anything else is not meaningful
+        if (limit > 0) { //Anything else is not meaningful
             query = query + "\n limit " + limit;
         }
 /*
