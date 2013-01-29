@@ -5,7 +5,7 @@
     <parent>
         <groupId>dk.statsbiblioteket.doms.updatetracker</groupId>
         <artifactId>updatetracker</artifactId>
-        <version>0.0.14</version>
+        <version>0.0.14.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>${parent.artifactId}-service</artifactId>
@@ -28,7 +28,9 @@
             </plugin>
 
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.6</version>
                 <executions>
                     <execution>
                         <id>Extract wsdl files</id>
@@ -39,6 +41,7 @@
                         <configuration>
                             <includeGroupIds>dk.statsbiblioteket.doms.domsutil,${groupId}</includeGroupIds>
                             <includeArtifactIds>domsutil-surveyable-interface,${parent.artifactId}-interface</includeArtifactIds>
+
                             <includes>wsdl/*</includes>
                             <outputDirectory>${project.build.directory}/wsdl</outputDirectory>
                         </configuration>
