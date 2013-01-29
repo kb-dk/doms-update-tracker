@@ -2,6 +2,8 @@ package dk.statsbiblioteket.doms.updatetracker.webservice;
 
 import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
 import dk.statsbiblioteket.doms.webservices.configuration.ConfigCollection;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import javax.annotation.Resource;
 import javax.jws.WebParam;
@@ -16,6 +18,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * Update tracker webservice. Provides upper layers of DOMS with info on changes
@@ -26,6 +29,10 @@ import java.util.List;
         = "dk.statsbiblioteket.doms.updatetracker.webservice"
         + ".UpdateTrackerWebservice")
 public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
+
+
+    private static Log log = LogFactory.getLog(
+            UpdateTrackerWebserviceImpl.class);
 
     @Resource
     WebServiceContext context;
@@ -88,6 +95,7 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
                                                   boolean reverse
     )
             throws InvalidCredentialsException, MethodFailedException {
+        log.trace("getModifiedObjects called");
         List<PidDatePidPid> result = new ArrayList<PidDatePidPid>();
 
         List<String> allEntryObjectsInRadioTVCollection;
@@ -147,9 +155,11 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
 
 //      These are ignored, as there are logical issues with the sorting and limit, when records can move
 
+/*
         if (limit > 0) { //Anything else is not meaningful
             query = query + "\n limit " + limit;
         }
+*/
 /*
         if (offset != 0) {
             query = query + "\n offset " + offset;
@@ -157,7 +167,7 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
 */
 
 
-
+        log.info("Executing query: '"+query+"'");
         try {
             allEntryObjectsInRadioTVCollection
                     = fedora.query(query);
@@ -167,12 +177,20 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
             throw new MethodFailedException("Method failed", "", e);
         }
 
+        log.info("got "+allEntryObjectsInRadioTVCollection.size()+" results. We will now cut all before "+beginTime+" away");
+
+        int discarded = 0;
+        int selecgted = 0;
+
+
         for (String line : allEntryObjectsInRadioTVCollection) {
             line = line.trim();
             if (line.isEmpty()){
                 continue;
             }
             String[] splitted = line.split(",");
+            String pid = splitted[0];
+            String entryCMPid = splitted[1];
             String lastModifiedFedoraDate = splitted[2];
             long lastChangedTime;
             try {
@@ -180,31 +198,39 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
                 lastChangedTime = fedoraFormat.parse(
                         lastModifiedFedoraDate).getTime();
 
-                //Check if this line should be included in the result
-                if (lastChangedTime < beginTime){
-                    continue;
-                }
             } catch (ParseException e) {
+                log.warn("Failed to parse date '"+lastModifiedFedoraDate+"' from object "+splitted[0],e);
                 throw new MethodFailedException(
                         "Failed to parse date for object",
                         e.getMessage(),
                         e);
             }
 
-            if (lastChangedTime < beginTime) {
+            //Check if this line should be included in the result
+            if (lastChangedTime <= beginTime){
+                discarded++;
                 continue;
             }
+            if (selecgted == 0){
+                log.info("Object '"+line+"' and is the first object in the result");
+            }
 
+            if (selecgted >= limit){
+                log.info("Object '"+line+"' and any later objects are discarded from the results");
+                break;
+            }
             PidDatePidPid objectThatChanged = new PidDatePidPid();
-            String pid = splitted[0];
-            String entryCMPid = splitted[1];
+
             objectThatChanged.setPid(pid);
             objectThatChanged.setCollectionPid(collectionPid);
             objectThatChanged.setEntryCMPid(entryCMPid);
             objectThatChanged.setLastChangedTime(lastChangedTime);
 
             result.add(objectThatChanged);
+            selecgted++;
         }
+
+        log.info("Removed "+discarded+" from result, and returning "+result.size()+" records");
 
         return result;
     }
