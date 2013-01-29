@@ -12,9 +12,9 @@
     <packaging>pom</packaging>
 
     <scm>
-        <connection>scm:svn:https://doms.svn.sourceforge.net/svnroot/doms/updatetracker/tags/updatetracker-0.0.14</connection>
-        <developerConnection>scm:svn:https://doms.svn.sourceforge.net/svnroot/doms/updatetracker/tags/updatetracker-0.0.14</developerConnection>
-        <url>http://doms.svn.sourceforge.net/viewvc/doms/updatetracker/tags/updatetracker-0.0.14</url>
+        <connection>scm:git:https://github.com/statsbiblioteket/doms-update-tracker.git</connection>
+        <developerConnection>scm:git:https://github.com/statsbiblioteket/doms-update-tracker.git</developerConnection>
+        <url>https://github.com/statsbiblioteket/doms-update-tracker.git</url>
     </scm>
 
 
