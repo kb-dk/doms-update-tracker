@@ -1,9 +1,10 @@
 package dk.statsbiblioteket.doms.updatetracker.webservice;
 
-import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
-import dk.statsbiblioteket.doms.webservices.configuration.ConfigCollection;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
+import dk.statsbiblioteket.doms.webservices.configuration.ConfigCollection;
 
 import javax.annotation.Resource;
 import javax.jws.WebParam;
@@ -12,13 +13,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.xml.ws.WebServiceContext;
 import javax.xml.ws.handler.MessageContext;
 import java.lang.String;
-import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.logging.Logger;
 
 /**
  * Update tracker webservice. Provides upper layers of DOMS with info on changes
@@ -36,11 +34,6 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
 
     @Resource
     WebServiceContext context;
-
-    private DateFormat fedoraFormat = new SimpleDateFormat(
-            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-    private DateFormat alternativefedoraFormat = new SimpleDateFormat(
-            "yyyy-MM-dd'T'HH:mm:ss'Z'");
 
     public UpdateTrackerWebserviceImpl() throws MethodFailedException {
 
@@ -183,6 +176,7 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
         int selecgted = 0;
 
 
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
         for (String line : allEntryObjectsInRadioTVCollection) {
             line = line.trim();
             if (line.isEmpty()){
@@ -195,8 +189,7 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
             long lastChangedTime;
             try {
                 lastModifiedFedoraDate = normalizeFedoraDate(lastModifiedFedoraDate);
-                lastChangedTime = fedoraFormat.parse(
-                        lastModifiedFedoraDate).getTime();
+                lastChangedTime = dateFormat.parse(lastModifiedFedoraDate).getTime();
 
             } catch (ParseException e) {
                 log.warn("Failed to parse date '"+lastModifiedFedoraDate+"' from object "+splitted[0],e);
