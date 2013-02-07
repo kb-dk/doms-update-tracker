@@ -8,7 +8,7 @@
         <version>0.0.14.2-SNAPSHOT</version>
     </parent>
 
-    <artifactId>${parent.artifactId}-service</artifactId>
+    <artifactId>updatetracker-service</artifactId>
     <packaging>war</packaging>
 
     <build>
@@ -16,6 +16,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-war-plugin</artifactId>
+                <version>2.1.1</version>
                 <configuration>
                     <webResources>
                         <resource>
@@ -39,8 +40,8 @@
                         </goals>
                         <phase>generate-sources</phase>
                         <configuration>
-                            <includeGroupIds>dk.statsbiblioteket.doms.domsutil,${groupId}</includeGroupIds>
-                            <includeArtifactIds>domsutil-surveyable-interface,${parent.artifactId}-interface</includeArtifactIds>
+                            <includeGroupIds>dk.statsbiblioteket.doms.domsutil,${project.groupId}</includeGroupIds>
+                            <includeArtifactIds>domsutil-surveyable-interface,${project.parent.artifactId}-interface</includeArtifactIds>
 
                             <includes>wsdl/*</includes>
                             <outputDirectory>${project.build.directory}/wsdl</outputDirectory>
@@ -82,8 +83,8 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>${groupId}</groupId>
-            <artifactId>${parent.artifactId}-interface</artifactId>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>${project.parent.artifactId}-interface</artifactId>
             <version>${project.version}</version>
         </dependency>
 
