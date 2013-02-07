@@ -10,9 +10,6 @@ import javax.jws.WebService;
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.ws.WebServiceContext;
 import javax.xml.ws.handler.MessageContext;
-import java.lang.String;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.List;
 
 /**
@@ -28,11 +25,6 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
     @Resource
     WebServiceContext context;
     UpdateTrackerWebservice updateTrackerWebservice;
-
-    private DateFormat fedoraFormat = new SimpleDateFormat(
-            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-    private DateFormat alternativefedoraFormat = new SimpleDateFormat(
-            "yyyy-MM-dd'T'HH:mm:ss'Z'");
 
     public UpdateTrackerWebserviceImpl() throws MethodFailedException {
         this.updateTrackerWebservice = new UpdateTrackerWebserviceLib(new WebserviceCredentialsGenerator());
