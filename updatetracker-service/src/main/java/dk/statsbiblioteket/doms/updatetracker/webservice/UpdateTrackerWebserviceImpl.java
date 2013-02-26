@@ -11,6 +11,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.xml.ws.WebServiceContext;
 import javax.xml.ws.handler.MessageContext;
 import java.util.List;
+import java.lang.String;
 
 /**
  * Update tracker webservice. Provides upper layers of DOMS with info on changes
