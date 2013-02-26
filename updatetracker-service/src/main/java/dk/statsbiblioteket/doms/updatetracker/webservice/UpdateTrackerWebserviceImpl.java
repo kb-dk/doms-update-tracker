@@ -3,6 +3,7 @@ package dk.statsbiblioteket.doms.updatetracker.webservice;
 import dk.statsbiblioteket.doms.updatetracker.CredentialsGenerator;
 import dk.statsbiblioteket.doms.updatetracker.UpdateTrackerWebserviceLib;
 import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
+import dk.statsbiblioteket.doms.webservices.configuration.ConfigCollection;
 
 import javax.annotation.Resource;
 import javax.jws.WebParam;
@@ -12,6 +13,12 @@ import javax.xml.ws.WebServiceContext;
 import javax.xml.ws.handler.MessageContext;
 import java.util.List;
 import java.lang.String;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 /**
  * Update tracker webservice. Provides upper layers of DOMS with info on changes
@@ -19,8 +26,8 @@ import java.lang.String;
  * said info.
  */
 @WebService(endpointInterface
-                    = "dk.statsbiblioteket.doms.updatetracker.webservice"
-                      + ".UpdateTrackerWebservice")
+        = "dk.statsbiblioteket.doms.updatetracker.webservice"
+        + ".UpdateTrackerWebservice")
 public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
 
     @Resource

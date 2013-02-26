@@ -16,6 +16,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-war-plugin</artifactId>
+                <version>2.1.1</version>
                 <configuration>
                     <webResources>
                         <resource>
@@ -28,7 +29,9 @@
             </plugin>
 
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.6</version>
                 <executions>
                     <execution>
                         <id>Extract wsdl files</id>
@@ -37,7 +40,7 @@
                         </goals>
                         <phase>generate-sources</phase>
                         <configuration>
-                            <includeGroupIds>dk.statsbiblioteket.doms.domsutil,${groupId}</includeGroupIds>
+                            <includeGroupIds>dk.statsbiblioteket.doms.domsutil,${project.groupId}</includeGroupIds>
                             <includeArtifactIds>domsutil-surveyable-interface,${project.parent.artifactId}-interface</includeArtifactIds>
                             <includes>wsdl/*</includes>
                             <outputDirectory>${project.build.directory}/wsdl</outputDirectory>
@@ -79,12 +82,12 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>${groupId}</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>${project.parent.artifactId}-interface</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>${groupId}</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>${project.parent.artifactId}-lib</artifactId>
             <version>${project.version}</version>
         </dependency>

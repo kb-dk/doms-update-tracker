@@ -22,7 +22,7 @@
                             <goal>wsimport</goal>
                         </goals>
                         <configuration>
-                            <packageName>${groupId}.webservice</packageName>
+                            <packageName>${project.groupId}.webservice</packageName>
                             <wsdlDirectory>src/main/resources/wsdl</wsdlDirectory>
                             <verbose>true</verbose>
                         </configuration>

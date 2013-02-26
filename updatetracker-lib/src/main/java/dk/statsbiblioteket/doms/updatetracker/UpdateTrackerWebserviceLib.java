@@ -1,5 +1,8 @@
 package dk.statsbiblioteket.doms.updatetracker;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import dk.statsbiblioteket.doms.updatetracker.webservice.InvalidCredentialsException;
 import dk.statsbiblioteket.doms.updatetracker.webservice.MethodFailedException;
 import dk.statsbiblioteket.doms.updatetracker.webservice.PidDatePidPid;
@@ -24,6 +27,7 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
     private DateFormat alternativefedoraFormat = new SimpleDateFormat(
             "yyyy-MM-dd'T'HH:mm:ss'Z'");
     private CredentialsGenerator credGenerator;
+    private final Log log = LogFactory.getLog(getClass());
 
     public UpdateTrackerWebserviceLib(CredentialsGenerator credGenerator) {
         this.credGenerator = credGenerator;
@@ -74,6 +78,7 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
                                                   boolean reverse
     )
             throws InvalidCredentialsException, MethodFailedException {
+        log.trace("getModifiedObjects called");
         List<PidDatePidPid> result = new ArrayList<PidDatePidPid>();
 
         List<String> allEntryObjectsInRadioTVCollection;
@@ -88,39 +93,41 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
         }
         if (state.equals("Published")) {
             state =  "and\n"
-                     + "$object <fedora-model:state> <fedora-model:Active> \n";
+                    + "$object <fedora-model:state> <fedora-model:Active> \n";
 
         } else if (state.equals("InProgress")) {
             state =  "and\n"
-                     + "$object <fedora-model:state> <fedora-model:Inactive> \n";
+                    + "$object <fedora-model:state> <fedora-model:Inactive> \n";
         } else if (state.equals("NotDeleted")){
             state =  "and\n"
-                   + "( $object <fedora-model:state> <fedora-model:Inactive> \n"
-                   + " or \n"
-                   + " $object <fedora-model:state> <fedora-model:Active> )\n";
+                    + "( $object <fedora-model:state> <fedora-model:Inactive> \n"
+                    + " or \n"
+                    + " $object <fedora-model:state> <fedora-model:Active> )\n";
         }
 
 
         String query = "select $object $cm $date\n"
-                       + "from <#ri>\n"
-                       + "where\n"
-                       + "$object <fedora-model:hasModel> $cm\n"
-                       + "and\n"
-                       + "$cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> '"
-                       + viewAngle + "'\n"
-                       + "and\n"
-                       + "$object <http://doms.statsbiblioteket.dk/relations/default/0/1/#isPartOfCollection> <info:fedora/"
-                       + collectionPid + ">\n"
-                       + state
-                       + "and\n"
-                       + "$object <fedora-view:lastModifiedDate> $date \n";
+                + "from <#ri>\n"
+                + "where\n"
+                + "$object <fedora-model:hasModel> $cm\n"
+                + "and\n"
+                + "$cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> '"
+                + viewAngle + "'\n"
+                + "and\n"
+                + "$object <http://doms.statsbiblioteket.dk/relations/default/0/1/#isPartOfCollection> <info:fedora/"
+                + collectionPid + ">\n"
+                + state
+                + "and\n"
+                + "$object <fedora-view:lastModifiedDate> $date \n";
 
 
+/*      This does not work, takes much to long, so fake the thing instead
         if (beginTime != 0){
             String beginTimeDate
                     = fedoraFormat.format(new Date(beginTime));
             query = query + "and \n $date <mulgara:after> '"+beginTimeDate+"'^^<xml-schema:dateTime> in <#xsd> \n";
         }
+*/
 
 
         if (reverse){
@@ -129,14 +136,21 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
             query = query + "order by $date asc";
         }
 
-        if (limit != 0) {
+//      These are ignored, as there are logical issues with the sorting and limit, when records can move
+
+/*
+        if (limit > 0) { //Anything else is not meaningful
             query = query + "\n limit " + limit;
         }
+*/
+/*
         if (offset != 0) {
             query = query + "\n offset " + offset;
         }
+*/
 
 
+        log.info("Executing query: '"+query+"'");
         try {
             allEntryObjectsInRadioTVCollection
                     = fedora.query(query);
@@ -146,39 +160,60 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
             throw new MethodFailedException("Method failed", "", e);
         }
 
+        log.info("got "+allEntryObjectsInRadioTVCollection.size()+" results. We will now cut all before "+beginTime+" away");
+
+        int discarded = 0;
+        int selecgted = 0;
+
+
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
         for (String line : allEntryObjectsInRadioTVCollection) {
             line = line.trim();
             if (line.isEmpty()){
                 continue;
             }
             String[] splitted = line.split(",");
+            String pid = splitted[0];
+            String entryCMPid = splitted[1];
             String lastModifiedFedoraDate = splitted[2];
             long lastChangedTime;
             try {
                 lastModifiedFedoraDate = normalizeFedoraDate(lastModifiedFedoraDate);
-                lastChangedTime = fedoraFormat.parse(
-                        lastModifiedFedoraDate).getTime();
+                lastChangedTime = dateFormat.parse(lastModifiedFedoraDate).getTime();
+
             } catch (ParseException e) {
+                log.warn("Failed to parse date '"+lastModifiedFedoraDate+"' from object "+splitted[0],e);
                 throw new MethodFailedException(
                         "Failed to parse date for object",
                         e.getMessage(),
                         e);
             }
 
-            if (lastChangedTime < beginTime) {
+            //Check if this line should be included in the result
+            if (lastChangedTime <= beginTime){
+                discarded++;
                 continue;
             }
+            if (selecgted == 0){
+                log.info("Object '"+line+"' and is the first object in the result");
+            }
 
+            if (selecgted >= limit){
+                log.info("Object '"+line+"' and any later objects are discarded from the results");
+                break;
+            }
             PidDatePidPid objectThatChanged = new PidDatePidPid();
-            String pid = splitted[0];
-            String entryCMPid = splitted[1];
+
             objectThatChanged.setPid(pid);
             objectThatChanged.setCollectionPid(collectionPid);
             objectThatChanged.setEntryCMPid(entryCMPid);
             objectThatChanged.setLastChangedTime(lastChangedTime);
 
             result.add(objectThatChanged);
+            selecgted++;
         }
+
+        log.info("Removed "+discarded+" from result, and returning "+result.size()+" records");
 
         return result;
     }
