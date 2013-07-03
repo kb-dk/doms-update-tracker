@@ -92,6 +92,10 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
         if (state == null) {
             state = "Published";
         }
+
+        String statePrefix = "  FILTER (\n";
+        String statePostfix = "  )\n";
+
         if (state.equals("Published")) {
             state = "          ?state =  <info:fedora/fedora-system:def/model#Active> ;\n";
 
@@ -101,6 +105,7 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
             state = "          ?state =  <info:fedora/fedora-system:def/model#Inactive> ||  " +
                     "?state =  <info:fedora/fedora-system:def/model#Active> ;\n";
         }
+        state = statePrefix + state + statePostfix;
 
         String dateSort;
         if (reverse) {
@@ -118,8 +123,8 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
                 "          <fedora-view:lastmodifiedDate> ?date .\n" +
                 "  FILTER (\n" +
                 "    ?date >= '%date%'^^xsd:dateTime\n" +
-                state +
                 "  )\n" +
+                state +
                 "  ?cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> " + viewAngle + " .\n"
                 + "} ORDER BY "+dateSort+" LIMIT "+limit+" OFFSET 0";
 
