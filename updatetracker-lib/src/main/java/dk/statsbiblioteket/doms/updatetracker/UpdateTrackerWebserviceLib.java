@@ -88,6 +88,10 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
         fedora = new Fedora(credGenerator.getCredentials(), fedoralocation);
 
 
+        if (offset == null){
+            offset = 0;
+        }
+
 
         if (state == null) {
             state = "Published";
@@ -97,21 +101,23 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
         String statePostfix = "  )\n";
 
         if (state.equals("Published")) {
-            state = "          ?state =  <info:fedora/fedora-system:def/model#Active> ;\n";
+            state = "          ?state =  <info:fedora/fedora-system:def/model#Active> \n";
 
         } else if (state.equals("InProgress")) {
-            state = "          ?state =  <info:fedora/fedora-system:def/model#Inactive> ;\n";
+            state = "          ?state =  <info:fedora/fedora-system:def/model#Inactive> \n";
         } else if (state.equals("NotDeleted")) {
             state = "          ?state =  <info:fedora/fedora-system:def/model#Inactive> ||  " +
-                    "?state =  <info:fedora/fedora-system:def/model#Active> ;\n";
+                    "?state =  <info:fedora/fedora-system:def/model#Active> \n";
         }
         state = statePrefix + state + statePostfix;
 
         String dateSort;
         if (reverse) {
-            dateSort = "DESC(?date)";
+            //TODO remove this when mulgara version is 2.1.5+
+            throw new UnsupportedOperationException("reverse is not supported by mulgara 2.1.4");
+            //dateSort = "DESC(?date)";
         } else {
-            dateSort = "ASC(?date)";
+            dateSort = "?date";
         }
 
 
@@ -119,14 +125,13 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
                 "  ?object <info:fedora/fedora-system:def/model#hasModel> ?cm ;\n" +
                 "          <info:fedora/fedora-system:def/view#lastModifiedDate> ?date ;\n" +
                 "          <http://doms.statsbiblioteket.dk/relations/default/0/1/#isPartOfCollection> <info:fedora/"+collectionPid+"> ;\n" +
-                "          <info:fedora/fedora-system:def/model#state> ?state ;\n" +
-                "          <fedora-view:lastmodifiedDate> ?date .\n" +
+                "          <info:fedora/fedora-system:def/model#state> ?state .\n" +
                 "  FILTER (\n" +
-                "    ?date >= '%date%'^^xsd:dateTime\n" +
+                "    ?date >= '"+fedoraFormat.format(new Date(beginTime))+"'^^xsd:dateTime\n" +
                 "  )\n" +
                 state +
-                "  ?cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> " + viewAngle + " .\n"
-                + "} ORDER BY "+dateSort+" LIMIT "+limit+" OFFSET 0";
+                "  ?cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> '" + viewAngle + "' .\n"
+                + "} ORDER BY "+dateSort+" LIMIT "+limit+" OFFSET "+offset;
 
 
 
