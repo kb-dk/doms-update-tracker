@@ -61,12 +61,12 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
     {
 
         return getModifiedObjects(collectionPid,
-                                  viewAngle,
-                                  beginTime,
-                                  state,
-                                  offset,
-                                  limit,
-                                  false);
+                viewAngle,
+                beginTime,
+                state,
+                offset,
+                limit,
+                false);
     }
 
     public List<PidDatePidPid> getModifiedObjects(String collectionPid,
@@ -88,79 +88,54 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
         fedora = new Fedora(credGenerator.getCredentials(), fedoralocation);
 
 
+
         if (state == null) {
             state = "Published";
         }
         if (state.equals("Published")) {
-            state =  "and\n"
-                    + "$object <fedora-model:state> <fedora-model:Active> \n";
+            state = "          ?state =  <info:fedora/fedora-system:def/model#Active> ;\n";
 
         } else if (state.equals("InProgress")) {
-            state =  "and\n"
-                    + "$object <fedora-model:state> <fedora-model:Inactive> \n";
-        } else if (state.equals("NotDeleted")){
-            state =  "and\n"
-                    + "( $object <fedora-model:state> <fedora-model:Inactive> \n"
-                    + " or \n"
-                    + " $object <fedora-model:state> <fedora-model:Active> )\n";
+            state = "          ?state =  <info:fedora/fedora-system:def/model#Inactive> ;\n";
+        } else if (state.equals("NotDeleted")) {
+            state = "          ?state =  <info:fedora/fedora-system:def/model#Inactive> ||  " +
+                    "?state =  <info:fedora/fedora-system:def/model#Active> ;\n";
         }
 
-
-        String query = "select $object $cm $date\n"
-                + "from <#ri>\n"
-                + "where\n"
-                + "$object <fedora-model:hasModel> $cm\n"
-                + "and\n"
-                + "$cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> '"
-                + viewAngle + "'\n"
-                + "and\n"
-                + "$object <http://doms.statsbiblioteket.dk/relations/default/0/1/#isPartOfCollection> <info:fedora/"
-                + collectionPid + ">\n"
-                + state
-                + "and\n"
-                + "$object <fedora-view:lastModifiedDate> $date \n";
-
-
-/*      This does not work, takes much to long, so fake the thing instead
-        if (beginTime != 0){
-            String beginTimeDate
-                    = fedoraFormat.format(new Date(beginTime));
-            query = query + "and \n $date <mulgara:after> '"+beginTimeDate+"'^^<xml-schema:dateTime> in <#xsd> \n";
-        }
-*/
-
-
-        if (reverse){
-            query = query + "order by $date desc";
+        String dateSort;
+        if (reverse) {
+            dateSort = "DESC(?date)";
         } else {
-            query = query + "order by $date asc";
+            dateSort = "ASC(?date)";
         }
 
-//      These are ignored, as there are logical issues with the sorting and limit, when records can move
 
-/*
-        if (limit > 0) { //Anything else is not meaningful
-            query = query + "\n limit " + limit;
-        }
-*/
-/*
-        if (offset != 0) {
-            query = query + "\n offset " + offset;
-        }
-*/
+        String sparql = "SELECT ?object ?cm ?date WHERE {\n" +
+                "  ?object <info:fedora/fedora-system:def/model#hasModel> ?cm ;\n" +
+                "          <info:fedora/fedora-system:def/view#lastModifiedDate> ?date ;\n" +
+                "          <http://doms.statsbiblioteket.dk/relations/default/0/1/#isPartOfCollection> <info:fedora/"+collectionPid+"> ;\n" +
+                "          <info:fedora/fedora-system:def/model#state> ?state ;\n" +
+                "          <fedora-view:lastmodifiedDate> ?date .\n" +
+                "  FILTER (\n" +
+                "    ?date >= '%date%'^^xsd:dateTime\n" +
+                state +
+                "  )\n" +
+                "  ?cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> " + viewAngle + " .\n"
+                + "} ORDER BY "+dateSort+" LIMIT "+limit+" OFFSET 0";
 
 
-        log.info("Executing query: '"+query+"'");
+
+        log.info("Executing query: '" + sparql + "'");
         try {
             allEntryObjectsInRadioTVCollection
-                    = fedora.query(query);
+                    = fedora.query(sparql);
         } catch (BackendInvalidCredsException e) {
             throw new InvalidCredentialsException("Invalid credentials", "", e);
         } catch (BackendMethodFailedException e) {
             throw new MethodFailedException("Method failed", "", e);
         }
 
-        log.info("got "+allEntryObjectsInRadioTVCollection.size()+" results. We will now cut all before "+beginTime+" away");
+        log.info("got " + allEntryObjectsInRadioTVCollection.size() + " results. We will now cut all before " + beginTime + " away");
 
         int discarded = 0;
         int selecgted = 0;
@@ -169,7 +144,7 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
         for (String line : allEntryObjectsInRadioTVCollection) {
             line = line.trim();
-            if (line.isEmpty()){
+            if (line.isEmpty()) {
                 continue;
             }
             String[] splitted = line.split(",");
@@ -182,7 +157,7 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
                 lastChangedTime = dateFormat.parse(lastModifiedFedoraDate).getTime();
 
             } catch (ParseException e) {
-                log.warn("Failed to parse date '"+lastModifiedFedoraDate+"' from object "+splitted[0],e);
+                log.warn("Failed to parse date '" + lastModifiedFedoraDate + "' from object " + splitted[0], e);
                 throw new MethodFailedException(
                         "Failed to parse date for object",
                         e.getMessage(),
@@ -190,16 +165,16 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
             }
 
             //Check if this line should be included in the result
-            if (lastChangedTime <= beginTime){
+            if (lastChangedTime <= beginTime) {
                 discarded++;
                 continue;
             }
-            if (selecgted == 0){
-                log.info("Object '"+line+"' and is the first object in the result");
+            if (selecgted == 0) {
+                log.info("Object '" + line + "' and is the first object in the result");
             }
 
-            if (selecgted >= limit){
-                log.info("Object '"+line+"' and any later objects are discarded from the results");
+            if (selecgted >= limit) {
+                log.info("Object '" + line + "' and any later objects are discarded from the results");
                 break;
             }
             PidDatePidPid objectThatChanged = new PidDatePidPid();
@@ -213,20 +188,20 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
             selecgted++;
         }
 
-        log.info("Removed "+discarded+" from result, and returning "+result.size()+" records");
+        log.info("Removed " + discarded + " from result, and returning " + result.size() + " records");
 
         return result;
     }
 
     private String normalizeFedoraDate(String lastModifiedFedoraDate) {
-        if (lastModifiedFedoraDate.matches(".*\\.\\d{3}Z$")){
+        if (lastModifiedFedoraDate.matches(".*\\.\\d{3}Z$")) {
             return lastModifiedFedoraDate;
-        } else if (lastModifiedFedoraDate.matches(".*\\.\\d{2}Z$")){
-            return lastModifiedFedoraDate.substring(0,lastModifiedFedoraDate.length()-1)+"0Z";
-        }else if (lastModifiedFedoraDate.matches(".*\\.\\d{1}Z$")){
-            return lastModifiedFedoraDate.substring(0,lastModifiedFedoraDate.length()-1)+"00Z";
-        }else if (lastModifiedFedoraDate.matches(".*:\\d\\dZ$")){
-            return lastModifiedFedoraDate.substring(0,lastModifiedFedoraDate.length()-1)+".000Z";
+        } else if (lastModifiedFedoraDate.matches(".*\\.\\d{2}Z$")) {
+            return lastModifiedFedoraDate.substring(0, lastModifiedFedoraDate.length() - 1) + "0Z";
+        } else if (lastModifiedFedoraDate.matches(".*\\.\\d{1}Z$")) {
+            return lastModifiedFedoraDate.substring(0, lastModifiedFedoraDate.length() - 1) + "00Z";
+        } else if (lastModifiedFedoraDate.matches(".*:\\d\\dZ$")) {
+            return lastModifiedFedoraDate.substring(0, lastModifiedFedoraDate.length() - 1) + ".000Z";
         }
         return lastModifiedFedoraDate;
     }
@@ -246,21 +221,20 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
             String collectionPid,
             String viewAngle,
             String state)
-            throws InvalidCredentialsException, MethodFailedException
-    {
+            throws InvalidCredentialsException, MethodFailedException {
 
         List<PidDatePidPid> lastChanged = getModifiedObjects(collectionPid,
-                                                             viewAngle,
-                                                             0,
-                                                             state,
-                                                             0,
-                                                             1,
-                                                             true);
+                viewAngle,
+                0,
+                state,
+                0,
+                1,
+                true);
 
-        if (!lastChanged.isEmpty()){
+        if (!lastChanged.isEmpty()) {
             return lastChanged.get(0).getLastChangedTime();
         } else {
-            throw new MethodFailedException("Did not find any elements in the collection","No elements in the collection");
+            throw new MethodFailedException("Did not find any elements in the collection", "No elements in the collection");
         }
     }
 }

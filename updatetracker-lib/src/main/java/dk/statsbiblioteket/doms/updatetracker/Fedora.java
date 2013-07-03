@@ -50,7 +50,7 @@ public class Fedora {
             String objects = restApi
                     .path("/risearch")
                     .queryParam("type", "tuples")
-                    .queryParam("lang", "iTQL")
+                    .queryParam("lang", "sparql")
                     .queryParam("format", "CSV")
                     .queryParam("flush","true")
                     .queryParam("stream","on")
@@ -80,4 +80,5 @@ public class Fedora {
             }
         }
     }
+
 }
