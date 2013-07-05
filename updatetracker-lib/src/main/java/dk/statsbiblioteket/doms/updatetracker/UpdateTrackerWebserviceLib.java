@@ -87,9 +87,18 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
                 "dk.statsbiblioteket.doms.updatetracker.fedoralocation");
         fedora = new Fedora(credGenerator.getCredentials(), fedoralocation);
 
+        String offsetString;
+        if (offset == null) {
+            offsetString = " ";
+        } else {
+            offsetString = " OFFSET " + offset + " ";
+        }
 
-        if (offset == null){
-            offset = 0;
+        String limitString;
+        if (limit == null) {
+            limitString = " ";
+        } else {
+            limitString = " LIMIT " + limit + " ";
         }
 
 
@@ -100,39 +109,46 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
         String statePrefix = "  FILTER (\n";
         String statePostfix = "  )\n";
 
+        String stateString = "";
         if (state.equals("Published")) {
-            state = "          ?state =  <info:fedora/fedora-system:def/model#Active> \n";
-
+            stateString = "          ?state =  <info:fedora/fedora-system:def/model#Active> \n";
         } else if (state.equals("InProgress")) {
-            state = "          ?state =  <info:fedora/fedora-system:def/model#Inactive> \n";
+            stateString = "          ?state =  <info:fedora/fedora-system:def/model#Inactive> \n";
         } else if (state.equals("NotDeleted")) {
-            state = "          ?state =  <info:fedora/fedora-system:def/model#Inactive> ||  " +
-                    "?state =  <info:fedora/fedora-system:def/model#Active> \n";
+            stateString = "          ?state !=  <info:fedora/fedora-system:def/model#Deleted> \n";
         }
-        state = statePrefix + state + statePostfix;
+        if (!stateString.isEmpty()) {
+            stateString = statePrefix + stateString + statePostfix;
+        }
 
+        String contentModelFilteringString = "?cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> '"+viewAngle+"' \n";
+        /*String contentModelFilteringString = "?cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> ?view \n" +
+                " FILTER (\n" +
+                " ?view = '"+viewAngle+"'" +
+                " )\n";
+*/
         String dateSort;
         if (reverse) {
             //TODO remove this when mulgara version is 2.1.5+
             throw new UnsupportedOperationException("reverse is not supported by mulgara 2.1.4");
-            //dateSort = "DESC(?date)";
+            //dateSort = " ORDER BY DESC(?date) ";
         } else {
-            dateSort = "?date";
+            dateSort = " ORDER BY ?date ";
         }
 
 
         String sparql = "SELECT ?object ?cm ?date WHERE {\n" +
                 "  ?object <info:fedora/fedora-system:def/model#hasModel> ?cm ;\n" +
                 "          <info:fedora/fedora-system:def/view#lastModifiedDate> ?date ;\n" +
-                "          <http://doms.statsbiblioteket.dk/relations/default/0/1/#isPartOfCollection> <info:fedora/"+collectionPid+"> ;\n" +
+                "          <http://doms.statsbiblioteket.dk/relations/default/0/1/#isPartOfCollection> <info:fedora/" + collectionPid + "> ;\n" +
                 "          <info:fedora/fedora-system:def/model#state> ?state .\n" +
+                contentModelFilteringString +
                 "  FILTER (\n" +
-                "    ?date >= '"+fedoraFormat.format(new Date(beginTime))+"'^^xsd:dateTime\n" +
+                "    ?date >= '" + fedoraFormat.format(new Date(beginTime)) + "'^^xsd:dateTime\n" +
                 "  )\n" +
-                state +
-                "  ?cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> '" + viewAngle + "' .\n"
-                + "} ORDER BY "+dateSort+" LIMIT "+limit+" OFFSET "+offset;
-
+                stateString +
+                "  ?cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> '" + viewAngle + "' .\n" +
+                "} " + dateSort + limitString + offsetString;
 
 
         log.info("Executing query: '" + sparql + "'");
@@ -145,11 +161,7 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
             throw new MethodFailedException("Method failed", "", e);
         }
 
-        log.info("got " + allEntryObjectsInRadioTVCollection.size() + " results. We will now cut all before " + beginTime + " away");
-
-        int discarded = 0;
-        int selecgted = 0;
-
+        log.info("got " + allEntryObjectsInRadioTVCollection.size() + " results.");
 
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
         for (String line : allEntryObjectsInRadioTVCollection) {
@@ -173,20 +185,6 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
                         e.getMessage(),
                         e);
             }
-
-            //Check if this line should be included in the result
-            if (lastChangedTime <= beginTime) {
-                discarded++;
-                continue;
-            }
-            if (selecgted == 0) {
-                log.info("Object '" + line + "' and is the first object in the result");
-            }
-
-            if (selecgted >= limit) {
-                log.info("Object '" + line + "' and any later objects are discarded from the results");
-                break;
-            }
             PidDatePidPid objectThatChanged = new PidDatePidPid();
 
             objectThatChanged.setPid(pid);
@@ -195,10 +193,9 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
             objectThatChanged.setLastChangedTime(lastChangedTime);
 
             result.add(objectThatChanged);
-            selecgted++;
         }
 
-        log.info("Removed " + discarded + " from result, and returning " + result.size() + " records");
+        log.info("Returning " + result.size() + " records");
 
         return result;
     }
