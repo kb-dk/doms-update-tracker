@@ -5,15 +5,10 @@ import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
 import dk.statsbiblioteket.doms.webservices.configuration.ConfigCollection;
 import org.junit.Ignore;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
-/**
- * Created with IntelliJ IDEA.
- * User: abr
- * Date: 7/3/13
- * Time: 1:35 PM
- * To change this template use File | Settings | File Templates.
- */
 public class UpdateTrackerWebserviceLibTest {
     @org.junit.Before
     public void setUp() throws Exception {
@@ -40,7 +35,17 @@ public class UpdateTrackerWebserviceLibTest {
             }
         });
 
-        List<PidDatePidPid> oldest = service.listObjectsChangedSince("doms:RadioTV_Collection", "SummaVisible", 0, null, 0, 100);
+        Date startDate = new SimpleDateFormat("yyyy-MM-dd").parse("2012-03-01");
+        Date before = new Date();
+        List<PidDatePidPid> oldest = service.listObjectsChangedSince("doms:RadioTV_Collection",
+                "SummaVisible",
+                startDate.getTime(),
+                null,
+                0,
+                10000);
+        Date after = new Date();
+        System.out.println((after.getTime()-before.getTime()));
+
         for (PidDatePidPid pidDatePidPid : oldest) {
             System.out.println(pidDatePidPid.getCollectionPid());
             System.out.println(pidDatePidPid.getPid());
