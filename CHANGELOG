@@ -1,0 +1,4 @@
+0.0.17
+Changed to use sparql, not ITQL, to query doms
+Deprecated the getLatestModificationTime method due to a lack of sorting in mulgara sparql
+Updated to use doms parent 0.1.5
