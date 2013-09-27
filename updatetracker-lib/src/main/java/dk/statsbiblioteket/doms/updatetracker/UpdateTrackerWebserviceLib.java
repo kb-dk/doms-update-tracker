@@ -121,7 +121,7 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
             stateString = statePrefix + stateString + statePostfix;
         }
 
-        String contentModelFilteringString = "?cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> '"+viewAngle+"' \n";
+        String contentModelFilteringString = "?cm "+namespaced("isEntryForViewAngle")+" '"+viewAngle+"' \n";
         /*String contentModelFilteringString = "?cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> ?view \n" +
                 " FILTER (\n" +
                 " ?view = '"+viewAngle+"'" +
@@ -140,14 +140,14 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
         String sparql = "SELECT ?object ?cm ?date WHERE {\n" +
                 "  ?object <info:fedora/fedora-system:def/model#hasModel> ?cm ;\n" +
                 "          <info:fedora/fedora-system:def/view#lastModifiedDate> ?date ;\n" +
-                "          <http://doms.statsbiblioteket.dk/relations/default/0/1/#isPartOfCollection> <info:fedora/" + collectionPid + "> ;\n" +
+                "          "+namespaced("isPartOfCollection")+" <info:fedora/" + collectionPid + "> ;\n" +
                 "          <info:fedora/fedora-system:def/model#state> ?state .\n" +
                 contentModelFilteringString +
                 "  FILTER (\n" +
                 "    ?date >= '" + fedoraFormat.format(new Date(beginTime)) + "'^^xsd:dateTime\n" +
                 "  )\n" +
                 stateString +
-                "  ?cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> '" + viewAngle + "' .\n" +
+                "  ?cm "+namespaced("isEntryForViewAngle")+" '" + viewAngle + "' .\n" +
                 "} " + dateSort + limitString + offsetString;
 
 
@@ -198,6 +198,11 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
         log.info("Returning " + result.size() + " records");
 
         return result;
+    }
+
+
+    private String namespaced(String name){
+        return " <http://doms.statsbiblioteket.dk/relations/default/0/1/#"+name.trim()+"> ";
     }
 
     private String normalizeFedoraDate(String lastModifiedFedoraDate) {
