@@ -1,3 +1,6 @@
+0.0.18
+Deprecate the old ecm.sourcforge.net namespace, and use doms.statsbiblioteket.dk namespace.
+
 0.0.17
 Changed to use sparql, not ITQL, to query doms
 Deprecated the getLatestModificationTime method due to a lack of sorting in mulgara sparql
