@@ -1,3 +1,9 @@
+1.0
+Bumped the version number
+Updated jersey version to 1.17.1
+Updated doms parent pom to 1.0
+Updated doms util to 1.0
+
 0.0.18
 Deprecate the old ecm.sourcforge.net namespace, and use doms.statsbiblioteket.dk namespace.
 
