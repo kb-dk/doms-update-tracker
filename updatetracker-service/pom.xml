@@ -8,8 +8,13 @@
         <version>1.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>${project.parent.artifactId}-service</artifactId>
+    <artifactId>updatetracker-service</artifactId>
     <packaging>war</packaging>
+
+    <properties><!--We couldn't be bothered to write valid javadoc, so ignore it-->
+        <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
+    </properties>
+
 
     <build>
         <plugins>
@@ -59,7 +64,6 @@
         <dependency>
             <groupId>net.sf.saxon</groupId>
             <artifactId>Saxon-HE</artifactId>
-            <version>9.5.1-6</version>
         </dependency>
         <dependency>
             <groupId>com.sun.xml.ws</groupId>
