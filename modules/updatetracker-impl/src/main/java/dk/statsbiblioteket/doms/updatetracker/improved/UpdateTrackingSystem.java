@@ -66,7 +66,7 @@ public class UpdateTrackingSystem {
         }
 
         //initialise the jms connection to Fedora
-        consumer = initialiseJMS(jmsurl, jmssubject);
+        consumer = initialiseJMS(jmsurl, jmssubject, fedoraUser,fedoraPass);
 
         //Tie it all together
         consumer.setMessageListener(new FedoraMessageListener(store));
@@ -76,12 +76,12 @@ public class UpdateTrackingSystem {
         return store;
     }
 
-    private static MessageConsumer initialiseJMS(String jmsurl, String jmssubject) throws JMSException {
+    private static MessageConsumer initialiseJMS(String jmsurl, String jmssubject, String fedoraUser, String fedoraPass) throws JMSException {
         Connection connection = null;
         Destination destination = null;
 
         // Create the connection.
-        ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(jmsurl);
+        ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(fedoraUser, fedoraPass, jmsurl);
         connection = connectionFactory.createConnection();
         connection.start();
 
