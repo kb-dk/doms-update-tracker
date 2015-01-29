@@ -6,6 +6,7 @@
         <groupId>dk.statsbiblioteket.doms.updatetracker</groupId>
         <artifactId>updatetracker</artifactId>
         <version>0.0.14-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <artifactId>${parent.artifactId}-interface</artifactId>
