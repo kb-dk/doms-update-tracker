@@ -3,6 +3,7 @@ package dk.statsbiblioteket.doms.updatetracker.improved;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.Entry;
 import dk.statsbiblioteket.doms.webservices.configuration.ConfigCollection;
 import org.apache.commons.logging.impl.Log4JLogger;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Date;
@@ -21,6 +22,20 @@ public class UpdateTrackingSystemTest {
     private int limit;
 
     @Test
+    @Ignore
+    public void testGetFromDOMS() throws Exception {
+        Properties props = new Properties();
+        props.load(Thread.currentThread().getContextClassLoader().getResourceAsStream("test.properties"));
+        ConfigCollection.addContextConfig(props);
+
+        UpdateTrackingSystem.startup();
+        Thread.sleep(120*1000);
+
+        UpdateTrackingSystem.getStore().dumpToStdOut();
+
+    }
+
+    @Test
     public void testRegenerateFromDOMS() throws Exception {
         Properties props = new Properties();
         props.load(Thread.currentThread().getContextClassLoader().getResourceAsStream("test.properties"));
@@ -30,7 +45,7 @@ public class UpdateTrackingSystemTest {
         UpdateTrackingSystem.getStore().dumpToStdOut();
 
         UpdateTrackingSystem.regenerateFromDOMS();
-        UpdateTrackingSystem.getStore().lookup(new Date(0), "SummaVisible", 0, 1000, "A", false);
+        UpdateTrackingSystem.getStore().lookup(new Date(0), "SummaVisible", 0, 10, "A", false);
 
 
     }
@@ -44,9 +59,9 @@ public class UpdateTrackingSystemTest {
         UpdateTrackingSystem.startup();
 
         offset = 0;
-        limit = 1000;
+        limit = 10;
         while(true){
-            List<Entry> results = UpdateTrackingSystem.getStore().lookup(new Date(0), "SummaVisible", offset, limit, "A", false);
+            List<Entry> results = UpdateTrackingSystem.getStore().lookup(new Date(0), "SummaVisible", offset, limit, "I", false);
             for (Entry result : results) {
                 System.out.println(result);
             }
