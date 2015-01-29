@@ -39,10 +39,10 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
     public void setUp() throws Exception {
         // A SessionFactory is set up once for an application
         sessionFactory = new AnnotationConfiguration()
-                .addAnnotatedClass(DomsObject.class)
-                .addAnnotatedClass(Entry.class)
-                .configure()
-                .buildSessionFactory();
+                                 .addAnnotatedClass(DomsObject.class)
+                                 .addAnnotatedClass(Entry.class)
+                                 .configure()
+                                 .buildSessionFactory();
     }
 
 
@@ -109,23 +109,22 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
         try {
             //Find the DomsObject rows that regard this object.
             //There will be one per entry/viewAngle combination
-            List results = session.createCriteria(DomsObject.class)
-                    .add(Restrictions.naturalId().set(OBJECT_PID, pid))
-                    .list();
+            final Criteria criteria = session.createCriteria(DomsObject.class)
+                                             .add(Restrictions.naturalId().set(OBJECT_PID, pid));
+            List<DomsObject> results = listAndCast(criteria);
+
             //Find all Entries that include this object
-            for (Object result : results) {
-                if (result instanceof DomsObject) {
-                    DomsObject result1 = (DomsObject) result;
-                    if (!result1.getEntryPid().equals(pid)) {
-                        //Mark them as updated
-                        updateEntry(session,
-                                result1.getEntryPid(),
-                                state,
-                                result1.getViewAngle(),
-                                date);
-                    }
+            for (DomsObject result : results) {
+                if (!result.getEntryPid().equals(pid)) {
+                    //Mark them as updated
+                    updateEntry(session,
+                                       result.getEntryPid(),
+                                       state,
+                                       result.getViewAngle(),
+                                       date);
                 }
             }
+
 
             // Find view Info for this object
             List<ViewInfo> viewInfoList = fedora.getViewInfo(pid, date);
@@ -149,6 +148,10 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
 
     }
 
+    private <T> List<T>  listAndCast(Criteria criteria) {
+        return (List<T>)(criteria.list());
+    }
+
     /**
      * Update the Entries table regarding a change
      *
@@ -160,7 +163,7 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
      */
     private void updateEntry(Session session, String entryPid, String state, String viewAngle, Date date) {
         NaturalIdentifier restrictions = Restrictions
-                .naturalId();
+                                                 .naturalId();
 
 
         //Set all the parameters that have been included as restrictions
@@ -169,33 +172,30 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
         restrictions = restrictions.set(VIEW_ANGLE, viewAngle);
 
         //Find the Entry objects that fulfill these restrictions
-        List results = session.createCriteria(Entry.class)
-                .add(restrictions)
-                .list();
+        List<Entry> results = listAndCast(session.createCriteria(Entry.class).add(restrictions));
 
         //There might be no Entry, but if we are here, we know that an entry should exist, so create it.
         if (results.size() == 0) {
             session.save(new Entry(entryPid, viewAngle, state, date));
         } else {
-            for (Object result : results) {
-                if (result instanceof Entry) {
-                    //Or there might have been some results
-                    Entry result1 = (Entry) result;
+            for (Entry result : results) {
 
-                    //Is this entry older than the current change?
-                    if (result1.getDateForChange().getTime() < date.getTime()) {
-                        result1.setDateForChange(date);
+                //Or there might have been some results
 
-                        result1.setEntryPid(entryPid);
-                        result1.setState(state);
-                        result1.setViewAngle(viewAngle);
-                    }
-                    //Save the entry
-                    session.save(result1);
+                //Is this entry older than the current change?
+                if (result.getDateForChange().getTime() < date.getTime()) {
+                    result.setDateForChange(date);
+
+                    result.setEntryPid(entryPid);
+                    result.setState(state);
+                    result.setViewAngle(viewAngle);
                 }
+                //Save the entry
+                session.save(result);
             }
         }
     }
+
 
     /**
      * update the Objects table with information about this object
@@ -207,10 +207,10 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
      */
     private void updateDomsObjects(Session session, String objectPid, String entryPid, String viewAngle) {
         List results = session.createCriteria(DomsObject.class).add(Restrictions.naturalId()
-                .set(OBJECT_PID, objectPid)
-                .set(ENTRY_PID, entryPid)
-                .set(VIEW_ANGLE, viewAngle))
-                .list();
+                                                                                .set(OBJECT_PID, objectPid)
+                                                                                .set(ENTRY_PID, entryPid)
+                                                                                .set(VIEW_ANGLE, viewAngle))
+                              .list();
         //TODO: can we avoid the query and just save each time?
         if (results.size() == 0) {
             session.save(new DomsObject(objectPid, entryPid, viewAngle));
@@ -220,38 +220,33 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
 
 
     private void removeFromEntries(Session session, String entryPid, String state, String viewAngle) {
-        List results = session.createCriteria(Entry.class)
-                .add(Restrictions
-                        .naturalId()
-                        .set(ENTRY_PID, entryPid)
-                        .set(STATE, state)
-                        .set(VIEW_ANGLE, viewAngle))
-                .list();
-        for (Object result : results) {
-            if (result instanceof Entry) {
-                Entry result1 = (Entry) result;
-                session.delete(result1);
-            }
+        List<Entry> results = listAndCast(session.createCriteria(Entry.class)
+                                                 .add(Restrictions
+                                                              .naturalId()
+                                                              .set(ENTRY_PID, entryPid)
+                                                              .set(STATE, state)
+                                                              .set(VIEW_ANGLE, viewAngle)));
+        for (Entry result : results) {
+            session.delete(result);
+
         }
 
     }
 
     private void removeNotListedFromDomsObjects(Session session, List<String> objectPid, String entryPid, String viewAngle) {
 
-        List results;
+        List<DomsObject> results;
         NaturalIdentifier query = Restrictions.naturalId()
-                .set(ENTRY_PID, entryPid)
-                .set(VIEW_ANGLE, viewAngle);
+                                              .set(ENTRY_PID, entryPid)
+                                              .set(VIEW_ANGLE, viewAngle);
 
-        results = session.createCriteria(DomsObject.class).add(query).list();
+        results = listAndCast(session.createCriteria(DomsObject.class).add(query));
 
-        for (Object result : results) {
-            if (result instanceof DomsObject) {
-                DomsObject result1 = (DomsObject) result;
-                if (!objectPid.contains(result1.getObjectPid())) {
-                    session.delete(result1);
-                }
+        for (DomsObject result1 : results) {
+            if (!objectPid.contains(result1.getObjectPid())) {
+                session.delete(result1);
             }
+
         }
 
     }
@@ -277,11 +272,11 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
         // the correct Entry entries when this method is called, and these should just be recalculated
 
         List<DomsObject> results = session.createCriteria(DomsObject.class)
-                .add(Restrictions
-                        .naturalId()
-                        .set(OBJECT_PID, pid)
-                )
-                .list();
+                                          .add(Restrictions
+                                                       .naturalId()
+                                                       .set(OBJECT_PID, pid)
+                                              )
+                                          .list();
 
         //we now have a list of all the entries that include this object.
 
@@ -319,10 +314,10 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
         try {
 
             Criteria thing = session.createCriteria(Entry.class)
-                    .add(Restrictions.ge(DATE_FOR_CHANGE, since))
-                    .add(Restrictions.naturalId().set(VIEW_ANGLE, viewAngle))
-                    .setFirstResult(offset)
-                    .setMaxResults(limit);
+                                    .add(Restrictions.ge(DATE_FOR_CHANGE, since))
+                                    .add(Restrictions.naturalId().set(VIEW_ANGLE, viewAngle))
+                                    .setFirstResult(offset)
+                                    .setMaxResults(limit);
 
             if (newestFirst) {
                 thing = thing.addOrder(Order.desc(DATE_FOR_CHANGE));
@@ -333,16 +328,14 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
             if (state != null && !state.trim().isEmpty()) {
                 thing = thing.add(Restrictions.naturalId().set(STATE, state));
             }
-            List results = thing.list();
+            List<Entry> results = listAndCast(thing);
 
 
             List<Entry> entries = new ArrayList<Entry>(results.size());
-            for (Object result : results) {
-                if (result instanceof Entry) {
-                    Entry result1 = (Entry) result;
-                    entries.add(result1);
-                }
+            for (Entry result1 : results) {
+                entries.add(result1);
             }
+
             transaction.commit();
             return entries;
 
