@@ -134,7 +134,7 @@ public class FedoraMessageListener implements MessageListener{
                 if (jaxbElement.getDeclaredType().isAssignableFrom(ContentType.class)) {
                     if (jaxbElement.getName().getLocalPart().equals("content")) {
                         ContentType content = (ContentType) jaxbElement.getValue();
-                        pid = content.getContent().toString();
+                        pid = content.getContent().get(0).toString();
                     }
                 }
 
