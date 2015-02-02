@@ -148,8 +148,9 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
 
     }
 
-    private <T> List<T>  listAndCast(Criteria criteria) {
-        return (List<T>)(criteria.list());
+    @SuppressWarnings("unchecked")
+    public static <T> List<T>  listAndCast(Criteria criteria) {
+        return criteria.list();
     }
 
     /**
