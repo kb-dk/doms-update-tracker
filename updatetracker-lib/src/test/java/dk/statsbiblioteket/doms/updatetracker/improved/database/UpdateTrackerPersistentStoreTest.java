@@ -1,9 +1,7 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
-import dk.statsbiblioteket.doms.updatetracker.improved.database.DomsUpdateTrackerUpdateTrackerPersistentStoreImpl;
-import dk.statsbiblioteket.doms.updatetracker.improved.database.Entry;
-import dk.statsbiblioteket.doms.updatetracker.improved.database.FedoraMockup;
-import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStore;
+import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,14 +26,14 @@ public class UpdateTrackerPersistentStoreTest {
     FedoraMockup fcmock;
 
     public UpdateTrackerPersistentStoreTest() throws MalformedURLException {
-        fcmock = new FedoraMockup(null,null,null);
+        fcmock = new FedoraMockup(new Credentials("user", "pass"),null,null);
     }
 
 
     @Before
     public void setUp() throws Exception {
 
-        db = new DomsUpdateTrackerUpdateTrackerPersistentStoreImpl(fcmock);
+        db = new UpdateTrackerPersistentStoreImpl(fcmock);
         db.setUp();
     }
 
@@ -80,7 +78,7 @@ public class UpdateTrackerPersistentStoreTest {
 
     @Test
     public void testObjectRelationsChanged() throws Exception {
-        Date frozen = new Date();
+        Date frozen = new Date(0);
         fcmock.addEntry("doms:test1");
         db.objectCreated("doms:test1",frozen);
         db.objectCreated("doms:test2",frozen);
