@@ -140,11 +140,13 @@ public class Fedora {
     }
 
     public ViewBundle calcViewBundle(String entryPid, String viewAngle, Date date)
-            throws BackendMethodFailedException, BackendInvalidResourceException, BackendInvalidCredsException {
-
-
-        List<String> pids = views.getViewObjectsListForObject(entryPid, viewAngle, null);
-        return new ViewBundle(entryPid,viewAngle,pids);
+            throws FedoraFailedException {
+        try {
+            List<String> pids = views.getViewObjectsListForObject(entryPid, viewAngle, null);
+            return new ViewBundle(entryPid,viewAngle,pids);
+        } catch (BackendInvalidCredsException | BackendMethodFailedException | BackendInvalidResourceException e) {
+            throw new FedoraFailedException("Failed calculating view bundle", e);
+        }
     }
 }
 

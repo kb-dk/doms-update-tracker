@@ -259,7 +259,8 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
      * @param pid  the pid of the object that changed
      * @param date the date of the change
      */
-    public void objectRelationsChanged(String pid, Date date) throws UpdateTrackerStorageException {
+    public void objectRelationsChanged(String pid, Date date)
+            throws UpdateTrackerStorageException, FedoraFailedException {
         Session session = sessionFactory.getCurrentSession();
         Transaction transaction = session.beginTransaction();
 

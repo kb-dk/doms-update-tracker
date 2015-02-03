@@ -36,21 +36,6 @@ public class UpdateTrackingSystemTest {
     }
 
     @Test
-    public void testRegenerateFromDOMS() throws Exception {
-        Properties props = new Properties();
-        props.load(Thread.currentThread().getContextClassLoader().getResourceAsStream("test.properties"));
-        ConfigCollection.addContextConfig(props);
-
-        UpdateTrackingSystem.startup();
-        UpdateTrackingSystem.getStore().dumpToStdOut();
-
-        UpdateTrackingSystem.regenerateFromDOMS();
-        UpdateTrackingSystem.getStore().lookup(new Date(0), "SummaVisible", 0, 10, "A", false);
-
-
-    }
-
-    @Test
     public void testLookupDOMS() throws Exception {
         Properties props = new Properties();
         props.load(Thread.currentThread().getContextClassLoader().getResourceAsStream("test.properties"));
