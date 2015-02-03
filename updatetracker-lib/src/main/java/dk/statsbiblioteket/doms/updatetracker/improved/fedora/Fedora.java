@@ -129,7 +129,7 @@ public class Fedora {
                 "where \n" +
                 "<info:fedora/" + pid + "> <fedora-model:hasModel> $cm\n" +
                 "and\n" +
-                "$cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> $angle";
+                "$cm <http://doms.statsbiblioteket.dk/types/view/default/0/1/#isEntryForViewAngle> $angle";
 
         String anglesString;
         try {
@@ -183,7 +183,7 @@ public class Fedora {
                 "and\n" +
                 "$pid <fedora-model:hasModel> $cm\n" +
                 "and\n" +
-                "$cm <http://ecm.sourceforge.net/relations/0/2/#isEntryForViewAngle> $angle\n" +
+                "$cm <http://doms.statsbiblioteket.dk/types/view/default/0/1/##isEntryForViewAngle> $angle\n" +
                 "and\n" +
                 "$pid <fedora-view:lastModifiedDate> $lastModified\n" +
                 "order by $lastModified";
