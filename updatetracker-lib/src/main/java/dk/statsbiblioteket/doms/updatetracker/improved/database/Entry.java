@@ -4,6 +4,7 @@ import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.NaturalId;
 
 import javax.persistence.*;
+import java.sql.Timestamp;
 import java.util.Date;
 
 /**
@@ -29,13 +30,13 @@ public class Entry {
     private String state;
 
     /** The date the object got to this configuration*/
-    private Date dateForChange;
+    private Timestamp dateForChange;
 
 
     public Entry() {
     }
 
-    public Entry(String entryPid, String viewAngle, String state, Date dateForChange) {
+    public Entry(String entryPid, String viewAngle, String state, Timestamp dateForChange) {
         this.entryPid = entryPid;
         this.viewAngle = viewAngle;
         this.state = state;
@@ -77,12 +78,11 @@ public class Entry {
         this.state = state;
     }
 
-    @Temporal(TemporalType.TIMESTAMP)
-    public Date getDateForChange() {
+    public Timestamp getDateForChange() {
         return dateForChange;
     }
 
-    public void setDateForChange(Date dateForChange) {
+    public void setDateForChange(Timestamp dateForChange) {
         this.dateForChange = dateForChange;
     }
 

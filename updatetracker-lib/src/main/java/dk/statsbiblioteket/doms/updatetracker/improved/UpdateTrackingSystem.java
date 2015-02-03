@@ -1,6 +1,6 @@
 package dk.statsbiblioteket.doms.updatetracker.improved;
 
-import dk.statsbiblioteket.doms.updatetracker.improved.database.DomsUpdateTrackerUpdateTrackerPersistentStoreImpl;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStoreImpl;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStore;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedoraJms.FedoraMessageListener;
@@ -55,7 +55,7 @@ public class UpdateTrackingSystem {
         fedora = new Fedora(creds,fedoraLocation);
 
         //Start up the database
-        store = new DomsUpdateTrackerUpdateTrackerPersistentStoreImpl(fedora);
+        store = new UpdateTrackerPersistentStoreImpl(fedora);
         try {
             store.setUp();
         } catch (Exception e) {

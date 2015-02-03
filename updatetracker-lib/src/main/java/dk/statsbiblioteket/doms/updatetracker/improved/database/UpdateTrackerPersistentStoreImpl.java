@@ -9,6 +9,7 @@ import org.hibernate.criterion.NaturalIdentifier;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 
+import java.sql.Timestamp;
 import java.util.*;
 
 /**
@@ -18,7 +19,7 @@ import java.util.*;
  * Time: 2:16 PM
  * To change this template use File | Settings | File Templates.
  */
-public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistentStore {
+public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistentStore {
 
     public static final String OBJECT_PID = "objectPid";
     public static final String STATE_DELETED = "D";
@@ -32,7 +33,7 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
 
     Fedora fedora;
 
-    public DomsUpdateTrackerUpdateTrackerPersistentStoreImpl(Fedora fedora) {
+    public UpdateTrackerPersistentStoreImpl(Fedora fedora) {
         this.fedora = fedora;
     }
 
@@ -177,7 +178,7 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
 
         //There might be no Entry, but if we are here, we know that an entry should exist, so create it.
         if (results.size() == 0) {
-            session.save(new Entry(entryPid, viewAngle, state, date));
+            session.save(new Entry(entryPid, viewAngle, state, new Timestamp(date.getTime())));
         } else {
             for (Entry result : results) {
 
@@ -185,7 +186,7 @@ public class DomsUpdateTrackerUpdateTrackerPersistentStoreImpl implements Update
 
                 //Is this entry older than the current change?
                 if (result.getDateForChange().getTime() < date.getTime()) {
-                    result.setDateForChange(date);
+                    result.setDateForChange(new Timestamp(date.getTime()));
 
                     result.setEntryPid(entryPid);
                     result.setState(state);
