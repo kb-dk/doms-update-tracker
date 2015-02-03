@@ -52,7 +52,7 @@ public interface UpdateTrackerPersistentStore {
      * @param pid
      * @param date
      */
-    void objectRelationsChanged(String pid, Date date) throws UpdateTrackerStorageException;
+    void objectRelationsChanged(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException;
 
     /**
      * Find objects from the database. TODO collections viewangles restrict
