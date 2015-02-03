@@ -8,20 +8,21 @@
 
     <groupId>dk.statsbiblioteket.doms.updatetracker</groupId>
     <artifactId>updatetracker</artifactId>
-    <version>0.0.14-SNAPSHOT</version>
+    <version>1.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <scm>
-        <connection>scm:svn:https://doms.svn.sourceforge.net/svnroot/doms/updatetracker/trunk</connection>
-        <developerConnection>scm:svn:https://doms.svn.sourceforge.net/svnroot/doms/updatetracker/trunk</developerConnection>
-        <url>http://doms.svn.sourceforge.net/viewvc/doms/updatetracker/trunk</url>
+        <connection>scm:git:git://github.com/statsbiblioteket/doms-update-tracker.git</connection>
+        <developerConnection>scm:git:git@github.com:statsbiblioteket/doms-update-tracker.git</developerConnection>
+        <url>https://github.com/statsbiblioteket/doms-update-tracker</url>
     </scm>
 
 
     <modules>
-        <module>modules/updatetracker-service</module>
-        <module>modules/updatetracker-impl</module>
-        <module>modules/updatetracker-interface</module>
+        <module>updatetracker-interface</module>
+        <module>updatetracker-service</module>
+        <module>updatetracker-lib-sparql</module>
+        <module>updatetracker-lib</module>
     </modules>
 
     <build>
@@ -45,7 +46,7 @@
             <dependency>
                 <groupId>dk.statsbiblioteket.doms.domsutil</groupId>
                 <artifactId>domsutil-bundle</artifactId>
-                <version>0.0.20</version>
+                <version>1.0</version>
                 <type>pom</type>
             </dependency>
             <dependency>
@@ -59,16 +60,19 @@
                 <version>2.1.7</version>
             </dependency>
             <dependency>
+                <groupId>log4j</groupId>
+                <artifactId>log4j</artifactId>
+                <version>1.2.16</version>
+            </dependency>
+            <dependency>
                 <groupId>com.sun.jersey</groupId>
                 <artifactId>jersey-client</artifactId>
                 <version>1.18.1</version>
             </dependency>
             <dependency>
-                <groupId>net.sourceforge.saxon</groupId>
-                <artifactId>saxon</artifactId>
-                <version>9.1.0.8</version>
-                <classifier>dom</classifier>
-                <scope>runtime</scope>
+                <groupId>net.sf.saxon</groupId>
+                <artifactId>Saxon-HE</artifactId>
+                <version>9.5.1-6</version>
             </dependency>
             <dependency>
                 <groupId>javax.servlet</groupId>
@@ -110,28 +114,16 @@
               <groupId>javassist</groupId>
               <artifactId>javassist</artifactId>
               <version>3.12.1.GA</version>
+            </dependency>
 
-          </dependency>
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>4.11</version>
+                <scope>test</scope>
+            </dependency>
 
 
         </dependencies>
     </dependencyManagement>
-
-<!--
-    <repositories>
-        <repository>
-            <id>jboss-maven2-release-repository</id>
-            <name>jboss releases</name>
-            <releases><enabled>true</enabled></releases>
-            <snapshots><enabled>true</enabled></snapshots>
-            <url>https://repository.jboss.org/nexus/content/repositories/releases/</url>
-        </repository>
-        <repository>
-            <id>nexus</id>
-            <name>nexus</name>
-            <url>https://sbforge.org/nexus/content/groups/public</url>
-        </repository>
-
-    </repositories>
--->
 </project>
