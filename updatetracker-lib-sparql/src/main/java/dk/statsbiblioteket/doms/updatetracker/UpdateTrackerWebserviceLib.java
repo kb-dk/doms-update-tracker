@@ -249,9 +249,4 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
             throw new MethodFailedException("Did not find any elements in the collection", "No elements in the collection");
         }
     }
-
-    @Override
-    public void regenerateFromDOMS() throws InvalidCredentialsException, MethodFailedException {
-        // No action necessary
-    }
 }
