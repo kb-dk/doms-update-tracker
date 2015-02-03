@@ -138,28 +138,4 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
             return entries.get(0).getDateForChange().getTime();
         }
     }
-
-    @Override
-    public void regenerateFromDOMS() throws MethodFailedException {
-
-        try {
-            UpdateTrackingSystem.regenerateFromDOMS();
-        } catch (UpdateTrackerStorageException e) {
-            throw new MethodFailedException("Failed to update the persistent storage","",e);
-        } catch (FedoraFailedException e) {
-            throw new MethodFailedException("Failed to query fedora","",e);
-        }
-    }
-
-    private Credentials getCredentials() {
-        HttpServletRequest request = (HttpServletRequest) context
-                .getMessageContext()
-                .get(MessageContext.SERVLET_REQUEST);
-        Credentials creds = (Credentials) request.getAttribute("Credentials");
-        if (creds == null) {
-            creds = new Credentials("", "");
-        }
-        return creds;
-    }
-
 }

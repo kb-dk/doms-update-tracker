@@ -21,7 +21,7 @@ public class FedoraMockup extends Fedora{
     Map<String,Set<String>> bundles = new HashMap<String,Set<String>>();
 
     public FedoraMockup(Credentials creds, String fedoraLocation, String ecmLocation) throws MalformedURLException {
-        super(creds,"http://something.dk","http://something.dk");
+        super(creds,"http://something.dk");
     }
 
     protected void addObject(String pid){

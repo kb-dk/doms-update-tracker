@@ -2,18 +2,18 @@ package dk.statsbiblioteket.doms.updatetracker.improved;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.database.DomsUpdateTrackerUpdateTrackerPersistentStoreImpl;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStore;
-import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerStorageException;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.ObjectInfo;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedoraJms.FedoraMessageListener;
 import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
 import dk.statsbiblioteket.doms.webservices.configuration.ConfigCollection;
 import org.apache.activemq.ActiveMQConnectionFactory;
 
-import javax.jms.*;
+import javax.jms.Connection;
+import javax.jms.Destination;
+import javax.jms.JMSException;
+import javax.jms.MessageConsumer;
+import javax.jms.Session;
 import java.net.MalformedURLException;
-import java.util.List;
 
 /**
  * This is the system that starts the persistent store and the jms listener and ties them together
@@ -43,9 +43,6 @@ public class UpdateTrackingSystem {
                 "dk.statsbiblioteket.doms.updatetracker.fedora.location", "http://localhost7880/fedora");
 
 
-        String ecmLocation = ConfigCollection.getProperties().getProperty(
-                "dk.statsbiblioteket.doms.updatetracker.ecm.location", "http://localhost:7880/ecm-service");
-
         String fedoraUser = ConfigCollection.getProperties().getProperty(
                 "dk.statsbiblioteket.doms.updatetracker.fedora.user", "fedoraReadOnlyAdmin");
 
@@ -55,7 +52,7 @@ public class UpdateTrackingSystem {
         Credentials creds = new Credentials(fedoraUser, fedoraPass);
 
         //Start up the fedora connection
-        fedora = new Fedora(creds,fedoraLocation,ecmLocation);
+        fedora = new Fedora(creds,fedoraLocation);
 
         //Start up the database
         store = new DomsUpdateTrackerUpdateTrackerPersistentStoreImpl(fedora);
@@ -77,8 +74,8 @@ public class UpdateTrackingSystem {
     }
 
     private static MessageConsumer initialiseJMS(String jmsurl, String jmssubject, String fedoraUser, String fedoraPass) throws JMSException {
-        Connection connection = null;
-        Destination destination = null;
+        Connection connection;
+        Destination destination;
 
         // Create the connection.
         ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(fedoraUser, fedoraPass, jmsurl);
@@ -92,24 +89,7 @@ public class UpdateTrackingSystem {
         destination = session.createTopic(jmssubject);
 
         // Create the Consumer
-        MessageConsumer consumer = session.createConsumer(destination);
-        return consumer;
+        return session.createConsumer(destination);
 
-    }
-
-    public static void regenerateFromDOMS() throws UpdateTrackerStorageException, FedoraFailedException {
-
-        //Clear the content
-        store.clear();
-
-        List<ObjectInfo> entryObjects = fedora.getAllEntryObjects();
-        for (ObjectInfo entryObject : entryObjects) {
-            store.objectCreated(entryObject.getObjectPid(),entryObject.getLastModified());
-            if (entryObject.getState().equals("Active")){
-                store.objectPublished(entryObject.getObjectPid(),entryObject.getLastModified());
-            } else if (entryObject.getState().equals("Deleted")){
-                store.objectDeleted(entryObject.getObjectPid(),entryObject.getLastModified());
-            }
-        }
     }
 }

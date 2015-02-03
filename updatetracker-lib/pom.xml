@@ -120,6 +120,11 @@
             <artifactId>${project.parent.artifactId}-interface</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>dk.statsbiblioteket.doms.central</groupId>
+            <artifactId>ecmViews</artifactId>
+            <version>1.8-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 
 </project>
