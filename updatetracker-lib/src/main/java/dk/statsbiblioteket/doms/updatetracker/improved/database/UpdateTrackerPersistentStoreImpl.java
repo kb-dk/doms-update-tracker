@@ -56,7 +56,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     @Override
     public void objectCreated(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException {
         //Modify the persistent storage, changing the entry for the Inprogress Entry
-        objectModified(pid, date, STATE_INPROGRESS);
+        modifyState(pid, date, STATE_INPROGRESS);//TODO: Is it okay that the state is always INPROGRESS
         objectRelationsChanged(pid, date);
     }
 
@@ -69,7 +69,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     @Override
     public void objectDeleted(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException {
         //Modify the persistent storage, changing the entry for the Deleted Entry
-        objectModified(pid, date, STATE_DELETED);
+        modifyState(pid, date, STATE_DELETED);
     }
 
     /**
@@ -81,7 +81,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     @Override
     public void objectPublished(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException {
         //Modify the persistent storage, changing the entry for the Deleted Entry
-        objectModified(pid, date, STATE_PUBLISHED);
+        modifyState(pid, date, STATE_PUBLISHED);
     }
 
     /**
@@ -92,9 +92,59 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      */
     @Override
     public void objectChanged(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException {
-        objectModified(pid, date, STATE_INPROGRESS);
+        modifyState(pid, date, STATE_INPROGRESS);//TODO Is this correct?
     }
 
+
+    /**
+     * The object's relations changed. This can cause a recalculation of the viewStructure.
+     *
+     * @param pid  the pid of the object that changed
+     * @param date the date of the change
+     */
+    public void objectRelationsChanged(String pid, Date date)
+            throws UpdateTrackerStorageException, FedoraFailedException {
+        recalculateView(pid, date);
+    }
+
+    @Override
+    public List<Entry> lookup(Date since, String viewAngle, int offset, int limit, String state, boolean newestFirst) throws UpdateTrackerStorageException {
+        Session session = sessionFactory.getCurrentSession();
+        Transaction transaction = session.beginTransaction();
+        try {
+
+            Criteria thing = session.createCriteria(Entry.class)
+                    .add(Restrictions.ge(DATE_FOR_CHANGE, since))
+                    .add(Restrictions.naturalId().set(VIEW_ANGLE, viewAngle))
+                    .setFirstResult(offset)
+                    .setMaxResults(limit);
+
+            if (newestFirst) {
+                thing = thing.addOrder(Order.desc(DATE_FOR_CHANGE));
+            } else {
+                thing = thing.addOrder(Order.asc(DATE_FOR_CHANGE));
+            }
+
+            if (state != null && !state.trim().isEmpty()) {
+                thing = thing.add(Restrictions.naturalId().set(STATE, state));
+            }
+            List<Entry> results = listAndCast(thing);
+
+
+            List<Entry> entries = new ArrayList<Entry>(results.size());
+            for (Entry result1 : results) {
+                entries.add(result1);
+            }
+
+            transaction.commit();
+            return entries;
+
+
+        } catch (HibernateException e) {
+            transaction.rollback();
+            throw new UpdateTrackerStorageException("Failed to query for", e);
+        }
+    }
 
     /**
      * Modify the persistent storage regarding a change.
@@ -103,39 +153,30 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      * @param date  the date of the change
      * @param state the state of the entries that should be updated
      */
-    private void objectModified(String pid, Date date, String state) throws UpdateTrackerStorageException, FedoraFailedException {
+    private void modifyState(String pid, Date date, String state) throws UpdateTrackerStorageException, FedoraFailedException {
         Session session = sessionFactory.getCurrentSession();
         Transaction transaction = session.beginTransaction();
 
         try {
             //Find the DomsObject rows that regard this object.
             //There will be one per entry/viewAngle combination
-            final Criteria criteria = session.createCriteria(DomsObject.class)
+            Criteria criteria = session.createCriteria(DomsObject.class)
                                              .add(Restrictions.naturalId().set(OBJECT_PID, pid));
             List<DomsObject> results = listAndCast(criteria);
 
-            //Find all Entries that include this object
-            for (DomsObject result : results) {
-                if (!result.getEntryPid().equals(pid)) {
-                    //Mark them as updated
-                    updateEntry(session,
-                                       result.getEntryPid(),
-                                       state,
-                                       result.getViewAngle(),
-                                       date);
+            if (results.size() == 0) {
+                // Find view Info for this object
+                List<ViewInfo> viewInfoList = fedora.getViewInfo(pid, date);
+                for (ViewInfo viewInfo : viewInfoList) {
+                    //If it is an entry object, set it in the ENTRIES table
+                    if (viewInfo.isEntry()) {
+                        updateEntry(session, pid, state, viewInfo.getViewAngle(), date);//TODO: Collection, CM
+                        updateDomsObjects(session, pid, pid, viewInfo.getViewAngle());
+                    }
                 }
             }
+            updateTimestamps(pid, date, state, session);
 
-
-            // Find view Info for this object
-            List<ViewInfo> viewInfoList = fedora.getViewInfo(pid, date);
-            for (ViewInfo viewInfo : viewInfoList) {
-                //If it is an entry object, set it in the ENTRIES table
-                if (viewInfo.isEntry()) {
-                    updateEntry(session, pid, state, viewInfo.getViewAngle(), date);
-                    updateDomsObjects(session, pid, pid, viewInfo.getViewAngle());
-                }
-            }
             transaction.commit();
 
         } catch (HibernateException e) {
@@ -149,10 +190,68 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
 
     }
 
-    @SuppressWarnings("unchecked")
-    public static <T> List<T>  listAndCast(Criteria criteria) {
-        return criteria.list();
+    private void updateTimestamps(String pid, Date date, String state, Session session) {
+        Criteria criteria = session.createCriteria(DomsObject.class)
+                                                 .add(Restrictions.naturalId().set(OBJECT_PID, pid));
+        List<DomsObject> results = listAndCast(criteria);
+        for (DomsObject result : results) {
+            updateEntry(session,
+                               result.getEntryPid(),
+                               state,
+                               result.getViewAngle(),
+                               date);
+        }
     }
+
+
+    private void recalculateView(String pid, Date date) throws FedoraFailedException, UpdateTrackerStorageException {
+        //TODO CM and Collection
+
+        Session session = sessionFactory.getCurrentSession();
+        Transaction transaction = session.beginTransaction();
+
+        //This can change the structure of the views and we must therefore recaculate the views
+
+        //if a current entry object use this object, we will need to recalculate the view of that object
+
+        //This method will only be called on objects that already exist. Objects cannot change type once created.
+        //ObjectModified() creates an Entry row, if the object is an entry object. As such, there will always be
+        // the correct Entry entries when this method is called, and these should just be recalculated
+
+        List<DomsObject> results = session.createCriteria(DomsObject.class)
+                                          .add(Restrictions
+                                                       .naturalId()
+                                                       .set(OBJECT_PID, pid)
+                                              )
+                                          .list();
+
+        //we now have a list of all the entries that include this object.
+
+        for (DomsObject result : results) {
+
+            //get the ViewBundle from fedora
+            ViewBundle bundle = fedora.calcViewBundle(result.getEntryPid(), result.getViewAngle(), date);
+
+
+            //First, remove all the objects in this bundle from the table
+            removeNotListedFromDomsObjects(session, bundle.getContained(), result.getEntryPid(), result.getViewAngle());
+
+            //Add all the objects from the bundle to the objects Table.
+            for (String objectPid : bundle.getContained()) {
+                updateDomsObjects(session, objectPid, bundle.getEntry(), bundle.getViewAngle());
+            }
+
+            updateEntry(session, bundle.getEntry(), STATE_INPROGRESS, bundle.getViewAngle(), date);
+
+        }
+        try {
+            transaction.commit();
+        } catch (HibernateException e) {
+            transaction.rollback();
+            throw new UpdateTrackerStorageException("Failed to commit transaction for pid='" + pid + "' and date='" + date.toString() + "'", e);
+        }
+    }
+
 
     /**
      * Update the Entries table regarding a change
@@ -165,7 +264,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      */
     private void updateEntry(Session session, String entryPid, String state, String viewAngle, Date date) {
         NaturalIdentifier restrictions = Restrictions
-                                                 .naturalId();
+                .naturalId();
 
 
         //Set all the parameters that have been included as restrictions
@@ -198,7 +297,6 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         }
     }
 
-
     /**
      * update the Objects table with information about this object
      *
@@ -209,10 +307,10 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      */
     private void updateDomsObjects(Session session, String objectPid, String entryPid, String viewAngle) {
         List results = session.createCriteria(DomsObject.class).add(Restrictions.naturalId()
-                                                                                .set(OBJECT_PID, objectPid)
-                                                                                .set(ENTRY_PID, entryPid)
-                                                                                .set(VIEW_ANGLE, viewAngle))
-                              .list();
+                                                                            .set(OBJECT_PID, objectPid)
+                                                                            .set(ENTRY_PID, entryPid)
+                                                                            .set(VIEW_ANGLE, viewAngle))
+                .list();
         //TODO: can we avoid the query and just save each time?
         if (results.size() == 0) {
             session.save(new DomsObject(objectPid, entryPid, viewAngle));
@@ -221,26 +319,12 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     }
 
 
-    private void removeFromEntries(Session session, String entryPid, String state, String viewAngle) {
-        List<Entry> results = listAndCast(session.createCriteria(Entry.class)
-                                                 .add(Restrictions
-                                                              .naturalId()
-                                                              .set(ENTRY_PID, entryPid)
-                                                              .set(STATE, state)
-                                                              .set(VIEW_ANGLE, viewAngle)));
-        for (Entry result : results) {
-            session.delete(result);
-
-        }
-
-    }
-
     private void removeNotListedFromDomsObjects(Session session, List<String> objectPid, String entryPid, String viewAngle) {
 
         List<DomsObject> results;
         NaturalIdentifier query = Restrictions.naturalId()
-                                              .set(ENTRY_PID, entryPid)
-                                              .set(VIEW_ANGLE, viewAngle);
+                .set(ENTRY_PID, entryPid)
+                .set(VIEW_ANGLE, viewAngle);
 
         results = listAndCast(session.createCriteria(DomsObject.class).add(query));
 
@@ -253,105 +337,26 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
 
     }
 
-
-    /**
-     * The object's relations changed. This can cause a recalculation of the viewStructure.
-     *
-     * @param pid  the pid of the object that changed
-     * @param date the date of the change
-     */
-    public void objectRelationsChanged(String pid, Date date)
-            throws UpdateTrackerStorageException, FedoraFailedException {
-        Session session = sessionFactory.getCurrentSession();
-        Transaction transaction = session.beginTransaction();
-
-
-        //This can change the structure of the views and we must therefore recaculate the views
-
-        //if a current entry object use this object, we will need to recalculate the view of that object
-
-        //This method will only be called on objects that already exist. Objects cannot change type once created.
-        //ObjectModified() creates an Entry row, if the object is an entry object. As such, there will always be
-        // the correct Entry entries when this method is called, and these should just be recalculated
-
-        List<DomsObject> results = session.createCriteria(DomsObject.class)
-                                          .add(Restrictions
-                                                       .naturalId()
-                                                       .set(OBJECT_PID, pid)
-                                              )
-                                          .list();
-
-        //we now have a list of all the entries that include this object.
-
-
-        for (DomsObject result : results) {
-
-            //get the ViewBundle from fedora
-            ViewBundle bundle = fedora.calcViewBundle(result.getEntryPid(), result.getViewAngle(), date);
-
-
-            //First, remove all the objects in this bundle from the table
-            removeNotListedFromDomsObjects(session, bundle.getContained(), result.getEntryPid(), result.getViewAngle());
-
-            //Add all the objects from the bundle to the objects Table.
-            for (String objectPid : bundle.getContained()) {
-                updateDomsObjects(session, objectPid, bundle.getEntry(), bundle.getViewAngle());
-            }
-
-            updateEntry(session, bundle.getEntry(), STATE_INPROGRESS, bundle.getViewAngle(), date);
+    private void removeFromEntries(Session session, String entryPid, String state, String viewAngle) {
+        List<Entry> results = listAndCast(session.createCriteria(Entry.class)
+                                                  .add(Restrictions.naturalId().set(ENTRY_PID, entryPid)
+                                                               .set(STATE, state).set(VIEW_ANGLE, viewAngle)));
+        for (Entry result : results) {
+            session.delete(result);
 
         }
-        try {
-            transaction.commit();
-        } catch (HibernateException e) {
-            transaction.rollback();
-            throw new UpdateTrackerStorageException("Failed to commit transaction for pid='" + pid + "' and date='" + date.toString() + "'", e);
-        }
+
     }
 
-
-    @Override
-    public List<Entry> lookup(Date since, String viewAngle, int offset, int limit, String state, boolean newestFirst) throws UpdateTrackerStorageException {
-        Session session = sessionFactory.getCurrentSession();
-        Transaction transaction = session.beginTransaction();
-        try {
-
-            Criteria thing = session.createCriteria(Entry.class)
-                                    .add(Restrictions.ge(DATE_FOR_CHANGE, since))
-                                    .add(Restrictions.naturalId().set(VIEW_ANGLE, viewAngle))
-                                    .setFirstResult(offset)
-                                    .setMaxResults(limit);
-
-            if (newestFirst) {
-                thing = thing.addOrder(Order.desc(DATE_FOR_CHANGE));
-            } else {
-                thing = thing.addOrder(Order.asc(DATE_FOR_CHANGE));
-            }
-
-            if (state != null && !state.trim().isEmpty()) {
-                thing = thing.add(Restrictions.naturalId().set(STATE, state));
-            }
-            List<Entry> results = listAndCast(thing);
-
-
-            List<Entry> entries = new ArrayList<Entry>(results.size());
-            for (Entry result1 : results) {
-                entries.add(result1);
-            }
-
-            transaction.commit();
-            return entries;
-
-
-        } catch (HibernateException e) {
-            transaction.rollback();
-            throw new UpdateTrackerStorageException("Failed to query for", e);
-        }
+    @SuppressWarnings("unchecked")
+    private static <T> List<T>  listAndCast(Criteria criteria) {
+        return criteria.list();
     }
 
 
     /**
      * Clear the entire database. Dangerous operation
+     * TODO Remove this
      */
     public void clear() {
         Session session = sessionFactory.getCurrentSession();
@@ -374,7 +379,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
 
 
     /**
-     * Clear the entire database. Dangerous operation
+     * Print the entire database.
      */
     public void dumpToStdOut() {
         Session session = sessionFactory.getCurrentSession();
