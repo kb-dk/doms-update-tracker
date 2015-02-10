@@ -26,7 +26,7 @@ public class UpdateTrackerPersistentStoreTest {
     FedoraMockup fcmock;
 
     public UpdateTrackerPersistentStoreTest() throws MalformedURLException {
-        fcmock = new FedoraMockup(new Credentials("user", "pass"),null,null);
+        fcmock = new FedoraMockup(new Credentials("user", "pass"), null, null);
     }
 
 
@@ -39,6 +39,7 @@ public class UpdateTrackerPersistentStoreTest {
 
     @After
     public void tearDown() throws Exception {
+        db.close();
         db.clear();
     }
 
@@ -47,12 +48,11 @@ public class UpdateTrackerPersistentStoreTest {
         Date now = new Date();
         fcmock.addEntry("doms:test1");
         db.objectCreated("doms:test1", now);
-        List<Entry> list = db.lookup(now,"SummaVisible",0,100,null,false);
-        assertEquals("To many objects, some should have been deleted",1, list.size());
+        List<Entry> list = db.lookup(now, "SummaVisible", 0, 100, null, false);
+        assertEquals("To many objects, some should have been deleted", 1, list.size());
 
-        list = db.lookup(new Date(),"SummaVisible",0,100,null,false);
-        assertEquals("To many objects, some should have been deleted",0, list.size());
-
+        list = db.lookup(new Date(), "SummaVisible", 0, 100, null, false);
+        assertEquals("To many objects, some should have been deleted", 0, list.size());
     }
 
     @Test
@@ -61,70 +61,73 @@ public class UpdateTrackerPersistentStoreTest {
         Date old = new Date();
         fcmock.addEntry("doms:test1");
         db.objectCreated("doms:test1", old);
-        Date now = new Date();
-        db.objectDeleted("doms:test1",now);
 
 
-
-        List<Entry> list = db.lookup(old,"SummaVisible",0,100,null,false);
-        assertEquals("To many objects", 2, list.size());
-        list = db.lookup(now,"SummaVisible",0,100,null,false);
+        List<Entry> list = db.lookup(old, "SummaVisible", 0, 100, null, false);
         assertEquals("To many objects", 1, list.size());
 
-        list = db.lookup(new Date(),"SummaVisible",0,100,null,false);
-        assertEquals("To many objects", 0, list.size());
+        Date now = new Date();
+        db.objectDeleted("doms:test1", now);
 
+        list = db.lookup(now, "SummaVisible", 0, 100, null, false);
+        assertEquals("To many objects", 1, list.size());
+
+        list = db.lookup(new Date(now.getTime() + 1), "SummaVisible", 0, 100, null, false);
+        assertEquals("To many objects", 0, list.size());
     }
 
     @Test
     public void testObjectRelationsChanged() throws Exception {
         Date frozen = new Date(0);
         fcmock.addEntry("doms:test1");
-        db.objectCreated("doms:test1",frozen);
-        db.objectCreated("doms:test2",frozen);
-        fcmock.addEntry("doms:test1","doms:test2");
+        db.objectCreated("doms:test1", frozen);
+        db.objectCreated("doms:test2", frozen);
+        fcmock.addEntry("doms:test1", "doms:test2");
 
-        List<Entry> list = db.lookup(frozen,"SummaVisible",0,100,null,false);
-        assertEquals(1,list.size());
-        assertEquals(list.get(0).getDateForChange().getTime(),frozen.getTime());
+        List<Entry> list = db.lookup(frozen, "SummaVisible", 0, 100, null, false);
+        assertEquals(1, list.size());
+        assertEquals(list.get(0).getDateForChange().getTime(), frozen.getTime());
 
         Date flow = new Date();
-        db.objectRelationsChanged("doms:test1",flow);
+        db.objectRelationsChanged("doms:test1", flow);
 
-        list = db.lookup(frozen,"SummaVisible",0,100,null,false);
-        assertEquals(1,list.size());
-        assertEquals(list.get(0).getDateForChange().getTime(),flow.getTime());
+        list = db.lookup(frozen, "SummaVisible", 0, 100, null, false);
+        assertEquals(1, list.size());
+        assertEquals(flow.getTime(), list.get(0).getDateForChange().getTime());
 
+        Thread.sleep(1000);
         Date flow2 = new Date();
 
-        db.objectChanged("doms:test2",flow2);
+        db.datastreamChanged("doms:test2", flow2, null);
 
-        list = db.lookup(frozen,"SummaVisible",0,100,null,false);
-        assertEquals(1,list.size());
-        assertEquals(list.get(0).getDateForChange().getTime(),flow2.getTime());
+        list = db.lookup(frozen, "SummaVisible", 0, 100, null, false);
+        assertEquals(1, list.size());
+        assertEquals(flow2.getTime(), list.get(0).getDateForChange().getTime());
 
         Date flow3 = new Date();
 
-        db.objectPublished("doms:test1",flow3);
-        list = db.lookup(frozen,"SummaVisible",0,100,null,false);
-                assertEquals(2,list.size());
-                assertEquals(list.get(0).getDateForChange().getTime(),flow2.getTime());
-        assertEquals(list.get(1).getDateForChange().getTime(),flow3.getTime());
-
+        db.objectStateChanged("doms:test1", flow3, "A");
+        list = db.lookup(frozen, "SummaVisible", 0, 100, null, false);
+        assertEquals(2, list.size());
+        assertEquals(list.get(0).getDateForChange().getTime(), flow3.getTime());
+        assertEquals(list.get(1).getDateForChange().getTime(), flow3.getTime());
     }
 
     @Test
     public void testObjectPublished() throws Exception {
-        Date frozen = new Date();
+        Date frozen = new Date(0);
         fcmock.addEntry("doms:test1");
-        db.objectCreated("doms:test1",frozen);
-        Thread.sleep(1000);
-        db.objectPublished("doms:test1",new Date());
-        List<Entry> list = db.lookup(frozen,"SummaVisible",0,100,null,false);
-        assertEquals("Wrong number of objects",list.size(),2);
-        assertEquals(list.get(0).getDateForChange().getTime(),frozen.getTime());
-        assertEquals(list.get(0).getState(),"I");
-        assertEquals(list.get(1).getState(),"A");
-    }
+        db.objectCreated("doms:test1", frozen);
 
+        List<Entry> list = db.lookup(frozen, "SummaVisible", 0, 100, "A", true);
+        assertEquals("Wrong number of objects", list.size(), 0);
+
+        Thread.sleep(1000);
+        final Date published = new Date();
+        db.objectStateChanged("doms:test1", published, "A");
+        list = db.lookup(frozen, "SummaVisible", 0, 100, "A", true);
+        assertEquals("Wrong number of objects", list.size(), 1);
+        assertEquals(published.getTime(), list.get(0).getDateForChange().getTime());
+        assertEquals(list.get(0).getState(), "A");
+    }
 }

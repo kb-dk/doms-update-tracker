@@ -1,6 +1,7 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.ViewInfo;
 import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
 
@@ -56,9 +57,19 @@ public class FedoraMockup extends Fedora{
     public ViewBundle calcViewBundle(String entryPid, String viewAngle, Date date) {
         if (bundles.containsKey(entryPid)){
             ViewBundle bundle = new ViewBundle(entryPid,viewAngle);
-            bundle.setContained(new ArrayList<String>(bundles.get(entryPid)));
+            bundle.setContained(new ArrayList<>(bundles.get(entryPid)));
             return bundle;
         }
         return null;
+    }
+
+    @Override
+    public Set<String> getCollections(String pid, Date date) throws FedoraFailedException {
+        return new HashSet<>(Arrays.asList("doms:Root_Collection"));
+    }
+
+    @Override
+    public List<ViewInfo> getContentModelViewInfo(String pid, Date date) throws FedoraFailedException {
+        return super.getContentModelViewInfo(pid, date);
     }
 }

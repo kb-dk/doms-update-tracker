@@ -84,8 +84,5 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
         return updateTrackerWebservice.getLatestModificationTime(collectionPid, viewAngle, state);
     }
 
-    @Override
-    public void regenerateFromDOMS() throws InvalidCredentialsException, MethodFailedException {
-        updateTrackerWebservice.regenerateFromDOMS();
-    }
+
 }

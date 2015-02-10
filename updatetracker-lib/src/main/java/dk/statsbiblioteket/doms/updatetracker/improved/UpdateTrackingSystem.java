@@ -26,7 +26,7 @@ public class UpdateTrackingSystem {
     private static MessageConsumer consumer;
 
 
-    public static synchronized void startup() throws MalformedURLException, JMSException {
+    public static synchronized void startup() throws JMSException, MalformedURLException {
 
         if (store != null && fedora != null && consumer != null){
             return;
@@ -60,6 +60,8 @@ public class UpdateTrackingSystem {
             store.setUp();
         } catch (Exception e) {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+        } finally {
+            store.close();
         }
 
         //initialise the jms connection to Fedora

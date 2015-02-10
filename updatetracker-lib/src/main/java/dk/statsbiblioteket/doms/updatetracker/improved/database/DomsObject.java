@@ -4,33 +4,41 @@ import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.NaturalId;
 
 import javax.persistence.*;
+import java.io.Serializable;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * This is the OBJECTS table. This table lists all the objects in DOMS.
  *
  */
 @Entity
+
 @Table(name = "OBJECTS")
-public class DomsObject {
-    private long id;
+public class DomsObject implements Serializable {
 
     /**
      * The pid of the Object
      */
-    @NaturalId
-    private String objectPid;
+    @Id
+    @Column(name = "OBJECTPID")
+    String objectPid;
 
     /**
      * The pid of the entry object that reference this object
      */
-    @NaturalId
+    @Id
+    @Column(name = "ENTRYPID")
     private String entryPid;
 
     /**
      * The viewangle that includes this object
      */
-    @NaturalId
+    @Id
+    @Column(name = "VIEWANGLE")
     private String viewAngle;
+
+
 
     public DomsObject() {
     }
@@ -39,17 +47,6 @@ public class DomsObject {
         this.objectPid = objectPid;
         this.entryPid = entryPid;
         this.viewAngle = viewAngle;
-    }
-
-    @Id
-    @GeneratedValue(generator = "increment")
-    @GenericGenerator(name = "increment", strategy = "increment")
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
     }
 
     public String getObjectPid() {
@@ -111,7 +108,6 @@ public class DomsObject {
     @Override
     public String toString() {
         return "DomsObject{" +
-                "id=" + id +
                 ", objectPid='" + objectPid + '\'' +
                 ", entryPid='" + entryPid + '\'' +
                 ", viewAngle='" + viewAngle + '\'' +
