@@ -10,7 +10,7 @@ import java.util.List;
  * Before using it, be sure to call setup()
  * The methods represents events that can take place, except the lookup method
  */
-public interface UpdateTrackerPersistentStore {
+public interface UpdateTrackerPersistentStore extends AutoCloseable{
 
     void setUp() throws Exception;
 
@@ -20,6 +20,7 @@ public interface UpdateTrackerPersistentStore {
 
     /**
      * Invoke to register a new object, that has been created
+     *
      * @param pid
      * @param date
      */
@@ -27,38 +28,56 @@ public interface UpdateTrackerPersistentStore {
 
     /**
      * Object was changed to the deleted state. Mark any "Deleted" entries to reflect this
-     * @param pid the pid of the object
+     *
+     * @param pid  the pid of the object
      * @param date the date of the change
      */
     void objectDeleted(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException;
 
-    /**
-     * Object was changed to the published state. Mark any "published" entries to this
-     * @param pid
-     * @param date
-     */
-    void objectPublished(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException;
 
     /**
      * Object was changed, but remains in the inProgress state
+     *
      * @param pid
      * @param date
+     * @param dsid
      */
-    void objectChanged(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException;
+    void datastreamChanged(String pid, Date date, String dsid) throws
+                                                               UpdateTrackerStorageException,
+                                                               FedoraFailedException;
 
 
     /**
      * Objects have changes in the relations, so we will have to update the structure of the views
+     *
      * @param pid
      * @param date
      */
     void objectRelationsChanged(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException;
 
     /**
+     * The object have (potentially) changed state
+     * @param pid
+     * @param date
+     * @param newstate
+     * @throws UpdateTrackerStorageException
+     * @throws FedoraFailedException
+     */
+    void objectStateChanged(String pid, Date date, String newstate) throws
+                                                                    UpdateTrackerStorageException,
+                                                                    FedoraFailedException;
+
+
+    /**
      * Find objects from the database. TODO collections viewangles restrict
+     *
      * @param since
+     *
      * @return
      */
-    List<Entry> lookup(Date since, String viewAngle, int offset, int limit, String state,         boolean newestFirst) throws UpdateTrackerStorageException;
+    List<Entry> lookup(Date since, String viewAngle, int offset, int limit, String state, boolean newestFirst) throws
+                                                                                                               UpdateTrackerStorageException;
 
+    @Override
+    void close();
 }

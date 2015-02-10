@@ -1,11 +1,19 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
+import org.hibernate.annotations.ForeignKey;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.NaturalId;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 import javax.persistence.*;
+import java.io.Serializable;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * This is the ENTRIES table in the persistent storage. The ENTRIES table lists the entry objects/
@@ -14,27 +22,33 @@ import java.util.Date;
  */
 @Entity
 @Table(name = "ENTRIES")
-public class Entry {
-    private long id;
+public class Entry implements Serializable {
 
-    /**The pid of the object*/
-    @NaturalId
+    /** The pid of the object */
+    @Id
+    @Column(name = "ENTRYPID")
     private String entryPid;
 
-    /** The viewangle the object is an entry for*/
-    @NaturalId
+    /** The viewangle the object is an entry for */
+    @Id
+    @Column(name = "VIEWANGLE")
     private String viewAngle;
 
-    /** The state of the object*/
-    @NaturalId
+    /** The state of the object */
+    @Id
+    @Column(name = "STATE")
     private String state;
 
-    /** The date the object got to this configuration*/
+    /** The date the object got to this configuration */
     private Timestamp dateForChange;
-
 
     public Entry() {
     }
+
+    public Entry(String entryPid, String viewAngle, String state, Date dateForChange) {
+        this(entryPid, viewAngle, state, new Timestamp(dateForChange.getTime()));
+    }
+
 
     public Entry(String entryPid, String viewAngle, String state, Timestamp dateForChange) {
         this.entryPid = entryPid;
@@ -43,16 +57,6 @@ public class Entry {
         this.dateForChange = dateForChange;
     }
 
-    @Id
-    @GeneratedValue(generator="increment")
-    @GenericGenerator(name="increment", strategy = "increment")
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
 
     public String getEntryPid() {
         return entryPid;
@@ -84,6 +88,10 @@ public class Entry {
 
     public void setDateForChange(Timestamp dateForChange) {
         this.dateForChange = dateForChange;
+    }
+
+    public void setDateForChange(Date dateForChange) {
+        setDateForChange(new Timestamp(dateForChange.getTime()));
     }
 
     @Override
@@ -126,11 +134,12 @@ public class Entry {
     @Override
     public String toString() {
         return "Entry{" +
-                "id=" + id +
-                ", entryPid='" + entryPid + '\'' +
-                ", viewAngle='" + viewAngle + '\'' +
-                ", state='" + state + '\'' +
-                ", dateForChange=" + dateForChange +
-                '}';
+               ", entryPid='" + entryPid + '\'' +
+               ", viewAngle='" + viewAngle + '\'' +
+               ", state='" + state + '\'' +
+               ", dateForChange=" + dateForChange +
+               '}';
     }
+
+
 }

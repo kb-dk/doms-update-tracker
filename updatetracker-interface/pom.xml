@@ -18,9 +18,9 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
+                <groupId>org.jvnet.jax-ws-commons</groupId>
                 <artifactId>jaxws-maven-plugin</artifactId>
-                <version>1.12</version>
+                <version>2.3</version>
                 <executions>
                     <execution>
                         <goals>
@@ -29,7 +29,9 @@
                         <configuration>
                             <packageName>${project.groupId}.webservice</packageName>
                             <wsdlDirectory>src/main/resources/wsdl</wsdlDirectory>
-                            <verbose>true</verbose>
+                            <vmArgs>
+                                <vmArg>-Djavax.xml.accessExternalSchema=all</vmArg>
+                            </vmArgs>
                         </configuration>
                     </execution>
                 </executions>

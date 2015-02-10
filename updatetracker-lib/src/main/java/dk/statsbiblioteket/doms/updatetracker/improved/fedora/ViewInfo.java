@@ -17,30 +17,10 @@ public class ViewInfo {
 
     private String pid;
 
-    private List<String> relations;
-
-    private List<String> inverseRelations;
-
     public ViewInfo(String viewAngle, boolean entry, String pid) {
         this.viewAngle = viewAngle;
         this.entry = entry;
         this.pid = pid;
-    }
-
-    public List<String> getRelations() {
-        return relations;
-    }
-
-    public void setRelations(List<String> relations) {
-        this.relations = relations;
-    }
-
-    public List<String> getInverseRelations() {
-        return inverseRelations;
-    }
-
-    public void setInverseRelations(List<String> inverseRelations) {
-        this.inverseRelations = inverseRelations;
     }
 
     public ViewInfo(String viewAngle, String pid) {

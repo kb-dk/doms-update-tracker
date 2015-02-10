@@ -45,33 +45,17 @@ public class FedoraMessageListener implements MessageListener{
         try {
             String atomblub = message.getText();
             EntryType entry = JAXB.unmarshal(new StringReader(atomblub), EntryType.class);
-            List<Object> properties = entry.getAuthorOrCategoryOrContent();
-
-            String method = "";
-
-            for (Object property : properties) {
-                if (property instanceof JAXBElement) {
-                    JAXBElement jaxbElement = (JAXBElement) property;
-
-                    if (jaxbElement.getDeclaredType().isAssignableFrom(TextType.class)){//text types
-                        TextType text = (TextType) jaxbElement.getValue();
-                        String name = jaxbElement.getName().getLocalPart();
-                        if (name.equals("title")){
-                            method = text.getContent().toString().replaceAll("[\\[\\]]","");
-                        }
-                    }
-                }
-            }
+            String method = getFedoraMethod(entry);
 
             switch (method) {
                 case "ingest" :
-                    parseObjectCreated(entry);
+                    objectCreated(entry);
                     break;
                 case "modifyObject" :
-                    parseModifyObject(entry);
+                    objectModified(entry);
                     break;
                 case "purgeObject" :
-                    parseObjectDeleted(entry);
+                    objectDeleted(entry);
                     break;
                 case "addDatastream" :
                 case "modifyDatastreamByReference" :
@@ -79,11 +63,11 @@ public class FedoraMessageListener implements MessageListener{
                 case "purgeDatastream" :
                 case "setDatastreamState" :
                 case "setDatastreamVersionable" :
-                    parseDatastreamChanged(entry);
+                    datastreamModified(entry);
                     break;
                 case "addRelationship" :
                 case "purgeRelationship" :
-                    parseRelationshipsChanged(entry);
+                    relationsChanged(entry);
                     break;
                 case "getObjectXML" :
                 case "export" :
@@ -109,51 +93,99 @@ public class FedoraMessageListener implements MessageListener{
 
     }
 
-    private void parseObjectCreated(EntryType entry) throws UpdateTrackerStorageException, FedoraFailedException {
-        List<Object> properties = entry.getAuthorOrCategoryOrContent();
 
-        String pid = null;
-        Date date = null;
-        for (Object property : properties) {
-            if (property instanceof JAXBElement) {
-                JAXBElement jaxbElement = (JAXBElement) property;
-
-                if (jaxbElement.getDeclaredType().isAssignableFrom(ContentType.class)) {
-                    if (jaxbElement.getName().getLocalPart().equals("content")) {
-                        ContentType content = (ContentType) jaxbElement.getValue();
-                        pid = content.getContent().get(0).toString();
-                    }
-                }
-
-                if (jaxbElement.getDeclaredType().isAssignableFrom(DateTimeType.class)) {
-                    if (jaxbElement.getName().getLocalPart().equals("updated")) {
-                        DateTimeType datetime = (DateTimeType) jaxbElement.getValue();
-                        date = datetime.getValue().toGregorianCalendar().getTime();
-                    }
-                }
-
-            }
-        }
+    private void objectCreated(EntryType entry) throws UpdateTrackerStorageException, FedoraFailedException {
+        String pid = getPid(entry);
+        Date date = getDate(entry);
         store.objectCreated(pid, date);
 
     }
 
-    private void parseObjectDeleted(EntryType entry) throws UpdateTrackerStorageException, FedoraFailedException {
+    private void objectDeleted(EntryType entry) throws UpdateTrackerStorageException, FedoraFailedException {
+        String pid = getPid(entry);
+        Date date = getDate(entry);
+        store.objectDeleted(pid, date);
+    }
+
+    private void relationsChanged(EntryType entry) throws UpdateTrackerStorageException, FedoraFailedException {
+        String pid = getPid(entry);
+        Date date = getDate(entry);
+        store.objectRelationsChanged(pid, date);
+    }
+
+    private void objectModified(EntryType entry) throws UpdateTrackerStorageException, FedoraFailedException {
+
+        String pid = getPid(entry);
+        Date date = getDate(entry);
+        String newstate = null;
+        newstate = getNewState(entry);
+        if (newstate != null) {
+            if (newstate.equals("D")) {
+
+            } else if (newstate != null) {
+                store.objectStateChanged(pid, date, newstate);
+            }
+        }  else {
+
+        }
+    }
+
+
+    private void datastreamModified(EntryType entry) throws UpdateTrackerStorageException, FedoraFailedException {
+        String pid = getPid(entry);
+        Date date = getDate(entry);
+        String dsid = getDatastream(entry);
+        if (pid != null && date != null && dsid != null) {
+            store.datastreamChanged(pid, date, dsid);
+        }
+    }
+
+
+    private String getFedoraMethod(EntryType entry) {
         List<Object> properties = entry.getAuthorOrCategoryOrContent();
 
-        String pid = null;
-        Date date = null;
+        String method = "";
+
         for (Object property : properties) {
             if (property instanceof JAXBElement) {
                 JAXBElement jaxbElement = (JAXBElement) property;
 
+                if (jaxbElement.getDeclaredType().isAssignableFrom(TextType.class)) {//text types
+                    TextType text = (TextType) jaxbElement.getValue();
+                    String name = jaxbElement.getName().getLocalPart();
+                    if (name.equals("title")) {
+                        method = text.getContent().toString().replaceAll("[\\[\\]]", "");
+                    }
+                }
+            }
+        }
+        return method;
+    }
+
+
+    private String getPid(EntryType entry) {
+        List<Object> properties = entry.getAuthorOrCategoryOrContent();
+        String pid = null;
+        for (Object property : properties) {
+            if (property instanceof JAXBElement) {
+                JAXBElement jaxbElement = (JAXBElement) property;
                 if (jaxbElement.getDeclaredType().isAssignableFrom(ContentType.class)) {
                     if (jaxbElement.getName().getLocalPart().equals("content")) {
                         ContentType content = (ContentType) jaxbElement.getValue();
                         pid = content.getContent().get(0).toString();
                     }
                 }
+            }
+        }
+        return pid;
+    }
 
+    private Date getDate(EntryType entry) {
+        List<Object> properties = entry.getAuthorOrCategoryOrContent();
+        Date date  = null;
+        for (Object property : properties) {
+            if (property instanceof JAXBElement) {
+                JAXBElement jaxbElement = (JAXBElement) property;
                 if (jaxbElement.getDeclaredType().isAssignableFrom(DateTimeType.class)) {
                     if (jaxbElement.getName().getLocalPart().equals("updated")) {
                         DateTimeType datetime = (DateTimeType) jaxbElement.getValue();
@@ -163,130 +195,47 @@ public class FedoraMessageListener implements MessageListener{
 
             }
         }
-        store.objectDeleted(pid, date);
-
+        return date;
     }
 
-    private void parseDatastreamChanged(EntryType entry) throws UpdateTrackerStorageException, FedoraFailedException {
+
+
+    private String getDatastream(EntryType entry) {
         List<Object> properties = entry.getAuthorOrCategoryOrContent();
-
-
-
-        String pid = null;
         String dsid = null;
-        Date date = null;
         for (Object property : properties) {
             if (property instanceof JAXBElement) {
                 JAXBElement jaxbElement = (JAXBElement) property;
-
-
-                if (jaxbElement.getDeclaredType().isAssignableFrom(DateTimeType.class)) {
-                    if (jaxbElement.getName().getLocalPart().equals("updated")) {
-                        DateTimeType datetime = (DateTimeType) jaxbElement.getValue();
-                        date = datetime.getValue().toGregorianCalendar().getTime();
-                    }
-                }
-
                 if (jaxbElement.getDeclaredType().isAssignableFrom(CategoryType.class)) {
                     if (jaxbElement.getName().getLocalPart().equals("category")) {
                         CategoryType  category = (CategoryType) jaxbElement.getValue();
                         if (category.getScheme().equals("fedora-types:dsID")){
                             dsid = category.getTerm();
-                        } else if (category.getScheme().equals("fedora-types:pid")){
-                            pid = category.getTerm();
                         }
                     }
                 }
             }
         }
-        if (pid != null && date != null && dsid!= null){
-            if (dsid.equals("RELS-EXT") || dsid.equals("RELS-INT")){
-                store.objectRelationsChanged(pid,date);
-            } else {
-                store.objectChanged(pid,date);
-            }
-        }
-
-
+        return dsid;
     }
 
-    private void parseRelationshipsChanged(EntryType entry) throws UpdateTrackerStorageException, FedoraFailedException {
+
+    private String getNewState(EntryType entry) {
         List<Object> properties = entry.getAuthorOrCategoryOrContent();
-
-
-
-        String pid = null;
-        String dsid = null;
-        Date date = null;
-        for (Object property : properties) {
-            if (property instanceof JAXBElement) {
-                JAXBElement jaxbElement = (JAXBElement) property;
-
-
-                if (jaxbElement.getDeclaredType().isAssignableFrom(DateTimeType.class)) {
-                    if (jaxbElement.getName().getLocalPart().equals("updated")) {
-                        DateTimeType datetime = (DateTimeType) jaxbElement.getValue();
-                        date = datetime.getValue().toGregorianCalendar().getTime();
-                    }
-                }
-
-                if (jaxbElement.getDeclaredType().isAssignableFrom(CategoryType.class)) {
-                    if (jaxbElement.getName().getLocalPart().equals("category")) {
-                        CategoryType  category = (CategoryType) jaxbElement.getValue();
-                        if (category.getScheme().equals("fedora-types:pid")){
-                            pid = category.getTerm();
-                        }
-                    }
-                }
-            }
-        }
-        store.objectRelationsChanged(pid,date);
-    }
-
-    private void parseModifyObject(EntryType entry) throws UpdateTrackerStorageException, FedoraFailedException {
-        List<Object> properties = entry.getAuthorOrCategoryOrContent();
-
-        String pid = null;
-        Date date = null;
         String newstate = null;
         for (Object property : properties) {
             if (property instanceof JAXBElement) {
                 JAXBElement jaxbElement = (JAXBElement) property;
-
-
-                if (jaxbElement.getDeclaredType().isAssignableFrom(DateTimeType.class)) {
-                    if (jaxbElement.getName().getLocalPart().equals("updated")) {
-                        DateTimeType datetime = (DateTimeType) jaxbElement.getValue();
-                        date = datetime.getValue().toGregorianCalendar().getTime();
-                    }
-                }
-
                 if (jaxbElement.getDeclaredType().isAssignableFrom(CategoryType.class)) {
                     if (jaxbElement.getName().getLocalPart().equals("category")) {
                         CategoryType  category = (CategoryType) jaxbElement.getValue();
                         if (category.getScheme().equals("fedora-types:state")){
                             newstate = category.getTerm();
-                        } else if (category.getScheme().equals("fedora-types:pid")){
-                            pid = category.getTerm();
                         }
                     }
                 }
             }
         }
-        if (pid != null && date != null && newstate != null){
-            switch (newstate) {
-                case "A": //published
-                    store.objectPublished(pid, date);
-                    break;
-                case "I": //inProgress
-                    store.objectChanged(pid, date);
-                    break;
-                case "D": //deleted
-                    store.objectDeleted(pid, date);
-                    break;
-            }
-        }
-
-
+        return newstate;
     }
 }
