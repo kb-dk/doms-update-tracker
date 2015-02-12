@@ -81,7 +81,7 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
 
         List<Entry> entries = null;
         try {
-            entries = UpdateTrackingSystem.getStore().lookup(new Date(beginTime), viewAngle, offset, limit, state, false);
+            entries = UpdateTrackingSystem.getStore().lookup(new Date(beginTime), viewAngle, offset, limit, state, collectionPid);
         } catch (UpdateTrackerStorageException e) {
             throw new MethodFailedException("Failed to query the persistent storage","",e);
         }
@@ -128,7 +128,8 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
 
         List<Entry> entries = null;
         try {
-            entries = UpdateTrackingSystem.getStore().lookup(new Date(0), viewAngle, 0, 1,state,true);
+            //TODO no way to control sorting order
+            entries = UpdateTrackingSystem.getStore().lookup(new Date(0), viewAngle, 0, 1,state,collectionPid);
         } catch (UpdateTrackerStorageException e) {
             throw new MethodFailedException("Failed to query the persistent storage","",e);
         }

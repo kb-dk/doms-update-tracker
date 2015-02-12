@@ -2,14 +2,21 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
-import org.hibernate.*;
+import org.hibernate.HibernateException;
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.StatelessSession;
+import org.hibernate.Transaction;
 import org.hibernate.cfg.AnnotationConfiguration;
-import org.hibernate.criterion.Order;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
 
-import static org.hibernate.criterion.Restrictions.eq;
-import static org.hibernate.criterion.Restrictions.ge;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.HibernateUtils.listAndCast;
 
 /**
  * Created by IntelliJ IDEA.
@@ -19,6 +26,8 @@ import static org.hibernate.criterion.Restrictions.ge;
  * To change this template use File | Settings | File Templates.
  */
 public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistentStore, AutoCloseable {
+
+    private static Logger log = LoggerFactory.getLogger(UpdateTrackerPersistentStoreImpl.class);
 
     private SessionFactory sessionFactory;
 
@@ -51,22 +60,22 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     public void objectCreated(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException {
         Session session = sessionFactory.getCurrentSession();
         Transaction transaction = session.beginTransaction();
+        log.info("ObjectCreated({},{}) Starting",pid,date);
         try {
             if (isNewContentModel(pid)){
                 backend.contentModelViewChanged(pid,date,session);
             } else {
                 backend.modifyState(pid, date, "I", session);
-                backend.recalculateView(pid, date, session);
+                backend.modifyRelations(pid, date, session);
                 backend.updateTimestamps(pid, date, session);
             }
+            transaction.commit();
+            log.info("ObjectCreated({},{}) Completed", pid, date);
         } catch (Exception e) {
             transaction.rollback();
             throw new UpdateTrackerStorageException("Hibernate Failed", e);
-        } finally {
-            if (!transaction.wasRolledBack()) {
-                transaction.commit();
-            }
         }
+
     }
 
     /**
@@ -79,23 +88,22 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     public void objectDeleted(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException {
         Session session = sessionFactory.getCurrentSession();
         Transaction transaction = session.beginTransaction();
+        log.info("ObjectDeleted({},{}) Starting", pid, date);
         try {
             backend.modifyState(pid, date, "D", session);
             backend.updateTimestamps(pid, date, session);
             if (backend.isContentModel(pid,session)) {
                 backend.contentModelDeleted(pid, date,session);
                 for (String subscriber : getSubscribingObjects(pid)) {
-                    backend.recalculateView(subscriber, date, session);
+                    backend.modifyRelations(subscriber, date, session);
                     backend.updateTimestamps(subscriber, date, session);
                 }
             }
+            transaction.commit();
+            log.info("ObjectDeleted({},{}) Completed", pid, date);
         } catch (Exception e) {
             transaction.rollback();
             throw new UpdateTrackerStorageException("Hibernate Failed", e);
-        } finally {
-            if (!transaction.wasRolledBack()) {
-                transaction.commit();
-            }
         }
     }
 
@@ -106,19 +114,20 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                                                                       FedoraFailedException {
         Session session = sessionFactory.getCurrentSession();
         Transaction transaction = session.beginTransaction();
+        log.info("DatastreamChanged({},{},{}) Starting", pid, date,dsid);
         try {
             if (backend.isContentModel(pid,session)) {
                 if (dsid != null && dsid.equals("VIEW")) {
                     backend.contentModelViewChanged(pid, date,session);
                     for (String subscriber : getSubscribingObjects(pid)) {
-                        backend.recalculateView(subscriber, date, session);
+                        backend.modifyRelations(subscriber, date, session);
                         backend.updateTimestamps(subscriber, date, session);
                     }
                 }
             } else if (dsid != null && dsid.equals("RELS-EXT") && (backend.isContentModel(pid,session) || isNewContentModel(pid))) {
                     backend.contentModelViewChanged(pid,date,session);
                     for (String subscriber : getSubscribingObjects(pid)) {
-                        backend.recalculateView(subscriber, date, session);
+                        backend.modifyRelations(subscriber, date, session);
                         backend.updateTimestamps(subscriber, date, session);
                     }
 
@@ -129,13 +138,11 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                 }
                 backend.updateTimestamps(pid, date, session);
             }
+            transaction.commit();
+            log.info("DatastreamChanged({},{},{}) Completed", pid, date, dsid);
         } catch (Exception e) {
             transaction.rollback();
             throw new UpdateTrackerStorageException("Hibernate Failed", e);
-        } finally {
-            if (!transaction.wasRolledBack()) {
-                transaction.commit();
-            }
         }
     }
 
@@ -151,23 +158,22 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                                                               FedoraFailedException {
         Session session = sessionFactory.getCurrentSession();
         Transaction transaction = session.beginTransaction();
+        log.info("objectRelationsChanged({},{}) Starting", pid, date);
         try {
-            backend.recalculateView(pid, date, session);
+            backend.modifyRelations(pid, date, session);
             backend.updateTimestamps(pid, date, session);
             if (backend.isContentModel(pid,session) || isNewContentModel(pid)) {
                 backend.contentModelViewChanged(pid, date,session);
                 for (String subscriber : getSubscribingObjects(pid)) {
-                    backend.recalculateView(subscriber, date, session);
+                    backend.modifyRelations(subscriber, date, session);
                     backend.updateTimestamps(subscriber, date, session);
                 }
             }
+            transaction.commit();
+            log.info("objectRelationsChanged({},{}) Completed", pid, date);
         } catch (Exception e) {
             transaction.rollback();
             throw new UpdateTrackerStorageException("Hibernate Failed", e);
-        } finally {
-            if (!transaction.wasRolledBack()) {
-                transaction.commit();
-            }
         }
     }
 
@@ -183,62 +189,49 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
 
         Session session = sessionFactory.getCurrentSession();
         Transaction transaction = session.beginTransaction();
+        log.info("objectStateChanged({},{},{}) Starting", pid, date,newstate);
         try {
             backend.modifyState(pid, date, newstate, session);
             backend.updateTimestamps(pid, date, session);
+            transaction.commit();
+            log.info("objectStateChanged({},{},{}) Completed", pid, date, newstate);
         } catch (Exception e) {
             transaction.rollback();
             throw new UpdateTrackerStorageException("Hibernate Failed", e);
-        } finally {
-            if (!transaction.wasRolledBack()) {
-                transaction.commit();
-            }
         }
     }
 
     @Override
-    public List<Entry> lookup(Date since, String viewAngle, int offset, int limit, String state,
-                              boolean newestFirst) throws UpdateTrackerStorageException {
-        Session session = sessionFactory.getCurrentSession();
-        Transaction transaction = session.beginTransaction();
+    public List<Entry> lookup(Date since, String viewAngle, int offset, int limit, String state, String collection) throws UpdateTrackerStorageException {
+        StatelessSession session = sessionFactory.openStatelessSession();
+        session.beginTransaction();
         try {
+            log.info("lookup({},{},{},{},{},{}) Starting", since,viewAngle,offset,limit,state,collection);
 
-            Criteria thing = session.createCriteria(Entry.class)
-                                    .add(ge("dateForChange", since))
-                                    .add(eq("viewAngle", viewAngle))
-                                    .setFirstResult(offset)
-                                    .setMaxResults(limit);
-
-            if (newestFirst) {
-                thing = thing.addOrder(Order.desc("dateForChange"));
-            } else {
-                thing = thing.addOrder(Order.asc("dateForChange"));
-            }
-
+            Query query
+                    = session.createQuery("from Entry e where e.dateForChange>=:since and e.viewAngle=:viewAngle and e.state in :stateList and e.entryPid in (select col.entryPid from Collection col where col.collectionID=:collection) order by e.dateForChange asc ");
+            query.setReadOnly(true);
+            query.setFirstResult(offset).setMaxResults(limit);
+            query.setParameter("since",since).setParameter("collection",collection).setParameter("viewAngle",viewAngle);
             if (state != null && !state.trim().isEmpty()) {
-                thing = thing.add(eq("state", state));
-            }
-            List<Entry> results = listAndCast(thing);
-
-
-            List<Entry> entries = new ArrayList<Entry>(results.size());
-            for (Entry result1 : results) {
-                entries.add(result1);
+                query.setParameterList("stateList", Arrays.asList(state));
+            } else {
+                query.setParameterList("stateList", Arrays.asList("A","I","D"));
             }
 
-            transaction.commit();
+            final List<Entry> entries = listAndCast(query);
+            session.getTransaction().commit();
+            log.info("lookup({},{},{},{},{},{}) Completed", since, viewAngle, offset, limit, state, collection);
             return entries;
         } catch (HibernateException e) {
-            transaction.rollback();
+            session.getTransaction().rollback();
             throw new UpdateTrackerStorageException("Failed to query for", e);
+        } finally {
+            session.close();
         }
     }
 
 
-    @SuppressWarnings("unchecked")
-    private static <T> List<T> listAndCast(Criteria criteria) {
-        return criteria.list();
-    }
 
 
     /**
