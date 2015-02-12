@@ -108,10 +108,10 @@ public class DomsObject implements Serializable {
     @Override
     public String toString() {
         return "DomsObject{" +
-                ", objectPid='" + objectPid + '\'' +
-                ", entryPid='" + entryPid + '\'' +
-                ", viewAngle='" + viewAngle + '\'' +
-                '}';
+               "objectPid='" + objectPid + '\'' +
+               ", entryPid='" + entryPid + '\'' +
+               ", viewAngle='" + viewAngle + '\'' +
+               '}';
     }
 }
 

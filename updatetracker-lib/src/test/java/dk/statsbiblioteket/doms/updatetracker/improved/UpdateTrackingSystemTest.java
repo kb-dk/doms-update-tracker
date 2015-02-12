@@ -46,7 +46,8 @@ public class UpdateTrackingSystemTest {
         offset = 0;
         limit = 10;
         while(true){
-            List<Entry> results = UpdateTrackingSystem.getStore().lookup(new Date(0), "SummaVisible", offset, limit, "I", false);
+            List<Entry> results = UpdateTrackingSystem.getStore().lookup(new Date(0), "SummaVisible", offset, limit, "I",
+                                                                                "doms:Newspaper_Collection");
             for (Entry result : results) {
                 System.out.println(result);
             }
