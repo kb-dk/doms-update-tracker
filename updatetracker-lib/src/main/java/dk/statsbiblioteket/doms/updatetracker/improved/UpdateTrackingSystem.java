@@ -59,9 +59,7 @@ public class UpdateTrackingSystem {
         try {
             store.setUp();
         } catch (Exception e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-        } finally {
-            store.close();
+            throw new RuntimeException(e);
         }
 
         //initialise the jms connection to Fedora

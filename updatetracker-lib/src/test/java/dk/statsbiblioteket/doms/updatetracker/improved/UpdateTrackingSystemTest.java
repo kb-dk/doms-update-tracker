@@ -1,8 +1,7 @@
 package dk.statsbiblioteket.doms.updatetracker.improved;
 
-import dk.statsbiblioteket.doms.updatetracker.improved.database.Entry;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.Record;
 import dk.statsbiblioteket.doms.webservices.configuration.ConfigCollection;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -46,9 +45,9 @@ public class UpdateTrackingSystemTest {
         offset = 0;
         limit = 10;
         while(true){
-            List<Entry> results = UpdateTrackingSystem.getStore().lookup(new Date(0), "SummaVisible", offset, limit, "I",
+            List<Record> results = UpdateTrackingSystem.getStore().lookup(new Date(0), "SummaVisible", offset, limit, "I",
                                                                                 "doms:Newspaper_Collection");
-            for (Entry result : results) {
+            for (Record result : results) {
                 System.out.println(result);
             }
             if (results.size() == 0){
