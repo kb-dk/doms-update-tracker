@@ -22,31 +22,23 @@ public class DomsObject implements Serializable {
      */
     @Id
     @Column(name = "OBJECTPID")
-    String objectPid;
-
-    /**
-     * The pid of the entry object that reference this object
-     */
-    @Id
-    @Column(name = "ENTRYPID")
-    private String entryPid;
-
-    /**
-     * The viewangle that includes this object
-     */
-    @Id
-    @Column(name = "VIEWANGLE")
-    private String viewAngle;
+    private String objectPid;
 
 
+    @ManyToMany(mappedBy = "objects")
+    private Set<Record> records = new HashSet<>();
 
     public DomsObject() {
     }
 
-    public DomsObject(String objectPid, String entryPid, String viewAngle) {
+    public DomsObject(String objectPid) {
         this.objectPid = objectPid;
-        this.entryPid = entryPid;
-        this.viewAngle = viewAngle;
+    }
+
+
+    public DomsObject(String objectPid, Set<Record> records) {
+        this.objectPid = objectPid;
+        this.records = records;
     }
 
     public String getObjectPid() {
@@ -57,20 +49,12 @@ public class DomsObject implements Serializable {
         this.objectPid = objectPid;
     }
 
-    public String getEntryPid() {
-        return entryPid;
+    public Set<Record> getRecords() {
+        return records;
     }
 
-    public void setEntryPid(String entryPid) {
-        this.entryPid = entryPid;
-    }
-
-    public String getViewAngle() {
-        return viewAngle;
-    }
-
-    public void setViewAngle(String viewAngle) {
-        this.viewAngle = viewAngle;
+    public void setRecords(Set<Record> records) {
+        this.records = records;
     }
 
     @Override
@@ -84,24 +68,15 @@ public class DomsObject implements Serializable {
 
         DomsObject that = (DomsObject) o;
 
-        if (entryPid != null ? !entryPid.equals(that.entryPid) : that.entryPid != null) {
+        if (!objectPid.equals(that.objectPid)) {
             return false;
         }
-        if (objectPid != null ? !objectPid.equals(that.objectPid) : that.objectPid != null) {
-            return false;
-        }
-        if (viewAngle != null ? !viewAngle.equals(that.viewAngle) : that.viewAngle != null) {
-            return false;
-        }
-
         return true;
     }
 
     @Override
     public int hashCode() {
-        int result = objectPid != null ? objectPid.hashCode() : 0;
-        result = 31 * result + (entryPid != null ? entryPid.hashCode() : 0);
-        result = 31 * result + (viewAngle != null ? viewAngle.hashCode() : 0);
+        int result = objectPid.hashCode();
         return result;
     }
 
@@ -109,8 +84,6 @@ public class DomsObject implements Serializable {
     public String toString() {
         return "DomsObject{" +
                "objectPid='" + objectPid + '\'' +
-               ", entryPid='" + entryPid + '\'' +
-               ", viewAngle='" + viewAngle + '\'' +
                '}';
     }
 }

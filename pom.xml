@@ -53,15 +53,39 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>org.hibernate</groupId>
+                <artifactId>hibernate-entitymanager</artifactId>
+                <version>4.3.8.Final</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>1.7.7</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-simple</artifactId>
+                <version>1.7.7</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.activemq</groupId>
+                <artifactId>activemq-core</artifactId>
+                <version>5.6.0</version>
+            </dependency>
+
+            <dependency>
+                <groupId>dk.statsbiblioteket.doms.central</groupId>
+                <artifactId>ecmViews</artifactId>
+                <version>1.8-SNAPSHOT</version>
+            </dependency>
+
+
+            <dependency>
                 <groupId>dk.statsbiblioteket.doms.domsutil</groupId>
                 <artifactId>domsutil-bundle</artifactId>
                 <version>1.0</version>
                 <type>pom</type>
-            </dependency>
-            <dependency>
-                <groupId>ch.qos.logback</groupId>
-                <artifactId>logback-classic</artifactId>
-                <version>1.1.2</version>
             </dependency>
             <dependency>
                 <groupId>com.sun.xml.ws</groupId>
@@ -93,17 +117,6 @@
                 <groupId>org.apache.derby</groupId>
                 <artifactId>derby</artifactId>
                 <version>10.9.1.0</version>
-            </dependency>
-            <dependency>
-                <groupId>org.hibernate</groupId>
-                <artifactId>hibernate-core</artifactId>
-                <version>3.6.9.Final</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.hibernate</groupId>
-                <artifactId>hibernate-annotations</artifactId>
-                <version>3.5.6-Final</version>
             </dependency>
 
 

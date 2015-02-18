@@ -1,5 +1,6 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
+import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import org.hibernate.HibernateException;
@@ -8,15 +9,18 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.StatelessSession;
 import org.hibernate.Transaction;
-import org.hibernate.cfg.AnnotationConfiguration;
+import org.hibernate.cfg.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
+import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.HibernateUtils.listAndCast;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State.DELETED;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State.INACTIVE;
 
 /**
  * Created by IntelliJ IDEA.
@@ -40,10 +44,8 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
 
     public void setUp() throws Exception {
         // A SessionFactory is set up once for an application
-        sessionFactory = new AnnotationConfiguration().addAnnotatedClass(DomsObject.class)
-                                                      .addAnnotatedClass(Entry.class)
-                                                      .addAnnotatedClass(Collection.class)
-                                                      .addAnnotatedClass(ContentModel.class)
+        sessionFactory = new Configuration().addAnnotatedClass(DomsObject.class)
+                                                      .addAnnotatedClass(Record.class)
                                                       .configure()
                                                       .buildSessionFactory();
         backend = new UpdateTrackerBackend(fedora);
@@ -62,12 +64,18 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         Transaction transaction = session.beginTransaction();
         log.info("ObjectCreated({},{}) Starting",pid,date);
         try {
+            Set<String> collections = fedora.getCollections(pid, date);
             if (isNewContentModel(pid)){
-                backend.contentModelViewChanged(pid,date,session);
+                //TODO cache content model info
+                //backend.contentModelViewChanged(pid,date,session);
             } else {
-                backend.modifyState(pid, date, "I", session);
-                backend.modifyRelations(pid, date, session);
-                backend.updateTimestamps(pid, date, session);
+                Timestamp timestamp = new Timestamp(date.getTime());
+
+                for (String collection : collections) {
+                    backend.modifyState(pid, timestamp, collection, INACTIVE, session);
+                    backend.modifyRelations(pid, timestamp, session);
+                }
+                backend.updateTimestamps(pid, timestamp, session);
             }
             transaction.commit();
             log.info("ObjectCreated({},{}) Completed", pid, date);
@@ -90,15 +98,9 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         Transaction transaction = session.beginTransaction();
         log.info("ObjectDeleted({},{}) Starting", pid, date);
         try {
-            backend.modifyState(pid, date, "D", session);
-            backend.updateTimestamps(pid, date, session);
-            if (backend.isContentModel(pid,session)) {
-                backend.contentModelDeleted(pid, date,session);
-                for (String subscriber : getSubscribingObjects(pid)) {
-                    backend.modifyRelations(subscriber, date, session);
-                    backend.updateTimestamps(subscriber, date, session);
-                }
-            }
+            Timestamp timestamp = new Timestamp(date.getTime());
+            backend.modifyState(pid, timestamp, null, DELETED, session);
+            backend.updateTimestamps(pid, timestamp, session);
             transaction.commit();
             log.info("ObjectDeleted({},{}) Completed", pid, date);
         } catch (Exception e) {
@@ -116,19 +118,21 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         Transaction transaction = session.beginTransaction();
         log.info("DatastreamChanged({},{},{}) Starting", pid, date,dsid);
         try {
+            Timestamp timestamp = new Timestamp(date.getTime());
             if (backend.isContentModel(pid,session)) {
                 if (dsid != null && dsid.equals("VIEW")) {
-                    backend.contentModelViewChanged(pid, date,session);
+                    //backend.contentModelViewChanged(pid, date,session);
                     for (String subscriber : getSubscribingObjects(pid)) {
-                        backend.modifyRelations(subscriber, date, session);
-                        backend.updateTimestamps(subscriber, date, session);
+
+                        backend.modifyRelations(subscriber, timestamp, session);
+                        backend.updateTimestamps(subscriber, timestamp, session);
                     }
                 }
             } else if (dsid != null && dsid.equals("RELS-EXT") && (backend.isContentModel(pid,session) || isNewContentModel(pid))) {
-                    backend.contentModelViewChanged(pid,date,session);
+                    //backend.contentModelViewChanged(pid,date,session);
                     for (String subscriber : getSubscribingObjects(pid)) {
-                        backend.modifyRelations(subscriber, date, session);
-                        backend.updateTimestamps(subscriber, date, session);
+                        backend.modifyRelations(subscriber, timestamp, session);
+                        backend.updateTimestamps(subscriber, timestamp, session);
                     }
 
             } else {
@@ -136,7 +140,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                     objectRelationsChanged(pid, date);
                     return;
                 }
-                backend.updateTimestamps(pid, date, session);
+                backend.updateTimestamps(pid, timestamp, session);
             }
             transaction.commit();
             log.info("DatastreamChanged({},{},{}) Completed", pid, date, dsid);
@@ -160,13 +164,14 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         Transaction transaction = session.beginTransaction();
         log.info("objectRelationsChanged({},{}) Starting", pid, date);
         try {
-            backend.modifyRelations(pid, date, session);
-            backend.updateTimestamps(pid, date, session);
+            Timestamp timestamp = new Timestamp(date.getTime());
+            backend.modifyRelations(pid, timestamp, session);
+            backend.updateTimestamps(pid, timestamp, session);
             if (backend.isContentModel(pid,session) || isNewContentModel(pid)) {
-                backend.contentModelViewChanged(pid, date,session);
+                //backend.contentModelViewChanged(pid, date,session);
                 for (String subscriber : getSubscribingObjects(pid)) {
-                    backend.modifyRelations(subscriber, date, session);
-                    backend.updateTimestamps(subscriber, date, session);
+                    backend.modifyRelations(subscriber, timestamp, session);
+                    backend.updateTimestamps(subscriber, timestamp, session);
                 }
             }
             transaction.commit();
@@ -191,8 +196,9 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         Transaction transaction = session.beginTransaction();
         log.info("objectStateChanged({},{},{}) Starting", pid, date,newstate);
         try {
-            backend.modifyState(pid, date, newstate, session);
-            backend.updateTimestamps(pid, date, session);
+            Timestamp timestamp = new Timestamp(date.getTime());
+            backend.modifyState(pid, timestamp, null, State.fromName(newstate), session);
+            backend.updateTimestamps(pid, timestamp, session);
             transaction.commit();
             log.info("objectStateChanged({},{},{}) Completed", pid, date, newstate);
         } catch (Exception e) {
@@ -202,24 +208,61 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     }
 
     @Override
-    public List<Entry> lookup(Date since, String viewAngle, int offset, int limit, String state, String collection) throws UpdateTrackerStorageException {
+    public List<Record> lookup(Date since, String viewAngle, int offset, int limit, String state, String collection) throws UpdateTrackerStorageException {
         StatelessSession session = sessionFactory.openStatelessSession();
         session.beginTransaction();
         try {
             log.info("lookup({},{},{},{},{},{}) Starting", since,viewAngle,offset,limit,state,collection);
 
-            Query query
-                    = session.createQuery("from Entry e where e.dateForChange>=:since and e.viewAngle=:viewAngle and e.state in :stateList and e.entryPid in (select col.entryPid from Collection col where col.collectionID=:collection) order by e.dateForChange asc ");
-            query.setReadOnly(true);
-            query.setFirstResult(offset).setMaxResults(limit);
-            query.setParameter("since",since).setParameter("collection",collection).setParameter("viewAngle",viewAngle);
-            if (state != null && !state.trim().isEmpty()) {
-                query.setParameterList("stateList", Arrays.asList(state));
+
+            Query activeDeleted
+                    = session.createQuery("from Record e where (e.deleted>=:since or e.active>=:since ) and e.viewAngle=:viewAngle and e.collection=:collection order by case when e.deleted>=e.active then e.deleted else e.active end asc ");
+
+            Query inactiveDeleted
+                    = session.createQuery("from Record e where (e.deleted>=:since or e.inactive>=:since ) and e.viewAngle=:viewAngle and e.collection=:collection order by case when e.deleted>=e.inactive then e.deleted else e.inactive end asc ");
+
+
+            Query deleted
+                    = session.createQuery("from Record e where (e.deleted>=:since or e.active>=:since ) and e.viewAngle=:viewAngle and e.collection=:collection order by e.deleted asc ");
+
+
+            Query all
+                    = session.createQuery("from Record e where (e.deleted>=:since or e.active>=:since or e.inactive>=:since ) and e.viewAngle=:viewAngle and e.collection=:collection order by " +
+                                          "case when e.deleted>=e.active then " +
+                                          "case when e.deleted>=e.inactive then " +
+                                          "e.deleted " +
+                                          "else " +
+                                          "e.inactive " +
+                                          "end " +
+                                          "else " +
+                                          "e.active end asc ");
+
+            Query query = null;
+            if (state == null){
+                query = all;
             } else {
-                query.setParameterList("stateList", Arrays.asList("A","I","D"));
+                switch (state) {
+                    case "A":
+                        query = activeDeleted;
+                        break;
+                    case "I":
+                        query = inactiveDeleted;
+                        break;
+                    case "D":
+                        query = deleted;
+                        break;
+                    default:
+                        query = all;
+                        break;
+                }
             }
 
-            final List<Entry> entries = listAndCast(query);
+
+            query.setReadOnly(true);
+            query.setFirstResult(offset).setMaxResults(limit);
+            query.setParameter("since", since).setParameter("collection",collection).setParameter("viewAngle",viewAngle);
+
+            final List<Record> entries = listAndCast(query);
             session.getTransaction().commit();
             log.info("lookup({},{},{},{},{},{}) Completed", since, viewAngle, offset, limit, state, collection);
             return entries;
@@ -246,7 +289,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         for (Object result : results) {
             session.delete(result);
         }
-        results = session.createCriteria(Entry.class).list();
+        results = session.createCriteria(Record.class).list();
         for (Object result : results) {
             session.delete(result);
         }
@@ -265,7 +308,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         for (Object result : results) {
             System.out.println(result.toString());
         }
-        results = session.createCriteria(Entry.class).list();
+        results = session.createCriteria(Record.class).list();
         for (Object result : results) {
             System.out.println(result.toString());
         }
