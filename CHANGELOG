@@ -1,0 +1,13 @@
+1.0
+Bumped the version number
+Updated jersey version to 1.17.1
+Updated doms parent pom to 1.0
+Updated doms util to 1.0
+
+0.0.18
+Deprecate the old ecm.sourcforge.net namespace, and use doms.statsbiblioteket.dk namespace.
+
+0.0.17
+Changed to use sparql, not ITQL, to query doms
+Deprecated the getLatestModificationTime method due to a lack of sorting in mulgara sparql
+Updated to use doms parent 0.1.5
