@@ -82,7 +82,7 @@ public class UpdateTrackerBackend {
                     Object actual = session.get(Record.class, record);
                     if (actual == null) {
                         log.debug("Pid {} is not marked as an entry for viewAngle {}. Fixing", pid, entryForViewAngle);
-                        final DomsObject e = new DomsObject(pid);
+                        final DomsObject e = get(session,new DomsObject(pid));
                         session.saveOrUpdate(e);
                         record.getObjects().add(e);
                         record.setInactive(date);
@@ -177,7 +177,7 @@ public class UpdateTrackerBackend {
             for (String collection : collections) {
                 Record record = new Record(pid, entryForViewAngle, collection);
                 if (session.get(Record.class,record) == null){
-                    DomsObject object = new DomsObject(pid);
+                    DomsObject object = get(session, new DomsObject(pid));
                     object.getRecords().add(record);
                     record.getObjects().add(object);
                     record.setInactive(date);
@@ -212,6 +212,15 @@ public class UpdateTrackerBackend {
 
 
         recalculateView(pid, date, session);
+    }
+
+    private DomsObject get(Session session, DomsObject domsObject) {
+        Object persistent = session.get(DomsObject.class, domsObject.getObjectPid());
+        if (persistent != null){
+            return (DomsObject) persistent;
+        } else {
+            return domsObject;
+        }
     }
 
     private Date asDate(Timestamp date) {
