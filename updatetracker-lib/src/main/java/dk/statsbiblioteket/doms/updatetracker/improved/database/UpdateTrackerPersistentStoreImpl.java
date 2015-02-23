@@ -215,44 +215,22 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             log.info("lookup({},{},{},{},{},{}) Starting", since,viewAngle,offset,limit,state,collection);
 
 
-            Query activeDeleted
-                    = session.createQuery("from Record e where (e.deleted>=:since or e.active>=:since ) and e.viewAngle=:viewAngle and e.collection=:collection order by case when e.deleted>=e.active then e.deleted else e.active end asc ");
-
-            Query inactiveDeleted
-                    = session.createQuery("from Record e where (e.deleted>=:since or e.inactive>=:since ) and e.viewAngle=:viewAngle and e.collection=:collection order by case when e.deleted>=e.inactive then e.deleted else e.inactive end asc ");
-
-
-            Query deleted
-                    = session.createQuery("from Record e where (e.deleted>=:since or e.active>=:since ) and e.viewAngle=:viewAngle and e.collection=:collection order by e.deleted asc ");
-
-
-            Query all
-                    = session.createQuery("from Record e where (e.deleted>=:since or e.active>=:since or e.inactive>=:since ) and e.viewAngle=:viewAngle and e.collection=:collection order by " +
-                                          "case when e.deleted>=e.active then " +
-                                          "case when e.deleted>=e.inactive then " +
-                                          "e.deleted " +
-                                          "else " +
-                                          "e.inactive " +
-                                          "end " +
-                                          "else " +
-                                          "e.active end asc ");
-
             Query query = null;
             if (state == null){
-                query = all;
+                query = session.getNamedQuery("All");
             } else {
                 switch (state) {
                     case "A":
-                        query = activeDeleted;
+                        query = session.getNamedQuery("ActiveAndDeleted");
                         break;
                     case "I":
-                        query = inactiveDeleted;
+                        query = session.getNamedQuery("InactiveOrDeleted");
                         break;
                     case "D":
-                        query = deleted;
+                        query = session.getNamedQuery("Deleted");
                         break;
                     default:
-                        query = all;
+                        query = session.getNamedQuery("All");
                         break;
                 }
             }
