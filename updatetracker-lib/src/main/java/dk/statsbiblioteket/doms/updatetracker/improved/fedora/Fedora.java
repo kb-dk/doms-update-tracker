@@ -143,21 +143,7 @@ public class Fedora {
         return collectionRelations.stream().map(FedoraRelation::getObject).collect(toSet());
     }
 
-    public List<ViewInfo> getContentModelViewInfo(String pid, Date date) throws FedoraFailedException {
 
-        Set<String> entryAngles = new HashSet<>();
-        Set<String> angles = new HashSet<>();
-
-
-        try {
-            parseContentModel(pid,date,angles,entryAngles);
-        } catch (BackendInvalidCredsException | BackendMethodFailedException | BackendInvalidResourceException | JAXBException e) {
-            throw new FedoraFailedException("Failed to get view info from Fedora for pid " + pid, e);
-        }
-
-
-        return buildViewInfoList(pid, entryAngles, angles);
-    }
 
     private List<ViewInfo> buildViewInfoList(String pid, Set<String> entryAngles, Set<String> angles) {
         List<ViewInfo> infoList = new ArrayList<>();

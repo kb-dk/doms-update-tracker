@@ -6,6 +6,50 @@ import java.sql.Timestamp;
 import java.util.HashSet;
 import java.util.Set;
 
+@NamedQueries({@NamedQuery(name = "ActiveAndDeleted",
+                           query = "from Record e where (" +
+                                       "(e.deleted is not null and e.deleted>=:since) or " +
+                                       "(e.active is not null and e.active>=:since) " +
+                                   ") and " +
+                                   "e.viewAngle=:viewAngle and " +
+                                   "e.collection=:collection " +
+                                   "order by case " +
+                                          "when e.deleted is not null and (e.active is null or e.deleted>=e.active) then e.deleted " +
+                                          "when e.active is not null and (e.deleted is null or e.active>=e.deleted) then e.active " +
+                                          " end"),
+
+               @NamedQuery(name = "InactiveOrDeleted",
+                           query = "from Record e where (" +
+                                       "(e.deleted is not null and e.deleted>=:since) or " +
+                                       "(e.inactive is not null or e.inactive>=:since)" +
+                                   ") and " +
+                                   "e.viewAngle=:viewAngle " +
+                                   "and e.collection=:collection " +
+                                   "order by case " +
+                                          "when e.deleted is not null and (e.inactive is null or e.deleted>=e.inactive) then e.deleted " +
+                                          "when e.inactive is not null and (e.deleted is null or e.inactive>=e.deleted) then e.inactive" +
+                                          " end"),
+
+               @NamedQuery(name = "Deleted",
+                           query = "from Record e where (e.deleted is not null and e.deleted>=:since) and e.viewAngle=:viewAngle and e.collection=:collection order by e.deleted asc "),
+
+               @NamedQuery(name = "All",
+                           query = "from Record e where " +
+                                   "(" +
+                                       "(e.deleted is not null and e.deleted>=:since) or " +
+                                       "(e.active is not null and e.active>=:since) or " +
+                                       "(e.inactive is not null and e.inactive>=:since)" +
+                                   ") and " +
+                                   "e.viewAngle=:viewAngle and " +
+                                   "e.collection=:collection " +
+                                   "order by case " +
+                                          "when e.deleted is not null and (e.active is null or e.deleted>=e.active) and (e.inactive is null or e.deleted>=e.inactive) then e.deleted " +
+                                          "when e.active is not null and (e.deleted is null or e.active>=e.deleted) and (e.inactive is null or e.active>=e.inactive) then e.active " +
+                                          "when e.inactive is not null and (e.deleted is null or e.inactive>=e.deleted) and ( e.active is null or e.inactive>=e.active) then e.inactive " +
+                                          " end")}
+
+)
+
 /**
  * This is the ENTRIES table in the persistent storage. The ENTRIES table lists the entry objects/
  * Notice that since entryPid, viewAngle and state are naturalIds, the uniqneness key will be a combination. This
@@ -103,20 +147,20 @@ public class Record implements Serializable {
     }
 
     @Transient
-    public State getState(){
-        Timestamp n_inactive = real(inactive);
-        Timestamp n_active = real(active);
-        Timestamp n_deleted = real(deleted);
-        if (n_inactive.after(n_active) && n_inactive.after(n_deleted)){
+    public State getState() {
+        long n_inactive = real(inactive).getTime();
+        long n_active = real(active).getTime();
+        long n_deleted = real(deleted).getTime();
+        if (n_inactive > n_active && n_inactive > n_deleted) {
             return State.INACTIVE;
         }
-        if (n_active.after(n_inactive) && n_active.after(n_deleted)) {
+        if (n_active >= n_inactive && n_active > n_deleted) {
             return State.ACTIVE;
         }
-        if (n_deleted.after(n_active) && n_deleted.after(n_inactive)) {
+        if (n_deleted >= n_active && n_deleted >= n_inactive) {
             return State.DELETED;
         }
-        return null;
+        return State.INACTIVE;
     }
 
     @Transient
