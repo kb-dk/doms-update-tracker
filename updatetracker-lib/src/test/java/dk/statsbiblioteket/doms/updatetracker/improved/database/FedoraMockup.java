@@ -68,8 +68,4 @@ public class FedoraMockup extends Fedora{
         return new HashSet<>(Arrays.asList("doms:Root_Collection"));
     }
 
-    @Override
-    public List<ViewInfo> getContentModelViewInfo(String pid, Date date) throws FedoraFailedException {
-        return super.getContentModelViewInfo(pid, date);
-    }
 }
