@@ -1,5 +1,6 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -27,6 +28,8 @@ public class ViewBundle {
     public ViewBundle(String entry, String viewAngle) {
         this.entry = entry;
         this.viewAngle = viewAngle;
+        this.contained = new ArrayList<>();
+        contained.add(entry);
     }
 
     public String getEntry() {
