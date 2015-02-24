@@ -113,24 +113,18 @@ public class UpdateTrackerBackend {
                                                     .collect(toSet());
             for (Record otherRecord : otherRecords) {
                 ViewBundle bundle = fedora.calcViewBundle(otherRecord.getEntryPid(), otherRecord.getViewAngle(), date);
-                Set<DomsObject> before = new HashSet<>(otherRecord.getObjects());
                 otherRecord.getObjects().clear();
                 for (String viewObject : bundle.getContained()) {
                     log.debug("Marking object {} as part of record {},{},{}", viewObject, otherRecord.getEntryPid(), otherRecord.getViewAngle(), otherRecord.getCollection());
                     final DomsObject object = new DomsObject(pid);
                     otherRecord.getObjects().add(object);
                 }
-                if (before.equals(otherRecord.getObjects())){
-                    if (otherRecord.getInactive().equals(otherRecord.getActive())){
-                        otherRecord.setActive(date);
-                    }
-                    otherRecord.setInactive(date);
-                    session.saveOrUpdate(otherRecord);
+
+                if (otherRecord.getInactive().equals(otherRecord.getActive())){
+                    otherRecord.setActive(date);
                 }
-                before.removeAll(otherRecord.getObjects());
-                for (DomsObject domsObject : before) {
-                    session.delete(domsObject);
-                }
+                otherRecord.setInactive(date);
+                session.saveOrUpdate(otherRecord);
             }
             session.createQuery("delete DomsObject d where d.objectPid= :pid").setParameter("pid", pid).executeUpdate();
 
@@ -200,7 +194,6 @@ public class UpdateTrackerBackend {
             previousRecord.setDeleted(date);
             previousRecord.setInactive(null);
             previousRecord.setActive(null);
-            previousRecord.getObjects().stream().forEach(session::delete);
             previousRecord.getObjects().clear();
             session.saveOrUpdate(previousRecord);
         }
