@@ -1,17 +1,28 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
-import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
 
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.ViewInfo;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.net.MalformedURLException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
 
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.HibernateUtils.set;
+import static java.util.Arrays.asList;
 import static junit.framework.Assert.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Created by IntelliJ IDEA.
@@ -22,17 +33,21 @@ import static junit.framework.Assert.*;
  */
 public class UpdateTrackerPersistentStoreTest {
 
+    private final String collection = "doms:Root_Collection";
     UpdateTrackerPersistentStore db;
-    FedoraMockup fcmock;
-
-    public UpdateTrackerPersistentStoreTest() throws MalformedURLException {
-        fcmock = new FedoraMockup(new Credentials("user", "pass"), null, null);
-    }
-
+    Fedora fedora;
 
     @Before
     public void setUp() throws Exception {
-        db = new UpdateTrackerPersistentStoreImpl(fcmock);
+        fedora = mock(Fedora.class);
+        //Collections for everybody
+        when(fedora.getCollections(anyString(), any(Date.class))).thenReturn(set(collection));
+
+        //No entry objects or view stuff until initialised
+        when(fedora.getViewInfo(anyString(), any(Date.class))).thenReturn(asList());
+
+
+        db = new UpdateTrackerPersistentStoreImpl(fedora);
         db.setUp();
     }
 
@@ -45,8 +60,9 @@ public class UpdateTrackerPersistentStoreTest {
     @Test
     public void testObjectCreatedBasic() throws Exception {
         Date now = new Date();
-        fcmock.addEntry("doms:test1");
-        db.objectCreated("doms:test1", now);
+        final String pid = "doms:test1";
+        addEntry(pid);
+        db.objectCreated(pid, now);
         List<Record> list = db.lookup(now, "SummaVisible", 0, 100, null, "doms:Root_Collection");
         assertEquals("To many objects, some should have been deleted", 1, list.size());
 
@@ -54,11 +70,23 @@ public class UpdateTrackerPersistentStoreTest {
         assertEquals("To many objects, some should have been deleted", 0, list.size());
     }
 
+    private void addEntry(String pid, String... contained) throws FedoraFailedException {
+        final String viewAngle = "SummaVisible";
+        when(fedora.getViewInfo(eq(pid), any(Date.class))).thenReturn(Arrays.asList(new ViewInfo(viewAngle,
+                                                                                                        true,
+                                                                                                        pid)));
+        List<String> objects = new ArrayList(Arrays.asList(contained));
+        objects.add(pid);
+        when(fedora.calcViewBundle(eq(pid),eq(viewAngle),any(Date.class))).thenReturn(new ViewBundle(pid,
+                                                                                                               viewAngle,
+                                                                                                               objects));
+    }
+
     @Test
     public void testObjectCreatedBeforeAndAfter() throws Exception {
 
         Date start = new Date();
-        fcmock.addEntry("doms:test1");
+        addEntry("doms:test1");
         db.objectCreated("doms:test1", start);
         List<Record> list = db.lookup(start, "SummaVisible", 0, 100, null, "doms:Root_Collection");
         assertEquals("To many objects, some should have been deleted", 1, list.size());
@@ -75,7 +103,7 @@ public class UpdateTrackerPersistentStoreTest {
     public void testObjectCreatedMany() throws Exception {
 
         Date start = new Date();
-        fcmock.addEntry("doms:test1");
+        addEntry("doms:test1");
         db.objectCreated("doms:test1", start);
 
 
@@ -84,7 +112,7 @@ public class UpdateTrackerPersistentStoreTest {
         assertEquals("To many objects, some should have been deleted", 1, list.size());
 
         Date test3 = new Date();
-        fcmock.addEntry("doms:test3");
+        addEntry("doms:test3");
         db.objectCreated("doms:test3", test3);
 
         List<Record> list2 = db.lookup(start, "SummaVisible", 0, 100, null, "doms:Root_Collection");
@@ -96,7 +124,7 @@ public class UpdateTrackerPersistentStoreTest {
     public void testObjectDeletedBasic() throws Exception {
 
         Date test1Create = new Date();
-        fcmock.addEntry("doms:test1");
+        addEntry("doms:test1");
         db.objectCreated("doms:test1", test1Create);
 
         List<Record> list = db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection");
@@ -117,12 +145,12 @@ public class UpdateTrackerPersistentStoreTest {
     public void testObjectDeletedMultiple() throws Exception {
 
         Date test1Create = new Date();
-        fcmock.addEntry("doms:test1");
+        addEntry("doms:test1");
         db.objectCreated("doms:test1", test1Create);
         assertEquals("To many objects", 1, db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection").size());
 
         Date test2Create = new Date();
-        fcmock.addEntry("doms:test2");
+        addEntry("doms:test2");
         db.objectCreated("doms:test2", test2Create);
         assertEquals("To many objects", 2, db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection").size());
         assertEquals("To many objects", 1, db.lookup(test2Create, "SummaVisible", 0, 100, null, "doms:Root_Collection").size());
@@ -148,7 +176,7 @@ public class UpdateTrackerPersistentStoreTest {
     public void testObjectRessurection() throws Exception {
 
         Date test1Create = new Date();
-        fcmock.addEntry("doms:test1");
+        addEntry("doms:test1");
         db.objectCreated("doms:test1", test1Create);
         assertEquals("To many objects", 1, db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection").size());
 
@@ -164,7 +192,7 @@ public class UpdateTrackerPersistentStoreTest {
         assertEquals("doms:test1", deleted.get(0).getEntryPid());
 
         Date test1CreateAgain = new Date();
-        fcmock.addEntry("doms:test1");
+        addEntry("doms:test1");
         db.objectCreated("doms:test1", test1CreateAgain);
         assertEquals("To many objects", 1, db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection").size());
         assertEquals("To many objects", 1, db.lookup(test1CreateAgain, "SummaVisible", 0, 100, null, "doms:Root_Collection").size());
@@ -174,7 +202,7 @@ public class UpdateTrackerPersistentStoreTest {
     @Test
     public void testObjectPublished() throws Exception {
         Date test1Create = new Date(0);
-        fcmock.addEntry("doms:test1");
+        addEntry("doms:test1");
         db.objectCreated("doms:test1", test1Create);
 
         List<Record> list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
@@ -197,7 +225,7 @@ public class UpdateTrackerPersistentStoreTest {
     @Test
     public void testObjectPublishedAndUnpublished() throws Exception {
         Date test1Create = new Date(0);
-        fcmock.addEntry("doms:test1");
+        addEntry("doms:test1");
         db.objectCreated("doms:test1", test1Create);
 
         List<Record> list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
@@ -232,7 +260,7 @@ public class UpdateTrackerPersistentStoreTest {
     @Test
     public void testObjectPublishedAndDeleted() throws Exception {
         Date test1Create = new Date(0);
-        fcmock.addEntry("doms:test1");
+        addEntry("doms:test1");
         db.objectCreated("doms:test1", test1Create);
 
         List<Record> list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
@@ -267,10 +295,10 @@ public class UpdateTrackerPersistentStoreTest {
     @Test
     public void testObjectRelationsChangedBasic() throws Exception {
         Date frozen = new Date(0);
-        fcmock.addEntry("doms:test1");
+        addEntry("doms:test1");
         db.objectCreated("doms:test1", frozen);
         db.objectCreated("doms:test2", frozen);
-        fcmock.addEntry("doms:test1", "doms:test2");
+        addEntry("doms:test1", "doms:test2");
 
         List<Record> list = db.lookup(frozen, "SummaVisible", 0, 100, null, "doms:Root_Collection");
         assertEquals(1, list.size());
@@ -310,7 +338,7 @@ public class UpdateTrackerPersistentStoreTest {
         db.objectCreated("doms:test1", ingest1);
         db.objectCreated("doms:test2", ingest2);
         db.objectCreated("doms:test3", ingest3);
-        fcmock.addEntry("doms:test1", "doms:test2", "doms:test3");
+        addEntry("doms:test1", "doms:test2", "doms:test3");
 
         //The entry was added after ingest, so the objects should not be in the index
         List<Record> list = db.lookup(ingest1, "SummaVisible", 0, 100, null, "doms:Root_Collection");
@@ -342,7 +370,7 @@ public class UpdateTrackerPersistentStoreTest {
         db.objectCreated("doms:test1", ingest1);
         db.objectCreated("doms:test2", ingest2);
         db.objectCreated("doms:test3", ingest3);
-        fcmock.addEntry("doms:test1", "doms:test2", "doms:test3");
+        addEntry("doms:test1", "doms:test2", "doms:test3");
 
         //The entry was added after ingest, so the objects should not be in the index
         List<Record> list = db.lookup(ingest1, "SummaVisible", 0, 100, null, "doms:Root_Collection");
@@ -394,12 +422,12 @@ public class UpdateTrackerPersistentStoreTest {
         db.objectCreated("doms:test1", ingest1);
         db.objectCreated("doms:test2", ingest2);
         db.objectCreated("doms:test3", ingest3);
-        fcmock.addEntry("doms:test4", "doms:test5", "doms:test6");
+        addEntry("doms:test4", "doms:test5", "doms:test6");
         db.objectCreated("doms:test4", ingest1);
         db.objectCreated("doms:test5", ingest2);
         db.objectCreated("doms:test6", ingest3);
 
-        fcmock.addEntry("doms:test1", "doms:test2", "doms:test3");
+        addEntry("doms:test1", "doms:test2", "doms:test3");
 
 
         //The entry was added after ingest, so the objects should not be in the index
