@@ -13,6 +13,12 @@ import java.util.Date;
 import java.util.List;
 
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.HibernateUtils.set;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.MockUtils.*;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.MockUtils.ALTO;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.MockUtils.EDITION;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.MockUtils.EVENTS;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.MockUtils.FILM;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.MockUtils.SBOI;
 import static java.util.Arrays.asList;
 import static junit.framework.Assert.assertEquals;
 import static org.mockito.AdditionalMatchers.geq;
@@ -24,27 +30,12 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class NewspaperLikeTests {
+public class NewspaperBatchTests {
 
-    protected static final String SBOI = "SBOI";
-    protected static final String GUI = "GUI";
-    protected static final String SUMMA_VISIBLE = "SummaVisible";
-    protected static final String INACTIVE = "I";
-    protected static final String ACTIVE = "A";
-    protected static final String EVENTS = "EVENTS";
-    protected static final String FILM = "FILM";
-    protected static final String EDITION = "EDITION";
-    protected static final String MODS = "MODS";
-    protected static final String MIX = "MIX";
-    protected static final String ALTO = "ALTO";
-    protected static final String CONTENT = "CONTENT";
-    protected static final String RELS_INT = "RELS-INT";
-    protected static final String JPYLYZER = "JPYLYZER";
-    protected static final String HISTOGRAM = "HISTOGRAM";
     UpdateTrackerPersistentStore db;
     Fedora fcmock;
 
-    public NewspaperLikeTests() throws MalformedURLException {
+    public NewspaperBatchTests() throws MalformedURLException {
         fcmock = mock(Fedora.class);
         //fcmock = new FedoraMockup(new Credentials("user", "pass"), null, null);
     }
@@ -79,30 +70,26 @@ public class NewspaperLikeTests {
         db.objectCreated(roundTrip, beginning);
 
         List<Record> list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
-        assertEquals(1, list.size());
-        assertEquals(list.get(0).getDateForChange().getTime(), beginning.getTime());
+        verifyOneHit(list,roundTrip,beginning);
 
         Date eventAdded = new Date();
         db.datastreamChanged(roundTrip, eventAdded, EVENTS);
 
         list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
-        assertEquals(1, list.size());
-        assertEquals(eventAdded.getTime(), list.get(0).getDateForChange().getTime());
+        verifyOneHit(list,roundTrip,eventAdded);
 
         Date eventAdded2 = new Date();
         db.datastreamChanged(roundTrip, eventAdded2, EVENTS);
 
         list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
-        assertEquals(1, list.size());
-        assertEquals(eventAdded2.getTime(), list.get(0).getDateForChange().getTime());
+        verifyOneHit(list, roundTrip, eventAdded2);
 
 
         Date eventAdded3 = new Date();
         db.datastreamChanged(roundTrip, eventAdded3, EVENTS);
 
         list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
-        assertEquals(1, list.size());
-        assertEquals(eventAdded3.getTime(), list.get(0).getDateForChange().getTime());
+        verifyOneHit(list, roundTrip, eventAdded3);
     }
 
 
@@ -176,7 +163,7 @@ public class NewspaperLikeTests {
         when(fcmock.getViewInfo(anyString(), any(Date.class))).thenReturn(asList());
 
         //Content Model for roundtrip
-        setContentModelItem(roundTrip);
+        setContentModelItem(roundTrip, fcmock);
 
         //Not a entry object before this time
 
@@ -186,11 +173,7 @@ public class NewspaperLikeTests {
 
 
         //Triggered
-        db.objectCreated(batch, new Date());
-        db.objectCreated(roundTrip, new Date());
-        db.objectRelationsChanged(batch, new Date());
-        final Date triggerEvents = new Date();
-        db.datastreamChanged(roundTrip, triggerEvents, EVENTS);
+        final Date triggerEvents = batchTriggered(db, batch, roundTrip);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
@@ -199,21 +182,7 @@ public class NewspaperLikeTests {
 
 
         //This simulates the order in which objects are created by the doms ingester
-        db.objectCreated(film, new Date());
-        db.datastreamChanged(film, new Date(), FILM);
-        db.objectCreated(edition, new Date());
-        db.datastreamChanged(edition, new Date(), EDITION);
-        db.objectCreated(page1, new Date());
-        db.datastreamChanged(page1, new Date(), MODS);
-        db.datastreamChanged(page1, new Date(), MIX);
-        db.datastreamChanged(page1, new Date(), ALTO);
-        db.objectCreated(image1, new Date());
-        db.objectRelationsChanged(page1, new Date());
-        db.objectRelationsChanged(edition, new Date());
-        db.objectRelationsChanged(film, new Date());
-        db.objectRelationsChanged(roundTrip, new Date());
-        final Date domsIngestEvents = new Date();
-        db.datastreamChanged(roundTrip, domsIngestEvents, EVENTS);
+        final Date domsIngestEvents = batchIngested(db, roundTrip, film, edition, page1, image1);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
@@ -222,10 +191,7 @@ public class NewspaperLikeTests {
 
 
         // And then the bit repo ingester
-        db.datastreamChanged(image1, new Date(), CONTENT);
-        db.datastreamChanged(image1, new Date(), RELS_INT);
-        final Date bitRepoEvents = new Date();
-        db.datastreamChanged(roundTrip, bitRepoEvents, EVENTS);
+        final Date bitRepoEvents = batchBitRepoIngested(db, roundTrip, image1);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
@@ -233,9 +199,7 @@ public class NewspaperLikeTests {
         assertEquals(State.INACTIVE, items.get(0).getState());
 
         //Jpylyzer
-        db.datastreamChanged(image1, new Date(), JPYLYZER);
-        final Date jpylyzerEvents = new Date();
-        db.datastreamChanged(roundTrip, jpylyzerEvents, EVENTS);
+        final Date jpylyzerEvents = batchJpylyzed(db, roundTrip, image1);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
@@ -244,9 +208,7 @@ public class NewspaperLikeTests {
 
 
         //Histogram
-        db.datastreamChanged(image1, new Date(), HISTOGRAM);
-        final Date histograEvents = new Date();
-        db.datastreamChanged(roundTrip, histograEvents, EVENTS);
+        final Date histograEvents = batchHistogrammed(db, roundTrip, image1);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
@@ -256,13 +218,7 @@ public class NewspaperLikeTests {
 
         //Then we come to the enricher
         //Labels
-        db.objectStateChanged(batch, new Date(), INACTIVE);
-        final Date roundTripLabels = new Date();
-        db.objectStateChanged(roundTrip, roundTripLabels, INACTIVE);
-        db.objectStateChanged(film, new Date(), INACTIVE);
-        db.objectStateChanged(edition, new Date(), INACTIVE);
-        db.objectStateChanged(page1, new Date(), INACTIVE);
-        db.objectStateChanged(image1, new Date(), INACTIVE);
+        final Date roundTripLabels = batchEnriched_Labeled(db, batch, roundTrip, film, edition, page1, image1);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
@@ -274,17 +230,17 @@ public class NewspaperLikeTests {
         db.datastreamChanged(page1, new Date(), MIX);
         db.datastreamChanged(page1, new Date(), ALTO);
         final Date pageContentModel = new Date();
-        hasContentModelPage(page1, pageContentModel, image1, edition);
+        setContentModelPage(page1, pageContentModel, image1, edition, fcmock);
         db.objectRelationsChanged(page1, pageContentModel);
 
         db.datastreamChanged(edition, new Date(), EDITION);
         final Date editionContentModel = new Date();
-        hasContentModelEditionAndItem(edition, editionContentModel,page1, image1);
+        setContentModelEditionAndItem(edition, editionContentModel, page1, image1, fcmock);
         db.objectRelationsChanged(edition, editionContentModel);
 
         db.datastreamChanged(film, new Date(), FILM);
         final Date filmContentModel = new Date();
-        hasContentModelFilm(film, filmContentModel, edition, page1, image1);
+        setContentModelFilm(film, filmContentModel, edition, page1, image1, fcmock);
         db.objectRelationsChanged(film, filmContentModel);
 
         final Date roundtripRelations = new Date();
@@ -300,11 +256,7 @@ public class NewspaperLikeTests {
 
 
         //publishing
-        db.objectStateChanged(roundTrip, new Date(), ACTIVE);
-        db.objectStateChanged(film, new Date(), ACTIVE);
-        db.objectStateChanged(edition, new Date(), ACTIVE);
-        db.objectStateChanged(page1, new Date(), ACTIVE);
-        db.objectStateChanged(image1, new Date(), ACTIVE);
+        batchPublished(db, roundTrip, film, edition, page1, image1);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(2, items.size());
@@ -318,58 +270,5 @@ public class NewspaperLikeTests {
         assertEquals(2, items.size());
         assertEquals(edition, items.get(0).getEntryPid());
         assertEquals(roundTrip, items.get(1).getEntryPid());
-    }
-
-    private void setContentModelItem(String roundTrip) throws FedoraFailedException {
-        when(fcmock.calcViewBundle(eq(roundTrip), eq(SBOI), any(Date.class))).thenReturn(new ViewBundle(roundTrip, SBOI));
-        when(fcmock.getViewInfo(eq(roundTrip), gt(new Date()))).thenReturn(asList(new ViewInfo(SBOI, true, roundTrip)));
-    }
-
-    private void hasContentModelFilm(String pid, Date date, String edition, String page, String image) throws FedoraFailedException {
-        when(fcmock.calcViewBundle(eq(pid), eq(GUI), geq(date))).thenReturn(new ViewBundle(pid,
-                                                                                                  GUI,
-                                                                                                    asList(pid, edition, page, image)));
-    }
-
-    private void hasContentModelEditionAndItem(String pid, Date date, String page, String image) throws FedoraFailedException {
-
-        when(fcmock.calcViewBundle(eq(pid), eq(GUI), geq(date))).thenReturn(new ViewBundle(pid,
-                                                                                                  GUI,
-                                                                                                    asList(pid, page, image)));
-        //TODO no current handling of Newspaper Objects
-        when(fcmock.calcViewBundle(eq(pid), eq(SUMMA_VISIBLE), geq(date))).thenReturn(new ViewBundle(pid, SUMMA_VISIBLE,
-                                                                                                             asList(pid)));
-        when(fcmock.calcViewBundle(eq(pid), eq(SBOI), geq(date))).thenReturn(new ViewBundle(pid, SBOI,
-                                                                                                     asList(pid)));
-
-
-        when(fcmock.getViewInfo(eq(pid), geq(date))).thenReturn(asList(new ViewInfo(GUI, true, pid),
-                                                                              new ViewInfo(SBOI, true, pid)));
-    }
-
-    private void hasContentModelPage(String pid, Date pageContentModel, String image, String edition) throws
-                                                                                                      FedoraFailedException {
-        when(fcmock.calcViewBundle(eq(pid), eq(GUI), geq(pageContentModel))).thenReturn(new ViewBundle(pid, GUI,
-                                                                                                                asList(pid,
-                                                                                                                              image)));
-        when(fcmock.calcViewBundle(eq(pid), eq(SUMMA_VISIBLE), geq(pageContentModel))).thenReturn(new ViewBundle(pid,
-                                                                                                                        SUMMA_VISIBLE,
-                                                                                                                         asList(pid,
-                                                                                                                                       edition)));
-
-        //But after this time, the object is an entry
-        when(fcmock.getViewInfo(eq(pid), geq(pageContentModel))).thenReturn(asList(new ViewInfo(SUMMA_VISIBLE,
-                                                                                                       true,
-                                                                                                       pid)));
-    }
-
-    public void testUpdateToNewspaper() {
-
-
-    }
-
-    public void testUpdateToEdition() {
-
-
     }
 }
