@@ -198,7 +198,6 @@ public class Record implements Serializable {
                ", active=" + active +
                ", inactive=" + inactive +
                ", deleted=" + deleted +
-               ", objects=" + objects +
                '}';
     }
 
