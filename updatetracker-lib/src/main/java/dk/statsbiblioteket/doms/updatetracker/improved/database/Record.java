@@ -1,6 +1,13 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
+import org.hibernate.annotations.*;
+import org.hibernate.annotations.CascadeType;
+
 import javax.persistence.*;
+import javax.persistence.Entity;
+import javax.persistence.NamedQueries;
+import javax.persistence.NamedQuery;
+import javax.persistence.Table;
 import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.HashSet;
@@ -106,10 +113,11 @@ public class Record implements Serializable {
 
     private Timestamp deleted = null;
 
-    @ManyToMany(cascade = {CascadeType.MERGE, CascadeType.PERSIST, CascadeType.REFRESH})
+    @ManyToMany
     @JoinTable(name = "MEMBERSHIPS",
                       joinColumns = {@JoinColumn(referencedColumnName = "ENTRYPID"), @JoinColumn(referencedColumnName = "VIEWANGLE"),@JoinColumn(referencedColumnName = "COLLECTION")},
                       inverseJoinColumns = @JoinColumn(referencedColumnName = "OBJECTPID"))
+    @Cascade({CascadeType.SAVE_UPDATE,CascadeType.PERSIST,CascadeType.MERGE})
     private Set<DomsObject> objects = new HashSet<>();
 
     public Record() {

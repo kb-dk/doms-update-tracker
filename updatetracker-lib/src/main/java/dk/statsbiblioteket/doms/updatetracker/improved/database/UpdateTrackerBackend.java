@@ -82,9 +82,8 @@ public class UpdateTrackerBackend {
                     Object actual = session.get(Record.class, record);
                     if (actual == null) {
                         log.debug("Pid {} is not marked as an entry for viewAngle {}. Fixing", pid, entryForViewAngle);
-                        final DomsObject e = get(session,new DomsObject(pid));
-                        session.saveOrUpdate(e);
-                        record.getObjects().add(e);
+                        final DomsObject object = get(session,new DomsObject(pid));
+                        record.getObjects().add(object);
                         record.setInactive(date);
                         if (state == State.ACTIVE){
                             record.setActive(date);
@@ -178,10 +177,8 @@ public class UpdateTrackerBackend {
                 Record record = new Record(pid, entryForViewAngle, collection);
                 if (session.get(Record.class,record) == null){
                     DomsObject object = get(session, new DomsObject(pid));
-                    object.getRecords().add(record);
                     record.getObjects().add(object);
                     record.setInactive(date);
-                    session.saveOrUpdate(object);
                     session.saveOrUpdate(record);
                 }
             }
@@ -254,8 +251,6 @@ public class UpdateTrackerBackend {
                 if (object == null){
                     object = new DomsObject(viewObject);
                 }
-                object.getRecords().add(otherRecord);
-                session.saveOrUpdate(object);
                 otherRecord.getObjects().add(object);
             }
             if (before.equals(otherRecord.getObjects())) {
@@ -263,12 +258,8 @@ public class UpdateTrackerBackend {
                     otherRecord.setActive(date);
                 }
                 otherRecord.setInactive(date);
-                session.saveOrUpdate(otherRecord);
             }
-            before.removeAll(otherRecord.getObjects());
-            for (DomsObject domsObject : before) {
-                session.delete(domsObject);
-            }
+            session.saveOrUpdate(otherRecord);
         }
     }
 
