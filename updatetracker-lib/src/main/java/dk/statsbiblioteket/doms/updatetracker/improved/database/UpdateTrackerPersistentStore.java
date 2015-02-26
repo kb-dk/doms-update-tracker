@@ -7,12 +7,9 @@ import java.util.List;
 
 /**
  * This is the interface representing the storage system, which holds the updates from doms.
- * Before using it, be sure to call setup()
  * The methods represents events that can take place, except the lookup method
  */
 public interface UpdateTrackerPersistentStore extends AutoCloseable{
-
-    void setUp() throws Exception;
 
     void clear();
 
@@ -69,11 +66,18 @@ public interface UpdateTrackerPersistentStore extends AutoCloseable{
 
 
     /**
-     * Find objects from the database. TODO collections viewangles restrict
+     * Find objects from the database.
      *
-     * @param since
+     * @param since only return records changed since this date
+     * @param viewAngle the viewangle to return objects for
+     * @param offset offset into the list. Almost always 0
+     * @param limit the max length of the result list
+     * @param state The state of the results. Can be "A", which returns Active and Deleted. Can be "I", which returns
+     *              Inactive and Deleted. Can be "D" which returns Deleted. Can be null, which returns Active, Inactive
+     *              and Deleted
+     * @param collection The collection to return objects for
      *
-     * @return
+     * @return a list of records, sorted by the highest timestamp for the relevant states.
      */
     public List<Record> lookup(Date since, String viewAngle, int offset, int limit, String state, String collection) throws UpdateTrackerStorageException;
 

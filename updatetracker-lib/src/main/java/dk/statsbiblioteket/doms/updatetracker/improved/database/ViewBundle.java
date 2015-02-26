@@ -3,13 +3,6 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by IntelliJ IDEA.
- * User: abr
- * Date: 5/2/11
- * Time: 3:57 PM
- * To change this template use File | Settings | File Templates.
- */
 public class ViewBundle {
 
     private String entry;

@@ -1,35 +1,25 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
-
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
-
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.HibernateUtils.set;
-import static java.util.Arrays.asList;
-import static junit.framework.Assert.*;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.HibernateUtils.asSet;
+import static java.util.Collections.emptyList;
+import static junit.framework.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * Created by IntelliJ IDEA.
- * User: abr
- * Date: 5/3/11
- * Time: 9:38 AM
- * To change this template use File | Settings | File Templates.
- */
 public class UpdateTrackerPersistentStoreTest {
 
     private final String collection = "doms:Root_Collection";
@@ -40,14 +30,10 @@ public class UpdateTrackerPersistentStoreTest {
     public void setUp() throws Exception {
         fedora = mock(Fedora.class);
         //Collections for everybody
-        when(fedora.getCollections(anyString(), any(Date.class))).thenReturn(set(collection));
-
+        when(fedora.getCollections(anyString(), any(Date.class))).thenReturn(asSet(collection));
         //No entry objects or view stuff until initialised
-        when(fedora.getViewInfo(anyString(), any(Date.class))).thenReturn(asList());
-
-
+        when(fedora.getEntryAngles(anyString(), any(Date.class))).thenReturn(emptyList());
         db = new UpdateTrackerPersistentStoreImpl(fedora);
-        db.setUp();
     }
 
     @After
@@ -71,8 +57,8 @@ public class UpdateTrackerPersistentStoreTest {
 
     private void addEntry(String pid, String... contained) throws FedoraFailedException {
         final String viewAngle = "SummaVisible";
-        when(fedora.getViewInfo(eq(pid), any(Date.class))).thenReturn(Arrays.asList(viewAngle));
-        List<String> objects = new ArrayList(Arrays.asList(contained));
+        when(fedora.getEntryAngles(eq(pid), any(Date.class))).thenReturn(Arrays.asList(viewAngle));
+        List<String> objects = new ArrayList<>(Arrays.asList(contained));
         objects.add(pid);
         when(fedora.calcViewBundle(eq(pid),eq(viewAngle),any(Date.class))).thenReturn(new ViewBundle(pid,
                                                                                                                viewAngle,
@@ -282,6 +268,7 @@ public class UpdateTrackerPersistentStoreTest {
         //After delete, the object is no longer published
         list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
         assertEquals("Wrong number of objects", 1,list.size());
+        assertEquals(list.get(0).getState(), Record.State.DELETED);
 
         list = db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection");
         assertEquals("Wrong number of objects", list.size(), 1);

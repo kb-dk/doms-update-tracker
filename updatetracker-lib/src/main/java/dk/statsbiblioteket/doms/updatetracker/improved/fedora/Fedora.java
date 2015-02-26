@@ -15,12 +15,10 @@ import dk.statsbiblioteket.doms.central.connectors.fedora.views.Views;
 import dk.statsbiblioteket.doms.central.connectors.fedora.views.ViewsImpl;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.ContentModelCache;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.ViewBundle;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.generated.ViewsType;
 import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
 
-import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
+import java.lang.String;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -28,15 +26,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
 /**
- * Created by IntelliJ IDEA.
- * User: abr
- * Date: 4/28/11
- * Time: 12:30 PM
- * To change this template use File | Settings | File Templates.
+ * This class embeds the specific functions we need for Fedora in the update tracker
  */
 public class Fedora {
 
@@ -53,7 +46,6 @@ public class Fedora {
     private final FedoraRest fedora;
     private final ContentModelCache cmCache;
 
-
     public Fedora(Credentials creds, String fedoraLocation) throws MalformedURLException {
         this.cmCache = new ContentModelCache();
         WebResource restApi = client.resource(fedoraLocation + "/objects/");
@@ -63,18 +55,15 @@ public class Fedora {
         views = new ViewsImpl(ts, fedora);
     }
 
-
-    public List<String> getViewInfo(String pid, Date date) throws FedoraFailedException {
-
-
+    public List<String> getEntryAngles(String pid, Date date) throws FedoraFailedException {
         try {
             Set<String> entryAngles = new HashSet<>();
             ObjectProfile profile = fedora.getLimitedObjectProfile(pid, date.getTime());
             if (profile.getType() == ObjectType.CONTENT_MODEL){
-                cmCache.setEntryViewAngles(pid, getEntryAngles(pid, date) );
+                cmCache.setEntryViewAngles(pid, getEntryAnglesForContentModel(pid, date) );
             }
             for (String contentmodelPid : profile.getContentModels()) {
-                entryAngles.addAll(getEntryAngles(contentmodelPid, date));
+                entryAngles.addAll(getEntryAnglesForContentModel(contentmodelPid, date));
             }
             return new ArrayList<>(entryAngles);
         } catch (BackendInvalidCredsException | BackendMethodFailedException | BackendInvalidResourceException | JAXBException e) {
@@ -82,7 +71,7 @@ public class Fedora {
         }
     }
 
-    private Set<String> getEntryAngles(String contentmodel, Date date) throws
+    private Set<String> getEntryAnglesForContentModel(String contentmodel, Date date) throws
                                                            BackendMethodFailedException,
                                                            BackendInvalidCredsException,
                                                            BackendInvalidResourceException,
@@ -98,9 +87,6 @@ public class Fedora {
         return entryAngles;
    }
 
-
-
-
     public ViewBundle calcViewBundle(String entryPid, String viewAngle, Date date) throws FedoraFailedException {
         try {
             List<String> pids = views.getViewObjectsListForObject(entryPid, viewAngle, date.getTime());
@@ -110,7 +96,7 @@ public class Fedora {
         }
     }
 
-    public Set<String> getCollections(java.lang.String pid, Date date) throws FedoraFailedException {
+    public Set<String> getCollections(String pid, Date date) throws FedoraFailedException {
         List<FedoraRelation> collectionRelations = null;
         try {
             collectionRelations = fedora.getNamedRelations(pid, COLLECTION_RELATION,
@@ -121,8 +107,7 @@ public class Fedora {
         return collectionRelations.stream().map(FedoraRelation::getObject).collect(toSet());
     }
 
-
-    public Set<String> getSubscribingObjects(String contentModelPid) throws FedoraFailedException {
+    public Set<String> getObjectsOfThisContentModel(String contentModelPid) throws FedoraFailedException {
 
         List<FedoraRelation> hasModelRelations;
         try {
@@ -133,19 +118,15 @@ public class Fedora {
         return hasModelRelations.stream()
                                   .map(FedoraRelation::getSubject)
                                   .collect(toSet());
-
     }
 
     public boolean isContentModel(String pid) {
+        //TODO if not cached, perform check
         return cmCache.isCachedContentModel(pid);
     }
 
     public void invalidateContentModel(String pid) {
         cmCache.invalidateContentModel(pid);
-    }
-
-    public boolean isCachedContentModel(String pid) {
-        return cmCache.isCachedContentModel(pid);
     }
 }
 

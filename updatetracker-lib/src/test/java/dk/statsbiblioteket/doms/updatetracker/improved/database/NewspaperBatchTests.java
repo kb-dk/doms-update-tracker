@@ -11,17 +11,18 @@ import java.net.MalformedURLException;
 import java.util.Date;
 import java.util.List;
 
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.HibernateUtils.set;
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.MockUtils.*;
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.MockUtils.ALTO;
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.MockUtils.EDITION;
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.MockUtils.EVENTS;
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.MockUtils.FILM;
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.MockUtils.SBOI;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.HibernateUtils.asSet;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.ALTO;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.EDITION;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.EVENTS;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.FILM;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.MIX;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.MODS;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.SBOI;
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static junit.framework.Assert.assertEquals;
 import static org.mockito.AdditionalMatchers.geq;
-import static org.mockito.AdditionalMatchers.gt;
 import static org.mockito.AdditionalMatchers.lt;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
@@ -36,14 +37,12 @@ public class NewspaperBatchTests {
 
     public NewspaperBatchTests() throws MalformedURLException {
         fcmock = mock(Fedora.class);
-        //fcmock = new FedoraMockup(new Credentials("user", "pass"), null, null);
     }
 
 
     @Before
     public void setUp() throws Exception {
         db = new UpdateTrackerPersistentStoreImpl(fcmock);
-        db.setUp();
     }
 
     @After
@@ -60,33 +59,33 @@ public class NewspaperBatchTests {
         final String collection = "doms:Root_Collection";
         String viewAngle = SBOI;
 
-        when(fcmock.getCollections(eq(roundTrip), any(Date.class))).thenReturn(set(collection));
+        when(fcmock.getCollections(eq(roundTrip), any(Date.class))).thenReturn(asSet(collection));
         when(fcmock.calcViewBundle(eq(roundTrip), eq(viewAngle), any(Date.class))).thenReturn(new ViewBundle(roundTrip,
                                                                                                                     viewAngle));
-        when(fcmock.getViewInfo(eq(roundTrip), any(Date.class))).thenReturn(asList(viewAngle));
+        when(fcmock.getEntryAngles(eq(roundTrip), any(Date.class))).thenReturn(asList(viewAngle));
         db.objectCreated(roundTrip, beginning);
 
         List<Record> list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
-        verifyOneHit(list,roundTrip,beginning);
+        Tests.verifyOneHit(list, roundTrip, beginning);
 
         Date eventAdded = new Date();
         db.datastreamChanged(roundTrip, eventAdded, EVENTS);
 
         list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
-        verifyOneHit(list,roundTrip,eventAdded);
+        Tests.verifyOneHit(list, roundTrip, eventAdded);
 
         Date eventAdded2 = new Date();
         db.datastreamChanged(roundTrip, eventAdded2, EVENTS);
 
         list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
-        verifyOneHit(list, roundTrip, eventAdded2);
+        Tests.verifyOneHit(list, roundTrip, eventAdded2);
 
 
         Date eventAdded3 = new Date();
         db.datastreamChanged(roundTrip, eventAdded3, EVENTS);
 
         list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
-        verifyOneHit(list, roundTrip, eventAdded3);
+        Tests.verifyOneHit(list, roundTrip, eventAdded3);
     }
 
 
@@ -100,14 +99,14 @@ public class NewspaperBatchTests {
         final String collection = "doms:Root_Collection";
         String viewAngle = SBOI;
 
-        when(fcmock.getCollections(eq(roundTrip), any(Date.class))).thenReturn(set(collection));
+        when(fcmock.getCollections(eq(roundTrip), any(Date.class))).thenReturn(asSet(collection));
         when(fcmock.calcViewBundle(eq(roundTrip), eq(viewAngle), any(Date.class))).thenReturn(new ViewBundle(roundTrip,
                                                                                                                     viewAngle));
         //Not a entry object before this time
-        when(fcmock.getViewInfo(eq(roundTrip), lt(becomingItemTime))).thenReturn(asList());
+        when(fcmock.getEntryAngles(eq(roundTrip), lt(becomingItemTime))).thenReturn(emptyList());
 
         //But after this time, the object is an entry
-        when(fcmock.getViewInfo(eq(roundTrip), geq(becomingItemTime))).thenReturn(asList(viewAngle));
+        when(fcmock.getEntryAngles(eq(roundTrip), geq(becomingItemTime))).thenReturn(asList(viewAngle));
 
 
         db.objectCreated(roundTrip, beginning);
@@ -152,13 +151,13 @@ public class NewspaperBatchTests {
         final String collection = "doms:Root_Collection";
 
         //Collections for everybody
-        when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(set(collection));
+        when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(asSet(collection));
 
         //No entry objects or view stuff until initialised
-        when(fcmock.getViewInfo(anyString(), any(Date.class))).thenReturn(asList());
+        when(fcmock.getEntryAngles(anyString(), any(Date.class))).thenReturn(emptyList());
 
         //Content Model for roundtrip
-        setContentModelItem(roundTrip, fcmock);
+        Tests.setContentModelItem(roundTrip, fcmock);
 
         //Not a entry object before this time
 
@@ -168,7 +167,7 @@ public class NewspaperBatchTests {
 
 
         //Triggered
-        final Date triggerEvents = batchTriggered(db, batch, roundTrip);
+        final Date triggerEvents = Tests.batchTriggered(db, batch, roundTrip);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
@@ -177,7 +176,7 @@ public class NewspaperBatchTests {
 
 
         //This simulates the order in which objects are created by the doms ingester
-        final Date domsIngestEvents = batchIngested(db, roundTrip, film, edition, page1, image1);
+        final Date domsIngestEvents = Tests.batchIngested(db, roundTrip, film, edition, page1, image1);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
@@ -186,7 +185,7 @@ public class NewspaperBatchTests {
 
 
         // And then the bit repo ingester
-        final Date bitRepoEvents = batchBitRepoIngested(db, roundTrip, image1);
+        final Date bitRepoEvents = Tests.batchBitRepoIngested(db, roundTrip, image1);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
@@ -194,7 +193,7 @@ public class NewspaperBatchTests {
         assertEquals(State.INACTIVE, items.get(0).getState());
 
         //Jpylyzer
-        final Date jpylyzerEvents = batchJpylyzed(db, roundTrip, image1);
+        final Date jpylyzerEvents = Tests.batchJpylyzed(db, roundTrip, image1);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
@@ -203,7 +202,7 @@ public class NewspaperBatchTests {
 
 
         //Histogram
-        final Date histograEvents = batchHistogrammed(db, roundTrip, image1);
+        final Date histograEvents = Tests.batchHistogrammed(db, roundTrip, image1);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
@@ -213,7 +212,7 @@ public class NewspaperBatchTests {
 
         //Then we come to the enricher
         //Labels
-        final Date roundTripLabels = batchEnriched_Labeled(db, batch, roundTrip, film, edition, page1, image1);
+        final Date roundTripLabels = Tests.batchEnriched_Labeled(db, batch, roundTrip, film, edition, page1, image1);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
@@ -225,17 +224,17 @@ public class NewspaperBatchTests {
         db.datastreamChanged(page1, new Date(), MIX);
         db.datastreamChanged(page1, new Date(), ALTO);
         final Date pageContentModel = new Date();
-        setContentModelPage(page1, pageContentModel, image1, edition, fcmock);
+        Tests.setContentModelPage(page1, pageContentModel, image1, edition, fcmock);
         db.objectRelationsChanged(page1, pageContentModel);
 
         db.datastreamChanged(edition, new Date(), EDITION);
         final Date editionContentModel = new Date();
-        setContentModelEditionAndItem(edition, editionContentModel, page1, image1, fcmock);
+        Tests.setContentModelEditionAndItem(edition, editionContentModel, page1, image1, fcmock);
         db.objectRelationsChanged(edition, editionContentModel);
 
         db.datastreamChanged(film, new Date(), FILM);
         final Date filmContentModel = new Date();
-        setContentModelFilm(film, filmContentModel, edition, page1, image1, fcmock);
+        Tests.setContentModelFilm(film, filmContentModel, edition, page1, image1, fcmock);
         db.objectRelationsChanged(film, filmContentModel);
 
         final Date roundtripRelations = new Date();
@@ -251,7 +250,7 @@ public class NewspaperBatchTests {
 
 
         //publishing
-        batchPublished(db, roundTrip, film, edition, page1, image1);
+        Tests.batchPublished(db, roundTrip, film, edition, page1, image1);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(2, items.size());

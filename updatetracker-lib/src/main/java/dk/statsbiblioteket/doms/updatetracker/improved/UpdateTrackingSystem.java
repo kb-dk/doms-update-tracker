@@ -56,11 +56,6 @@ public class UpdateTrackingSystem {
 
         //Start up the database
         store = new UpdateTrackerPersistentStoreImpl(fedora);
-        try {
-            store.setUp();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
 
         //initialise the jms connection to Fedora
         consumer = initialiseJMS(jmsurl, jmssubject, fedoraUser,fedoraPass);

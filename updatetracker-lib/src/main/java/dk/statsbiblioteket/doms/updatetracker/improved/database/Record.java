@@ -58,9 +58,7 @@ import java.util.Set;
 )
 
 /**
- * This is the ENTRIES table in the persistent storage. The ENTRIES table lists the entry objects/
- * Notice that since entryPid, viewAngle and state are naturalIds, the uniqneness key will be a combination. This
- * means that there will be multipe "rows" for each entryPid, corresponding to the different states and viewAngles.
+ * This is the RECORDS table in the persistent storage. The RECORDS table lists the records that can be found in DOMS.
  */
 @Entity
 @Table(name = "RECORDS")
@@ -117,7 +115,7 @@ public class Record implements Serializable {
     @JoinTable(name = "MEMBERSHIPS",
                       joinColumns = {@JoinColumn(referencedColumnName = "ENTRYPID"), @JoinColumn(referencedColumnName = "VIEWANGLE"),@JoinColumn(referencedColumnName = "COLLECTION")},
                       inverseJoinColumns = @JoinColumn(referencedColumnName = "OBJECTPID"))
-    @Cascade({CascadeType.SAVE_UPDATE,CascadeType.PERSIST,CascadeType.MERGE})
+    @Cascade({CascadeType.REFRESH,CascadeType.REPLICATE,CascadeType.SAVE_UPDATE,CascadeType.PERSIST,CascadeType.MERGE})
     private Set<DomsObject> objects = new HashSet<>();
 
     public Record() {
@@ -183,7 +181,7 @@ public class Record implements Serializable {
 
     private Timestamp real(Timestamp timestamp) {
         if (timestamp == null){
-            return new Timestamp(0);
+            return new Timestamp(Long.MIN_VALUE);
         }
         return timestamp;
     }

@@ -4,7 +4,6 @@ import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import org.hibernate.HibernateException;
-import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.StatelessSession;
@@ -18,17 +17,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.HibernateUtils.listAndCast;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State.DELETED;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State.INACTIVE;
 
-/**
- * Created by IntelliJ IDEA.
- * User: abr
- * Date: 4/27/11
- * Time: 2:16 PM
- * To change this template use File | Settings | File Templates.
- */
 public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistentStore, AutoCloseable {
 
     private static Logger log = LoggerFactory.getLogger(UpdateTrackerPersistentStoreImpl.class);
@@ -41,17 +32,13 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
 
     public UpdateTrackerPersistentStoreImpl(Fedora fedora) {
         this.fedora = fedora;
-    }
-
-    public void setUp() throws Exception {
         // A SessionFactory is set up once for an application
         sessionFactory = new Configuration().addAnnotatedClass(DomsObject.class)
-                                                      .addAnnotatedClass(Record.class)
-                                                      .configure()
-                                                      .buildSessionFactory();
+                                            .addAnnotatedClass(Record.class)
+                                            .configure()
+                                            .buildSessionFactory();
         backend = new UpdateTrackerBackend(fedora);
     }
-
 
     /**
      * The object  was created.
@@ -66,12 +53,12 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         log.info("ObjectCreated({},{}) Starting",pid,date);
         try {
             Set<String> collections = fedora.getCollections(pid, date);
-                Timestamp timestamp = new Timestamp(date.getTime());
-                for (String collection : collections) {
-                    backend.modifyState(pid, timestamp, collection, INACTIVE, session);
-                    backend.modifyRelations(pid, timestamp, session);
-                }
-                backend.updateTimestamps(pid, timestamp, session);
+            Timestamp timestamp = new Timestamp(date.getTime());
+            for (String collection : collections) {
+                backend.modifyState(pid, timestamp, collection, INACTIVE, session);
+                backend.reconnectObjects(pid, timestamp, session);
+            }
+            backend.updateTimestamps(pid, timestamp, session);
 
             transaction.commit();
             log.info("ObjectCreated({},{}) Completed", pid, date);
@@ -115,33 +102,33 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         log.info("DatastreamChanged({},{},{}) Starting", pid, date,dsid);
         try {
             Timestamp timestamp = new Timestamp(date.getTime());
-            if (fedora.isContentModel(pid)) {
-                if (dsid != null && dsid.equals("VIEW")) {
-                    fedora.invalidateContentModel(pid);
-                    for (String subscriber : fedora.getSubscribingObjects(pid)) {
-                        backend.modifyRelations(subscriber, timestamp, session);
-                        backend.updateTimestamps(subscriber, timestamp, session);
+            if (dsid != null) {
+                if (fedora.isContentModel(pid)) {
+                    if ((dsid.equals("VIEW") || dsid.equals("RELS-EXT"))) {
+                        contentModelChanged(pid, timestamp, session);
+                    }
+                } else {
+                    if (dsid.equals("RELS-EXT")) {
+                        objectRelationsChanged(pid, date);
                     }
                 }
-            } else if (dsid != null && dsid.equals("RELS-EXT") && (fedora.isCachedContentModel(pid))) {
-                fedora.invalidateContentModel(pid);
-                for (String subscriber : fedora.getSubscribingObjects(pid)) {
-                        backend.modifyRelations(subscriber, timestamp, session);
-                        backend.updateTimestamps(subscriber, timestamp, session);
-                    }
-
-            } else {
-                if (dsid != null && dsid.equals("RELS-EXT")) {
-                    objectRelationsChanged(pid, date);
-                    return;
-                }
-                backend.updateTimestamps(pid, timestamp, session);
             }
+            backend.updateTimestamps(pid, timestamp, session);
             transaction.commit();
             log.info("DatastreamChanged({},{},{}) Completed", pid, date, dsid);
         } catch (Exception e) {
             transaction.rollback();
             throw new UpdateTrackerStorageException("Hibernate Failed", e);
+        }
+    }
+
+    private void contentModelChanged(String pid, Timestamp timestamp, Session session) throws
+                                                                                       FedoraFailedException,
+                                                                                       UpdateTrackerStorageException {
+        fedora.invalidateContentModel(pid);
+        for (String object : fedora.getObjectsOfThisContentModel(pid)) {
+            backend.reconnectObjects(object, timestamp, session);
+            backend.updateTimestamps(object, timestamp, session);
         }
     }
 
@@ -160,14 +147,11 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         log.info("objectRelationsChanged({},{}) Starting", pid, date);
         try {
             Timestamp timestamp = new Timestamp(date.getTime());
-            backend.modifyRelations(pid, timestamp, session);
-            backend.updateTimestamps(pid, timestamp, session);
             if (fedora.isContentModel(pid)) {
-                fedora.invalidateContentModel(pid);
-                for (String subscriber : fedora.getSubscribingObjects(pid)) {
-                    backend.modifyRelations(subscriber, timestamp, session);
-                    backend.updateTimestamps(subscriber, timestamp, session);
-                }
+                contentModelChanged(pid, timestamp, session);
+            } else {
+                backend.reconnectObjects(pid, timestamp, session);
+                backend.updateTimestamps(pid, timestamp, session);
             }
             transaction.commit();
             log.info("objectRelationsChanged({},{}) Completed", pid, date);
@@ -206,32 +190,13 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             log.info("lookup({},{},{},{},{},{}) Starting", since,viewAngle,offset,limit,state,collection);
 
 
-            Query query = null;
-            if (state == null){
-                query = session.getNamedQuery("All");
-            } else {
-                switch (state) {
-                    case "A":
-                        query = session.getNamedQuery("ActiveAndDeleted");
-                        break;
-                    case "I":
-                        query = session.getNamedQuery("InactiveOrDeleted");
-                        break;
-                    case "D":
-                        query = session.getNamedQuery("Deleted");
-                        break;
-                    default:
-                        query = session.getNamedQuery("All");
-                        break;
-                }
-            }
-
-
-            query.setReadOnly(true);
-            query.setFirstResult(offset).setMaxResults(limit);
-            query.setParameter("since", since).setParameter("collection",collection).setParameter("viewAngle",viewAngle);
-
-            final List<Record> entries = listAndCast(query);
+            final List<Record> entries = backend.lookup(new Timestamp(since.getTime()),
+                                                        viewAngle,
+                                                        offset,
+                                                        limit,
+                                                        state,
+                                                        collection,
+                                                        session);
             session.getTransaction().commit();
             log.info("lookup({},{},{},{},{},{}) Completed", since, viewAngle, offset, limit, state, collection);
             return entries;
@@ -242,7 +207,6 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             session.close();
         }
     }
-
 
 
 
