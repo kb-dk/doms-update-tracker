@@ -2,7 +2,6 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.ViewInfo;
 
 import java.util.Arrays;
 import java.util.Date;
@@ -42,7 +41,7 @@ public class MockUtils {
     static void setContentModelItem(String roundTrip, Fedora fcmock) throws FedoraFailedException {
         when(fcmock.calcViewBundle(eq(roundTrip), eq(SBOI), any(Date.class))).thenReturn(new ViewBundle(roundTrip,
                                                                                                         SBOI));
-        when(fcmock.getViewInfo(eq(roundTrip), gt(new Date()))).thenReturn(asList(new ViewInfo(SBOI, true, roundTrip)));
+        when(fcmock.getViewInfo(eq(roundTrip), gt(new Date()))).thenReturn(asList(SBOI));
     }
 
     /**
@@ -88,8 +87,7 @@ public class MockUtils {
         when(fcmock.calcViewBundle(eq(pid), eq(SBOI), geq(date))).thenReturn(new ViewBundle(pid, SBOI, asList(pid)));
 
 
-        when(fcmock.getViewInfo(eq(pid), geq(date))).thenReturn(asList(new ViewInfo(GUI, true, pid),
-                                                                       new ViewInfo(SBOI,true, pid)));
+        when(fcmock.getViewInfo(eq(pid), geq(date))).thenReturn(asList(GUI, SBOI));
     }
 
     /**
@@ -115,9 +113,7 @@ public class MockUtils {
                                                                                                                         edition)));
 
         //But after this time, the object is an entry
-        when(fcmock.getViewInfo(eq(pid), geq(pageContentModel))).thenReturn(asList(new ViewInfo(SUMMA_VISIBLE,
-                                                                                                true,
-                                                                                                pid)));
+        when(fcmock.getViewInfo(eq(pid), geq(pageContentModel))).thenReturn(asList(SUMMA_VISIBLE));
     }
 
     /**
@@ -136,8 +132,7 @@ public class MockUtils {
                                                                                                            SUMMA_VISIBLE));
 
         //But after this time, the object is an entry
-        when(fcmock.getViewInfo(eq(pid), geq(changeDate))).thenReturn(asList(new ViewInfo(SUMMA_VISIBLE, true, pid),
-                                                                             new ViewInfo(GUI, true, pid)));
+        when(fcmock.getViewInfo(eq(pid), geq(changeDate))).thenReturn(asList(SUMMA_VISIBLE, GUI));
 
 
         //Newspapers are a linked list, with the relation relatedSucceeding. These are view relations in

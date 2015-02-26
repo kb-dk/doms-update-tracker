@@ -3,7 +3,6 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.ViewInfo;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -72,9 +71,7 @@ public class UpdateTrackerPersistentStoreTest {
 
     private void addEntry(String pid, String... contained) throws FedoraFailedException {
         final String viewAngle = "SummaVisible";
-        when(fedora.getViewInfo(eq(pid), any(Date.class))).thenReturn(Arrays.asList(new ViewInfo(viewAngle,
-                                                                                                        true,
-                                                                                                        pid)));
+        when(fedora.getViewInfo(eq(pid), any(Date.class))).thenReturn(Arrays.asList(viewAngle));
         List<String> objects = new ArrayList(Arrays.asList(contained));
         objects.add(pid);
         when(fedora.calcViewBundle(eq(pid),eq(viewAngle),any(Date.class))).thenReturn(new ViewBundle(pid,

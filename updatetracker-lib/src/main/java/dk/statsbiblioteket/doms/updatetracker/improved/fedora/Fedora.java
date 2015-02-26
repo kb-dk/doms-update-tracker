@@ -1,7 +1,6 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.fedora;
 
 import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
 import dk.statsbiblioteket.doms.central.connectors.BackendInvalidCredsException;
@@ -10,14 +9,14 @@ import dk.statsbiblioteket.doms.central.connectors.BackendMethodFailedException;
 import dk.statsbiblioteket.doms.central.connectors.fedora.FedoraRest;
 import dk.statsbiblioteket.doms.central.connectors.fedora.structures.FedoraRelation;
 import dk.statsbiblioteket.doms.central.connectors.fedora.structures.ObjectProfile;
+import dk.statsbiblioteket.doms.central.connectors.fedora.structures.ObjectType;
 import dk.statsbiblioteket.doms.central.connectors.fedora.tripleStore.TripleStoreRest;
 import dk.statsbiblioteket.doms.central.connectors.fedora.views.Views;
 import dk.statsbiblioteket.doms.central.connectors.fedora.views.ViewsImpl;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.ContentModelCache;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.ViewBundle;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.generated.ViewangleType;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.generated.ViewsType;
 import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
-import dk.statsbiblioteket.util.xml.DOM;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -29,6 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
 /**
@@ -44,27 +44,19 @@ public class Fedora {
             = "http://doms.statsbiblioteket.dk/types/view/default/0/1/#isEntryForViewAngle";
     protected static final String COLLECTION_RELATION
             = "http://doms.statsbiblioteket.dk/relations/default/0/1/#isPartOfCollection";
+    protected static final String HASMODEL_RELATION
+            = "info:fedora/fedora-system:def/model#hasModel";
+
     private static Client client = Client.create();
-    private final WebResource restApi;
     private final Views views;
     private final TripleStoreRest ts;
     private final FedoraRest fedora;
-
-    //This is not threadsafe so...
-    ThreadLocal<Unmarshaller> unmarshaller = new ThreadLocal<Unmarshaller>() {
-        @Override
-        protected Unmarshaller initialValue() {
-            try {
-                return JAXBContext.newInstance(ViewsType.class).createUnmarshaller();
-            } catch (JAXBException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    };
+    private final ContentModelCache cmCache;
 
 
     public Fedora(Credentials creds, String fedoraLocation) throws MalformedURLException {
-        restApi = client.resource(fedoraLocation + "/objects/");
+        this.cmCache = new ContentModelCache();
+        WebResource restApi = client.resource(fedoraLocation + "/objects/");
         restApi.addFilter(new HTTPBasicAuthFilter(creds.getUsername(), creds.getPassword()));
         fedora = new FedoraRest(creds, fedoraLocation);
         ts = new TripleStoreRest(creds, fedoraLocation, fedora);
@@ -72,60 +64,46 @@ public class Fedora {
     }
 
 
-    public List<ViewInfo> getViewInfo(String pid, Date date) throws FedoraFailedException {
+    public List<String> getViewInfo(String pid, Date date) throws FedoraFailedException {
 
 
         try {
-            Set<String> angles = new HashSet<>();
             Set<String> entryAngles = new HashSet<>();
-
             ObjectProfile profile = fedora.getLimitedObjectProfile(pid, date.getTime());
-            for (String contentmodel : profile.getContentModels()) {
-                parseContentModel(contentmodel, date, angles, entryAngles);
+            if (profile.getType() == ObjectType.CONTENT_MODEL){
+                cmCache.setEntryViewAngles(pid, getEntryAngles(pid, date) );
             }
-            return buildViewInfoList(pid, entryAngles, angles);
+            for (String contentmodelPid : profile.getContentModels()) {
+                entryAngles.addAll(getEntryAngles(contentmodelPid, date));
+            }
+            return new ArrayList<>(entryAngles);
         } catch (BackendInvalidCredsException | BackendMethodFailedException | BackendInvalidResourceException | JAXBException e) {
             throw new FedoraFailedException("Failed to get view info from Fedora for pid " + pid, e);
         }
     }
 
-    private void parseContentModel(String contentmodel, Date date, Set<String> angles, Set<String> entryAngles) throws
+    private Set<String> getEntryAngles(String contentmodel, Date date) throws
                                                            BackendMethodFailedException,
                                                            BackendInvalidCredsException,
                                                            BackendInvalidResourceException,
                                                            JAXBException {
-
-        List<FedoraRelation> entryRelations = fedora.getNamedRelations(contentmodel, ENTRY_RELATION,
-                                                                              date.getTime());
-        entryRelations.stream().map(FedoraRelation::getObject).forEach(obj -> {
-            angles.add(obj);
-            entryAngles.add(obj);
-        });
-
-
-        ViewsType viewStream;
-        try {
-            viewStream = unmarshaller.get().unmarshal(DOM.stringToDOM(fedora.getXMLDatastreamContents(contentmodel,
-                                                                                                       "VIEW",
-                                                                                                       date.getTime()),
-                                                                       true), ViewsType.class).getValue();
-        } catch (BackendInvalidResourceException e) {
-            return;
-            //ignore
+        Set<String> entryAngles = cmCache.getCachedEntryAngles(contentmodel);
+        if (entryAngles == null) {
+            List<FedoraRelation> entryRelations = fedora.getNamedRelations(contentmodel, ENTRY_RELATION, date.getTime());
+            entryAngles = entryRelations.stream()
+                                 .map(FedoraRelation::getObject)
+                                 .collect(toSet());
+            cmCache.setEntryViewAngles(contentmodel,entryAngles);
         }
-
-        for (ViewangleType viewangleType : viewStream.getViewangle()) {
-            String name = viewangleType.getName();
-            angles.add(name);
-        }
-    }
+        return entryAngles;
+   }
 
 
 
 
     public ViewBundle calcViewBundle(String entryPid, String viewAngle, Date date) throws FedoraFailedException {
         try {
-            List<String> pids = views.getViewObjectsListForObject(entryPid, viewAngle, null);
+            List<String> pids = views.getViewObjectsListForObject(entryPid, viewAngle, date.getTime());
             return new ViewBundle(entryPid, viewAngle, pids);
         } catch (BackendInvalidCredsException | BackendMethodFailedException | BackendInvalidResourceException e) {
             throw new FedoraFailedException("Failed calculating view bundle", e);
@@ -144,15 +122,30 @@ public class Fedora {
     }
 
 
+    public Set<String> getSubscribingObjects(String contentModelPid) throws FedoraFailedException {
 
-    private List<ViewInfo> buildViewInfoList(String pid, Set<String> entryAngles, Set<String> angles) {
-        List<ViewInfo> infoList = new ArrayList<>();
-        for (String angle : angles) {
-            ViewInfo info = new ViewInfo(angle, pid);
-            info.setEntry(entryAngles.contains(angle));
-            infoList.add(info);
+        List<FedoraRelation> hasModelRelations;
+        try {
+            hasModelRelations = ts.getInverseRelations(contentModelPid,HASMODEL_RELATION);
+        } catch (BackendInvalidCredsException | BackendMethodFailedException | BackendInvalidResourceException e) {
+            throw new FedoraFailedException("Failed to get content model info from Fedora for pid " + contentModelPid, e);
         }
-        return infoList;
+        return hasModelRelations.stream()
+                                  .map(FedoraRelation::getSubject)
+                                  .collect(toSet());
+
+    }
+
+    public boolean isContentModel(String pid) {
+        return cmCache.isCachedContentModel(pid);
+    }
+
+    public void invalidateContentModel(String pid) {
+        cmCache.invalidateContentModel(pid);
+    }
+
+    public boolean isCachedContentModel(String pid) {
+        return cmCache.isCachedContentModel(pid);
     }
 }
 

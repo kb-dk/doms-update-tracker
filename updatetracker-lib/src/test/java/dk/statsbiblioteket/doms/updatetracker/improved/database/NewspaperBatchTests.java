@@ -3,7 +3,6 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.ViewInfo;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -64,9 +63,7 @@ public class NewspaperBatchTests {
         when(fcmock.getCollections(eq(roundTrip), any(Date.class))).thenReturn(set(collection));
         when(fcmock.calcViewBundle(eq(roundTrip), eq(viewAngle), any(Date.class))).thenReturn(new ViewBundle(roundTrip,
                                                                                                                     viewAngle));
-        when(fcmock.getViewInfo(eq(roundTrip), any(Date.class))).thenReturn(asList(new ViewInfo(viewAngle,
-                                                                                                       true,
-                                                                                                       roundTrip)));
+        when(fcmock.getViewInfo(eq(roundTrip), any(Date.class))).thenReturn(asList(viewAngle));
         db.objectCreated(roundTrip, beginning);
 
         List<Record> list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
@@ -110,9 +107,7 @@ public class NewspaperBatchTests {
         when(fcmock.getViewInfo(eq(roundTrip), lt(becomingItemTime))).thenReturn(asList());
 
         //But after this time, the object is an entry
-        when(fcmock.getViewInfo(eq(roundTrip), geq(becomingItemTime))).thenReturn(asList(new ViewInfo(viewAngle,
-                                                                                                             true,
-                                                                                                             roundTrip)));
+        when(fcmock.getViewInfo(eq(roundTrip), geq(becomingItemTime))).thenReturn(asList(viewAngle));
 
 
         db.objectCreated(roundTrip, beginning);

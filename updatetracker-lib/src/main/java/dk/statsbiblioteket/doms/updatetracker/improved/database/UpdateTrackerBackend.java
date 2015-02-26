@@ -3,12 +3,9 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.ViewInfo;
 import org.hibernate.Criteria;
 import org.hibernate.Query;
 import org.hibernate.Session;
-import org.hibernate.criterion.Criterion;
-import org.hibernate.criterion.LogicalExpression;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,7 +15,6 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.HibernateUtils.listAndCast;
 import static java.util.stream.Collectors.toSet;
@@ -33,6 +29,8 @@ public class UpdateTrackerBackend {
 
 
     public UpdateTrackerBackend(Fedora fedora) {
+
+
         this.fedora = fedora;
     }
 
@@ -74,9 +72,8 @@ public class UpdateTrackerBackend {
         if ( state != State.DELETED) {
             List<Record> thisRecords = listAndCast(session.createCriteria(Record.class).add(eq("entryPid", pid)));
             if (thisRecords.isEmpty()){
-                List<ViewInfo> viewInfo = fedora.getViewInfo(pid, date);
-                List<String> entryForViewAngles = isEntryForViewAngles(viewInfo);
-                for (String entryForViewAngle : entryForViewAngles) {
+                List<String> viewInfo = fedora.getViewInfo(pid, date);
+                for (String entryForViewAngle : viewInfo) {
                     log.debug("Pid {} is an entry for viewangle {}", pid, entryForViewAngle);
                     Record record = new Record(pid, entryForViewAngle, collection);
                     Object actual = session.get(Record.class, record);
@@ -139,9 +136,6 @@ public class UpdateTrackerBackend {
 
     }
 
-    List<String> isEntryForViewAngles(List<ViewInfo> viewInfo) {
-        return viewInfo.stream().filter(ViewInfo::isEntry).map(ViewInfo::getViewAngle).collect(Collectors.toList());
-    }
 
 
     public void modifyRelations(String pid, Timestamp date, Session session) throws
@@ -164,7 +158,7 @@ public class UpdateTrackerBackend {
         log.debug("starting modifyRelations({},{})",pid,date);
 
         //Create new Records
-        final Collection<String> entryForViewAngles = isEntryForViewAngles(fedora.getViewInfo(pid, date));
+        final Collection<String> entryForViewAngles = fedora.getViewInfo(pid, date);
         final Collection<String> collections = fedora.getCollections(pid, asDate(date));
         for (String entryForViewAngle : entryForViewAngles) {
             for (String collection : collections) {
@@ -199,8 +193,6 @@ public class UpdateTrackerBackend {
         }
 
         //Update other records
-
-
         recalculateView(pid, date, session);
     }
 
@@ -270,7 +262,5 @@ public class UpdateTrackerBackend {
     }
 
 
-    public boolean isContentModel(String pid, Session session) {
-        return false;
-    }
+
 }

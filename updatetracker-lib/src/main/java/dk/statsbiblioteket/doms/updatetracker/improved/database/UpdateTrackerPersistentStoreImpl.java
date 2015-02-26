@@ -38,6 +38,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     private Fedora fedora;
     private UpdateTrackerBackend backend;
 
+
     public UpdateTrackerPersistentStoreImpl(Fedora fedora) {
         this.fedora = fedora;
     }
@@ -65,18 +66,13 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         log.info("ObjectCreated({},{}) Starting",pid,date);
         try {
             Set<String> collections = fedora.getCollections(pid, date);
-            if (isNewContentModel(pid)){
-                //TODO cache content model info
-                //backend.contentModelViewChanged(pid,date,session);
-            } else {
                 Timestamp timestamp = new Timestamp(date.getTime());
-
                 for (String collection : collections) {
                     backend.modifyState(pid, timestamp, collection, INACTIVE, session);
                     backend.modifyRelations(pid, timestamp, session);
                 }
                 backend.updateTimestamps(pid, timestamp, session);
-            }
+
             transaction.commit();
             log.info("ObjectCreated({},{}) Completed", pid, date);
         } catch (Exception e) {
@@ -119,18 +115,17 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         log.info("DatastreamChanged({},{},{}) Starting", pid, date,dsid);
         try {
             Timestamp timestamp = new Timestamp(date.getTime());
-            if (backend.isContentModel(pid,session)) {
+            if (fedora.isContentModel(pid)) {
                 if (dsid != null && dsid.equals("VIEW")) {
-                    //backend.contentModelViewChanged(pid, date,session);
-                    for (String subscriber : getSubscribingObjects(pid)) {
-
+                    fedora.invalidateContentModel(pid);
+                    for (String subscriber : fedora.getSubscribingObjects(pid)) {
                         backend.modifyRelations(subscriber, timestamp, session);
                         backend.updateTimestamps(subscriber, timestamp, session);
                     }
                 }
-            } else if (dsid != null && dsid.equals("RELS-EXT") && (backend.isContentModel(pid,session) || isNewContentModel(pid))) {
-                    //backend.contentModelViewChanged(pid,date,session);
-                    for (String subscriber : getSubscribingObjects(pid)) {
+            } else if (dsid != null && dsid.equals("RELS-EXT") && (fedora.isCachedContentModel(pid))) {
+                fedora.invalidateContentModel(pid);
+                for (String subscriber : fedora.getSubscribingObjects(pid)) {
                         backend.modifyRelations(subscriber, timestamp, session);
                         backend.updateTimestamps(subscriber, timestamp, session);
                     }
@@ -167,9 +162,9 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             Timestamp timestamp = new Timestamp(date.getTime());
             backend.modifyRelations(pid, timestamp, session);
             backend.updateTimestamps(pid, timestamp, session);
-            if (backend.isContentModel(pid,session) || isNewContentModel(pid)) {
-                //backend.contentModelViewChanged(pid, date,session);
-                for (String subscriber : getSubscribingObjects(pid)) {
+            if (fedora.isContentModel(pid)) {
+                fedora.invalidateContentModel(pid);
+                for (String subscriber : fedora.getSubscribingObjects(pid)) {
                     backend.modifyRelations(subscriber, timestamp, session);
                     backend.updateTimestamps(subscriber, timestamp, session);
                 }
@@ -182,10 +177,6 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         }
     }
 
-    //TODO this checks if the pid is a content model in fedora
-    private boolean isNewContentModel(String pid) {
-        return false;
-    }
 
     @Override
     public void objectStateChanged(String pid, Date date, String newstate) throws
@@ -296,11 +287,5 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     @Override
     public void close() {
         sessionFactory.close();
-    }
-
-
-    private String[] getSubscribingObjects(String pid) {
-        //TODO
-        return new String[0];
     }
 }
