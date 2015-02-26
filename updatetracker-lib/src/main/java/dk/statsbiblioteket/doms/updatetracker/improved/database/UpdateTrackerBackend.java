@@ -11,11 +11,9 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.Timestamp;
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.HibernateUtils.listAndCast;
 import static java.util.stream.Collectors.toSet;
 
 public class UpdateTrackerBackend {
@@ -64,7 +62,7 @@ public class UpdateTrackerBackend {
                     Record newRecord = new Record(pid, entryAngle, collection);
                     if (HibernateUtils.recordNotExists(session, newRecord)) {
                         log.debug("Pid {} is not marked as an entry for viewAngle {}. Fixing", pid, entryAngle);
-                        final DomsObject object = HibernateUtils.loadOrCreate(session, new DomsObject(pid));
+                        final DomsObject object = HibernateUtils.loadOrCreate(session, pid);
                         newRecord.getObjects().add(object);
                         newRecord.setInactive(date);
                         if (state == State.ACTIVE){
@@ -99,7 +97,7 @@ public class UpdateTrackerBackend {
             log.debug("Switching on states for pid {}, got the Deleted branch", pid);
 
             //TODO This code duplicates code in recalc view
-            DomsObject thisObject = HibernateUtils.loadOrCreate(session, new DomsObject(pid));
+            DomsObject thisObject = HibernateUtils.loadOrCreate(session, pid);
             Set<Record> otherRecordsThanThisWhichThisObjectIsPart = thisObject.getRecords().stream()
                                                     .filter(record -> !record.getEntryPid().equals(pid))
                                                     .collect(toSet());
@@ -132,7 +130,7 @@ public class UpdateTrackerBackend {
         otherRecord.getObjects().clear();
         for (String viewObject : bundle.getContained()) {
             log.debug("Marking object {} as part of record {},{},{}", viewObject, otherRecord.getEntryPid(), otherRecord.getViewAngle(), otherRecord.getCollection());
-            final DomsObject object = HibernateUtils.loadOrCreate(session, new DomsObject(viewObject));
+            final DomsObject object = HibernateUtils.loadOrCreate(session, viewObject);
             otherRecord.getObjects().add(object);
         }
 
@@ -170,7 +168,7 @@ public class UpdateTrackerBackend {
             for (String collection : collections) {
                 Record record = new Record(pid, entryViewAngle, collection);
                 if (HibernateUtils.recordNotExists(session, record)){
-                    DomsObject object = HibernateUtils.loadOrCreate(session, new DomsObject(pid));
+                    DomsObject object = HibernateUtils.loadOrCreate(session, pid);
                     record.getObjects().add(object);
                     record.setInactive(date);
                     session.saveOrUpdate(record);
@@ -201,7 +199,7 @@ public class UpdateTrackerBackend {
 
          */
 
-        Set<Record> records = HibernateUtils.loadOrCreate(session, new DomsObject(pid)).getRecords();
+        Set<Record> records = HibernateUtils.loadOrCreate(session, pid).getRecords();
         log.debug("Find all records {} containing {} ", records, pid);
         for (Record otherRecord : records) {
             reconnectObjectsInRecord(date, session, otherRecord);
@@ -252,6 +250,11 @@ public class UpdateTrackerBackend {
              .setParameter("collection", collection)
              .setParameter("viewAngle", viewAngle);
 
-        return listAndCast(query);
+        return listRecords(query);
+    }
+
+    @SuppressWarnings("unchecked")
+    static <T> List<T> listRecords(Query query) {
+        return query.list();
     }
 }
