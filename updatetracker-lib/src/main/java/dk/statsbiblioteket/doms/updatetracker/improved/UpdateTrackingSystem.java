@@ -1,7 +1,14 @@
 package dk.statsbiblioteket.doms.updatetracker.improved;
 
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
+import dk.statsbiblioteket.doms.central.connectors.fedora.FedoraRest;
+import dk.statsbiblioteket.doms.central.connectors.fedora.tripleStore.TripleStoreRest;
+import dk.statsbiblioteket.doms.central.connectors.fedora.views.ViewsImpl;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStoreImpl;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStore;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.ContentModelCache;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedoraJms.FedoraMessageListener;
 import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
@@ -50,9 +57,17 @@ public class UpdateTrackingSystem {
                         "dk.statsbiblioteket.doms.updatetracker.fedora.password", "FedoraReadOnlyPass");
 
         Credentials creds = new Credentials(fedoraUser, fedoraPass);
+        ContentModelCache cmCache = new ContentModelCache();
+        Client client = Client.create();
+        WebResource restApi = client.resource(fedoraLocation + "/objects/");
+        restApi.addFilter(new HTTPBasicAuthFilter(creds.getUsername(), creds.getPassword()));
+        FedoraRest fedoraRest = new FedoraRest(creds, fedoraLocation);
+        TripleStoreRest tripleStoreRest = new TripleStoreRest(creds, fedoraLocation, fedoraRest);
+        ViewsImpl views = new ViewsImpl(tripleStoreRest, fedoraRest);
+
 
         //Start up the fedora connection
-        fedora = new Fedora(creds,fedoraLocation);
+        fedora = new Fedora(cmCache,fedoraRest,tripleStoreRest,views);
 
         //Start up the database
         store = new UpdateTrackerPersistentStoreImpl(fedora);

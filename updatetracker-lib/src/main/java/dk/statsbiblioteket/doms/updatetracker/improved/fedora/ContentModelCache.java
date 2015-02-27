@@ -1,4 +1,4 @@
-package dk.statsbiblioteket.doms.updatetracker.improved.database;
+package dk.statsbiblioteket.doms.updatetracker.improved.fedora;
 
 import dk.statsbiblioteket.util.caching.TimeSensitiveCache;
 

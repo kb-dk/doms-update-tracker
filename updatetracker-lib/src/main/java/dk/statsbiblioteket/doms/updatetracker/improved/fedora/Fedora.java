@@ -13,9 +13,10 @@ import dk.statsbiblioteket.doms.central.connectors.fedora.structures.ObjectType;
 import dk.statsbiblioteket.doms.central.connectors.fedora.tripleStore.TripleStoreRest;
 import dk.statsbiblioteket.doms.central.connectors.fedora.views.Views;
 import dk.statsbiblioteket.doms.central.connectors.fedora.views.ViewsImpl;
-import dk.statsbiblioteket.doms.updatetracker.improved.database.ContentModelCache;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.ViewBundle;
 import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
+import dk.statsbiblioteket.util.Pair;
+import dk.statsbiblioteket.util.caching.TimeSensitiveCache;
 
 import javax.xml.bind.JAXBException;
 import java.lang.String;
@@ -33,32 +34,44 @@ import static java.util.stream.Collectors.toSet;
  */
 public class Fedora {
 
-    protected static final String ENTRY_RELATION
+    public static final String ENTRY_RELATION
             = "http://doms.statsbiblioteket.dk/types/view/default/0/1/#isEntryForViewAngle";
     protected static final String COLLECTION_RELATION
             = "http://doms.statsbiblioteket.dk/relations/default/0/1/#isPartOfCollection";
     protected static final String HASMODEL_RELATION
             = "info:fedora/fedora-system:def/model#hasModel";
 
-    private static Client client = Client.create();
     private final Views views;
-    private final TripleStoreRest ts;
-    private final FedoraRest fedora;
+    private final TripleStoreRest tripleStoreRest;
+    private final FedoraRest fedoraRest;
     private final ContentModelCache cmCache;
 
-    public Fedora(Credentials creds, String fedoraLocation) throws MalformedURLException {
-        this.cmCache = new ContentModelCache();
-        WebResource restApi = client.resource(fedoraLocation + "/objects/");
-        restApi.addFilter(new HTTPBasicAuthFilter(creds.getUsername(), creds.getPassword()));
-        fedora = new FedoraRest(creds, fedoraLocation);
-        ts = new TripleStoreRest(creds, fedoraLocation, fedora);
-        views = new ViewsImpl(ts, fedora);
+
+    private static final int ONE_MINUTE_IN_MILLISECONDS = 60 * 1000;
+
+    /**
+     * This is the profile of object profiles. Elements have a lifetime of only one minute, which should prevent the cache
+     * from growing to large.
+     * As both the pid and the date is part of the key, this is just a cache for multiple invocations during the
+     * same event. The next event will have a new date, and will thus not hit the old profile, and thus I do not need
+     * to invalidate entries in this cache.
+     */
+    private static final TimeSensitiveCache<Pair<String,Date>, ObjectProfile> profileCache = new TimeSensitiveCache<>(ONE_MINUTE_IN_MILLISECONDS, false);
+
+
+
+    public Fedora(ContentModelCache cmCache, FedoraRest fedoraRest, TripleStoreRest tripleStoreRest, ViewsImpl views) {
+
+        this.cmCache = cmCache;
+        this.fedoraRest = fedoraRest;
+        this.tripleStoreRest = tripleStoreRest;
+        this.views = views;
     }
 
     public List<String> getEntryAngles(String pid, Date date) throws FedoraFailedException {
         try {
             Set<String> entryAngles = new HashSet<>();
-            ObjectProfile profile = fedora.getLimitedObjectProfile(pid, date.getTime());
+            ObjectProfile profile = getObjectProfile(pid, date);
             if (profile.getType() == ObjectType.CONTENT_MODEL){
                 cmCache.setEntryViewAngles(pid, getEntryAnglesForContentModel(pid, date) );
             }
@@ -78,7 +91,7 @@ public class Fedora {
                                                            JAXBException {
         Set<String> entryAngles = cmCache.getCachedEntryAngles(contentmodel);
         if (entryAngles == null) {
-            List<FedoraRelation> entryRelations = fedora.getNamedRelations(contentmodel, ENTRY_RELATION, date.getTime());
+            List<FedoraRelation> entryRelations = fedoraRest.getNamedRelations(contentmodel, ENTRY_RELATION, date.getTime());
             entryAngles = entryRelations.stream()
                                  .map(FedoraRelation::getObject)
                                  .collect(toSet());
@@ -99,7 +112,7 @@ public class Fedora {
     public Set<String> getCollections(String pid, Date date) throws FedoraFailedException {
         List<FedoraRelation> collectionRelations = null;
         try {
-            collectionRelations = fedora.getNamedRelations(pid, COLLECTION_RELATION,
+            collectionRelations = fedoraRest.getNamedRelations(pid, COLLECTION_RELATION,
                                                                                        date.getTime());
         } catch (BackendInvalidCredsException | BackendMethodFailedException | BackendInvalidResourceException e) {
             throw new FedoraFailedException("Failed to get collection info from Fedora for pid " + pid, e);
@@ -111,7 +124,7 @@ public class Fedora {
 
         List<FedoraRelation> hasModelRelations;
         try {
-            hasModelRelations = ts.getInverseRelations(contentModelPid,HASMODEL_RELATION);
+            hasModelRelations = tripleStoreRest.getInverseRelations(contentModelPid,HASMODEL_RELATION);
         } catch (BackendInvalidCredsException | BackendMethodFailedException | BackendInvalidResourceException e) {
             throw new FedoraFailedException("Failed to get content model info from Fedora for pid " + contentModelPid, e);
         }
@@ -120,9 +133,29 @@ public class Fedora {
                                   .collect(toSet());
     }
 
-    public boolean isContentModel(String pid) {
-        //TODO if not cached, perform check
-        return cmCache.isCachedContentModel(pid);
+    public boolean isCurrentlyContentModel(String pid, Date date) throws FedoraFailedException {
+        if (cmCache.isCachedContentModel(pid)){
+            return true;
+        }
+        try {
+            ObjectProfile profile = getObjectProfile(pid, date);
+            return profile.getType() == ObjectType.CONTENT_MODEL;
+        } catch (BackendInvalidCredsException | BackendInvalidResourceException | BackendMethodFailedException e) {
+            throw new FedoraFailedException("Failed to get profile of object '"+pid+"' at date '"+date.toString()+"'",e);
+        }
+    }
+
+    private ObjectProfile getObjectProfile(String pid, Date date) throws
+                                                                  BackendInvalidResourceException,
+                                                                  BackendMethodFailedException,
+                                                                  BackendInvalidCredsException {
+        final Pair<String, Date> key = new Pair<>(pid, date);
+        ObjectProfile cachedProfile = profileCache.get(key);
+        if (cachedProfile == null){
+            cachedProfile = fedoraRest.getLimitedObjectProfile(pid, date.getTime());
+            profileCache.put(key,cachedProfile);
+        }
+        return cachedProfile;
     }
 
     public void invalidateContentModel(String pid) {

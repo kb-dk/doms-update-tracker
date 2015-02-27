@@ -103,13 +103,15 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         try {
             Timestamp timestamp = new Timestamp(date.getTime());
             if (dsid != null) {
-                if (fedora.isContentModel(pid)) {
-                    if ((dsid.equals("VIEW") || dsid.equals("RELS-EXT"))) {
-                        contentModelChanged(pid, timestamp, session);
-                    }
-                } else {
-                    if (dsid.equals("RELS-EXT")) {
-                        objectRelationsChanged(pid, date);
+                if ((dsid.equals("VIEW") || dsid.equals("RELS-EXT"))) {
+                    if (fedora.isCurrentlyContentModel(pid, date)) {
+                        fedora.invalidateContentModel(pid);
+                        for (String object : fedora.getObjectsOfThisContentModel(pid)) {
+                            backend.reconnectObjects(object, timestamp, session);
+                            backend.updateTimestamps(object, timestamp, session);
+                        }
+                    } else if (dsid.equals("RELS-EXT")) {
+                        backend.reconnectObjects(pid, timestamp, session);
                     }
                 }
             }
@@ -119,16 +121,6 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         } catch (Exception e) {
             transaction.rollback();
             throw new UpdateTrackerStorageException("Hibernate Failed", e);
-        }
-    }
-
-    private void contentModelChanged(String pid, Timestamp timestamp, Session session) throws
-                                                                                       FedoraFailedException,
-                                                                                       UpdateTrackerStorageException {
-        fedora.invalidateContentModel(pid);
-        for (String object : fedora.getObjectsOfThisContentModel(pid)) {
-            backend.reconnectObjects(object, timestamp, session);
-            backend.updateTimestamps(object, timestamp, session);
         }
     }
 
@@ -142,23 +134,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     public void objectRelationsChanged(String pid, Date date) throws
                                                               UpdateTrackerStorageException,
                                                               FedoraFailedException {
-        Session session = sessionFactory.getCurrentSession();
-        Transaction transaction = session.beginTransaction();
-        log.info("objectRelationsChanged({},{}) Starting", pid, date);
-        try {
-            Timestamp timestamp = new Timestamp(date.getTime());
-            if (fedora.isContentModel(pid)) {
-                contentModelChanged(pid, timestamp, session);
-            } else {
-                backend.reconnectObjects(pid, timestamp, session);
-                backend.updateTimestamps(pid, timestamp, session);
-            }
-            transaction.commit();
-            log.info("objectRelationsChanged({},{}) Completed", pid, date);
-        } catch (Exception e) {
-            transaction.rollback();
-            throw new UpdateTrackerStorageException("Hibernate Failed", e);
-        }
+        datastreamChanged(pid,date,"RELS-EXT");
     }
 
 
