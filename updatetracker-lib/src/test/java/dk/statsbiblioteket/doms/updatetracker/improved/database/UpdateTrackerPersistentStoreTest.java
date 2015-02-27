@@ -65,6 +65,13 @@ public class UpdateTrackerPersistentStoreTest {
                                                                                                                objects));
     }
 
+    private void removeEntry(String pid) throws FedoraFailedException {
+        final String viewAngle = "SummaVisible";
+        when(fedora.getEntryAngles(eq(pid), any(Date.class))).thenThrow(new FedoraFailedException("Object not found"));
+        when(fedora.calcViewBundle(eq(pid), eq(viewAngle), any(Date.class))).thenThrow(new FedoraFailedException("Object not found"));
+    }
+
+
     @Test
     public void testObjectCreatedBeforeAndAfter() throws Exception {
 
@@ -114,6 +121,27 @@ public class UpdateTrackerPersistentStoreTest {
         assertEquals("To many objects", 1, list.size());
 
         Date test1Delete = new Date();
+        db.objectDeleted("doms:test1", test1Delete);
+
+        list = db.lookup(test1Delete, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals("To many objects", 1, list.size());
+
+        list = db.lookup(new Date(test1Delete.getTime() + 1), "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals("To many objects", 0, list.size());
+    }
+
+    @Test
+    public void testObjectPurgedBasic() throws Exception {
+
+        Date test1Create = new Date();
+        addEntry("doms:test1");
+        db.objectCreated("doms:test1", test1Create);
+
+        List<Record> list = db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals("To many objects", 1, list.size());
+
+        Date test1Delete = new Date();
+        removeEntry("doms:test1");
         db.objectDeleted("doms:test1", test1Delete);
 
         list = db.lookup(test1Delete, "SummaVisible", 0, 100, null, "doms:Root_Collection");
