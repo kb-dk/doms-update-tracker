@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<dbspec:database xmlns:dbspec="dbspec"
+                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                 xsi:schemaLocation="dbspec  dbspec.xsd">
+    <dbspec:table name="updateTrackerLogs" primaryKey="">
+        <dbspec:comment>This table records all operations done on objects in fedora</dbspec:comment>
+        <dbspec:column name="key" autoIncrement="true" type="bigint">
+            <dbspec:comment>the unique key</dbspec:comment>
+        </dbspec:column>
+        <dbspec:column name="pid" type="varchar(64)" notNull="true" index="pid" binary="true">
+            <dbspec:comment>The PID of the object</dbspec:comment>
+        </dbspec:column>
+        <dbspec:column name="happened" type="TIMESTAMP" notNull="true" index="happened" binary="true">
+            <dbspec:comment>when the method happened</dbspec:comment>
+        </dbspec:column>
+        <dbspec:column name="method" type="varchar(64)" notNull="true" binary="true">
+            <dbspec:comment>what method</dbspec:comment>
+        </dbspec:column>
+        <dbspec:column name="param" type="varchar(64)" notNull="false" binary="true">
+            <dbspec:comment>the relevant param, dsid or state</dbspec:comment>
+        </dbspec:column>
+    </dbspec:table>
+</dbspec:database>
+
+

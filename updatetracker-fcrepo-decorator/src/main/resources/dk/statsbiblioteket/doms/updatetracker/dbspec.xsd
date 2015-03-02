@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" targetNamespace="dbspec" xmlns:dbspec="dbspec">
+    <xs:element name="database">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="table" type="dbspec:table" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:complexType name="table">
+        <xs:sequence>
+            <xs:element name="comment" type="xs:string" minOccurs="0"/>
+            <xs:element name="column" type="dbspec:column" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="name" use="required" type="xs:NCName"/>
+        <xs:attribute name="primaryKey"/>
+        <xs:attribute name="type"/>
+    </xs:complexType>
+    <xs:complexType name="column">
+        <xs:sequence>
+            <xs:element name="comment" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+        <xs:attribute name="name" use="required"/>
+        <xs:attribute name="type" use="required"/>
+        <xs:attribute name="binary" type="xs:boolean"/>
+        <xs:attribute name="autoIncrement" type="xs:boolean"/>
+        <xs:attribute name="index"/>
+        <xs:attribute name="notNull" type="xs:boolean"/>
+        <xs:attribute name="unique" type="xs:boolean"/>
+        <xs:attribute name="default"/>
+        <xs:attribute name="foreignKey"/>
+    </xs:complexType>
+
+</xs:schema>
