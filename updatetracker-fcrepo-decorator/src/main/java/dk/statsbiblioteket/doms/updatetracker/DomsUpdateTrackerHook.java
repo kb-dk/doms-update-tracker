@@ -13,6 +13,8 @@ import org.fcrepo.server.storage.ConnectionPool;
 import org.fcrepo.server.storage.ConnectionPoolManager;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -29,6 +31,7 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
 
     /** Logger for this class. */
     private static Log logger = LogFactory.getLog(DomsUpdateTrackerHook.class);
+    private static Log replayableLog = LogFactory.getLog("dk.statsbiblioteket.doms.updatetracker.ReplayLog");
 
     private Database database;
 
@@ -62,7 +65,9 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
             database = new Database(cPool);
         } catch (Exception e){
             cPool.close();
-            throw new InitializationException("Failed to open connection", e);
+            final StringWriter out = new StringWriter();
+            e.printStackTrace(new PrintWriter(out));
+            throw new InitializationException("Failed to open connection: "+ out.toString(), e);
         }
     }
 
@@ -83,47 +88,74 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
             now = Server.getCurrentDate(context);
             pid = args[1].toString();
             param = null;
-            if (args.length > 2) {
+            if (args.length > 2 && args[2] != null) {
                 param = args[2].toString();
             }
         } catch (Exception e) {
             logger.error("Failed to parse params '" + Arrays.toString(args) + "'", e);
-            return method.invoke(proxy, args);
+            return method.invoke(target, args);
         }
 
-        logger.info("Method: " + methodName + "(" + pid + ", " + now.getTime() + ", " + param + ")");
+        try {
 
-        switch (methodName) {
-            case "ingest":
-            case "modifyObject":
-            case "purgeObject":
-            case "addDatastream":
-            case "modifyDatastreamByReference":
-            case "modifyDatastreamByValue":
-            case "purgeDatastream":
-            case "setDatastreamState":
-            case "setDatastreamVersionable":
-            case "addRelationship":
-            case "purgeRelationship":
-                return invokeHook(method, args, methodName, pid, now, param);
+            switch (methodName) {
+                case "ingest":
+                    param = null;
+                    pid = invokeIngestHook(method, args, now);
+                    return pid;
 
-            case "getObjectXML":
-            case "export":
-            case "getDatastream":
-            case "getDatastreams":
-            case "getDatastreamHistory":
-            case "putTempStream":
-            case "getTempStream":
-            case "compareDatastreamChecksum":
-            case "getNextPID":
-            case "getRelationships":
-            case "validate":
-                return method.invoke(target, args);
+                case "modifyObject":
+                case "purgeObject":
+                case "addDatastream":
+                case "modifyDatastreamByReference":
+                case "modifyDatastreamByValue":
+                case "purgeDatastream":
+                case "setDatastreamState":
+                case "setDatastreamVersionable":
+                case "addRelationship":
+                case "purgeRelationship":
+                    return invokeHook(method, args, methodName, pid, now, param);
 
-            default:
-                logger.warn("Unknown method invoked  '" + methodName + "'");
-                return method.invoke(target, args);
+                case "getObjectXML":
+                case "export":
+                case "getDatastream":
+                case "getDatastreams":
+                case "getDatastreamHistory":
+                case "putTempStream":
+                case "getTempStream":
+                case "compareDatastreamChecksum":
+                case "getNextPID":
+                case "getRelationships":
+                case "validate":
+                    return method.invoke(target, args);
+
+                default:
+                    logger.warn("Unknown method invoked: " + methodName + "(" + pid + ", " + now.getTime() + ", " +
+                                param +
+                                ")");
+                    return method.invoke(target, args);
+            }
+        } finally {
+            replayableLog.info("Method: " + methodName + "(" + pid + ", " + now.getTime() + ", " + param + ")");
         }
+    }
+
+    /**
+     * For ingest, we do not know the pid until after the operation completes
+     * @param method
+     * @param args
+     * @param now
+     * @return
+     * @throws InvocationTargetException
+     * @throws IllegalAccessException
+     */
+    private String invokeIngestHook(Method method, Object[] args,  Date now) throws InvocationTargetException, IllegalAccessException {
+        String methodName = "ingest";
+
+        String pid = (String) method.invoke(target, args);
+        addLogEntry(methodName,pid,now,null);
+        return pid;
+
     }
 
     /**
@@ -140,22 +172,49 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
      */
     private Object invokeHook(Method method, Object[] args, String methodName, String pid, Date now,
                               String param) throws IllegalAccessException, InvocationTargetException {
-        Long logkey = -1L;
-        try {
-            logkey = database.addLogEntry(pid, now, methodName, param);
-        } catch (IOException e) {
-            logger.error("Failed to add log to database",e);
-        }
+        Long logkey;
+        logkey = addLogEntry(methodName, pid, now, param);
 
         try {
             return method.invoke(target, args);
         } catch (Throwable tr) {
-            try {
-                database.removeLogEntry(logkey);
-            } catch (IOException e) {
-                logger.error("Failed to remove log key '"+logkey+"' from database",e);
-            }
+            logger.info("Caught exception while invoking method " + methodName + "(" + pid + ", " + now.getTime() +
+                        ", " +
+                        param +
+                        ")" + " . Now attempting to remove log entry from database", tr);
+
+            removeLogEntry(methodName, pid, now, param, logkey);
             throw tr;
         }
+    }
+
+    private void removeLogEntry(String methodName, String pid, Date now, String param, Long logkey) {
+        try {
+            database.removeLogEntry(logkey);
+
+            logger.info("For method" + "" + methodName + "(" + pid + ", " + now.getTime() + ", " +
+                                   param +
+                                   ")" + ", we removed logKey '" + logkey + "' from the database");
+        } catch (IOException e) {
+
+            logger.error("For method" + "" + methodName + "(" + pid + ", " + now.getTime() + ", " +
+                                   param +
+                                   ")" + ", we failed to remove logKey '"+logkey+"' from the database",e);
+        }
+    }
+
+    private Long addLogEntry(String methodName, String pid, Date now, String param) throws InvocationTargetException {
+        Long logkey;
+        try {
+            logger.debug("For method" + "" + methodName + "(" + pid + ", " + now.getTime() + ", " + param +
+                         ")" + ", add a log entry to the database");
+            logkey = database.addLogEntry(pid, now, methodName, param);
+        } catch (IOException e) {
+            final String message = "For method" + "" + methodName + "(" + pid + ", " + now.getTime() + ", " + param +
+                                   ")" + ", we failed to add log to database";
+            logger.error(message,e);
+            throw new InvocationTargetException(e, message);
+        }
+        return logkey;
     }
 }

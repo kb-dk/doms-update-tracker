@@ -10,6 +10,7 @@ import dk.statsbiblioteket.doms.central.connectors.fedora.structures.ObjectType;
 import dk.statsbiblioteket.doms.central.connectors.fedora.tripleStore.TripleStoreRest;
 import dk.statsbiblioteket.doms.central.connectors.fedora.views.Views;
 import dk.statsbiblioteket.doms.central.connectors.fedora.views.ViewsImpl;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.ViewBundle;
 import dk.statsbiblioteket.util.Pair;
 import dk.statsbiblioteket.util.caching.TimeSensitiveCache;
@@ -163,6 +164,16 @@ public class FedoraForUpdateTracker {
 
     public void invalidateContentModel(String pid) {
         cmCache.invalidateContentModel(pid);
+    }
+
+    public Record.State getState(String pid, Date date) throws FedoraFailedException {
+        try {
+            ObjectProfile profile = getObjectProfile(pid, date);
+            return Record.State.fromName(profile.getState());
+        } catch (BackendInvalidCredsException | BackendInvalidResourceException | BackendMethodFailedException e) {
+            throw new FedoraFailedException("Failed to get profile of object '" + pid + "' at date '" +
+                                            date.toString() + "'", e);
+        }
     }
 }
 
