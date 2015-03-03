@@ -3,7 +3,7 @@
 <dbspec:database xmlns:dbspec="dbspec"
                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                  xsi:schemaLocation="dbspec  dbspec.xsd">
-    <dbspec:table name="updateTrackerLogs" primaryKey="">
+    <dbspec:table name="updateTrackerLogs" primaryKey="key">
         <dbspec:comment>This table records all operations done on objects in fedora</dbspec:comment>
         <dbspec:column name="key" autoIncrement="true" type="bigint">
             <dbspec:comment>the unique key</dbspec:comment>
