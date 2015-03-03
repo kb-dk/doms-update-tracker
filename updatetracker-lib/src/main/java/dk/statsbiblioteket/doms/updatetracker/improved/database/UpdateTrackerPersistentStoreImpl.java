@@ -55,7 +55,8 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             Set<String> collections = fedora.getCollections(pid, date);
             Timestamp timestamp = new Timestamp(date.getTime());
             for (String collection : collections) {
-                backend.modifyState(pid, timestamp, collection, INACTIVE, session);
+                State ingestState = fedora.getState(pid,date);
+                backend.modifyState(pid, timestamp, collection, ingestState, session);
                 backend.reconnectObjects(pid, timestamp, session);
             }
             backend.updateTimestamps(pid, timestamp, session);
