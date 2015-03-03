@@ -5,7 +5,7 @@ import dk.statsbiblioteket.util.caching.TimeSensitiveCache;
 import java.util.Map;
 import java.util.Set;
 
-public class ContentModelCache {
+public class EntryAngleCache {
 
     private static final int ONE_DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
     private static final TimeSensitiveCache<String, Set<String>> cache = new TimeSensitiveCache<>(ONE_DAY_IN_MILLISECONDS, true);

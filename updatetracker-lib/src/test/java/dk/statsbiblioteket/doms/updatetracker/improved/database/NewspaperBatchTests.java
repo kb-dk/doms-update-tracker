@@ -1,7 +1,7 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import org.junit.After;
 import org.junit.Before;
@@ -11,7 +11,7 @@ import java.net.MalformedURLException;
 import java.util.Date;
 import java.util.List;
 
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.HibernateUtils.asSet;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerDAO.asSet;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.ALTO;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.EDITION;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.EVENTS;
@@ -33,10 +33,10 @@ import static org.mockito.Mockito.when;
 public class NewspaperBatchTests {
 
     UpdateTrackerPersistentStore db;
-    Fedora fcmock;
+    FedoraForUpdateTracker fcmock;
 
     public NewspaperBatchTests() throws MalformedURLException {
-        fcmock = mock(Fedora.class);
+        fcmock = mock(FedoraForUpdateTracker.class);
     }
 
 

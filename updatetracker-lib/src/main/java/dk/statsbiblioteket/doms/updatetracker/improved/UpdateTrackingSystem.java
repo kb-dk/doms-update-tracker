@@ -8,8 +8,8 @@ import dk.statsbiblioteket.doms.central.connectors.fedora.tripleStore.TripleStor
 import dk.statsbiblioteket.doms.central.connectors.fedora.views.ViewsImpl;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStoreImpl;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStore;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.ContentModelCache;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.EntryAngleCache;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedoraJms.FedoraMessageListener;
 import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
 import dk.statsbiblioteket.doms.webservices.configuration.ConfigCollection;
@@ -29,7 +29,7 @@ public class UpdateTrackingSystem {
 
 
     private static UpdateTrackerPersistentStore store;
-    private static Fedora fedora;
+    private static FedoraForUpdateTracker fedora;
     private static MessageConsumer consumer;
 
 
@@ -57,7 +57,7 @@ public class UpdateTrackingSystem {
                         "dk.statsbiblioteket.doms.updatetracker.fedora.password", "FedoraReadOnlyPass");
 
         Credentials creds = new Credentials(fedoraUser, fedoraPass);
-        ContentModelCache cmCache = new ContentModelCache();
+        EntryAngleCache cmCache = new EntryAngleCache();
         Client client = Client.create();
         WebResource restApi = client.resource(fedoraLocation + "/objects/");
         restApi.addFilter(new HTTPBasicAuthFilter(creds.getUsername(), creds.getPassword()));
@@ -67,7 +67,7 @@ public class UpdateTrackingSystem {
 
 
         //Start up the fedora connection
-        fedora = new Fedora(cmCache,fedoraRest,tripleStoreRest,views);
+        fedora = new FedoraForUpdateTracker(cmCache,fedoraRest,tripleStoreRest,views);
 
         //Start up the database
         store = new UpdateTrackerPersistentStoreImpl(fedora);

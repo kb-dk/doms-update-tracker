@@ -1,7 +1,7 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import org.hibernate.Query;
 import org.hibernate.Session;
@@ -17,11 +17,11 @@ import java.util.Set;
 import static java.util.stream.Collectors.toSet;
 
 public class UpdateTrackerBackend {
-    private Fedora fedora;
+    private FedoraForUpdateTracker fedora;
     private Logger log = LoggerFactory.getLogger(UpdateTrackerBackend.class);
 
 
-    public UpdateTrackerBackend(Fedora fedora) {
+    public UpdateTrackerBackend(FedoraForUpdateTracker fedora) {
 
 
         this.fedora = fedora;
@@ -54,15 +54,15 @@ public class UpdateTrackerBackend {
                         set Active Timestamp
          */
         if ( state != State.DELETED) {
-            List<Record> allRecordsWithThisEntryPid = HibernateUtils.getAllRecordsWithThisEntryPid(pid, session);
+            List<Record> allRecordsWithThisEntryPid = UpdateTrackerDAO.getAllRecordsWithThisEntryPid(pid, session);
             if (allRecordsWithThisEntryPid.isEmpty()){
                 List<String> entryAngles = fedora.getEntryAngles(pid, date);
                 for (String entryAngle : entryAngles) {
                     log.debug("Pid {} is an entry for viewangle {}", pid, entryAngle);
                     Record newRecord = new Record(pid, entryAngle, collection);
-                    if (HibernateUtils.recordNotExists(session, newRecord)) {
+                    if (UpdateTrackerDAO.recordNotExists(session, newRecord)) {
                         log.debug("Pid {} is not marked as an entry for viewAngle {}. Fixing", pid, entryAngle);
-                        final DomsObject object = HibernateUtils.loadOrCreate(session, pid);
+                        final DomsObject object = UpdateTrackerDAO.loadOrCreate(session, pid);
                         newRecord.getObjects().add(object);
                         newRecord.setInactive(date);
                         if (state == State.ACTIVE){
@@ -97,7 +97,7 @@ public class UpdateTrackerBackend {
             log.debug("Switching on states for pid {}, got the Deleted branch", pid);
 
             //TODO This code duplicates code in recalc view
-            DomsObject thisObject = HibernateUtils.loadOrCreate(session, pid);
+            DomsObject thisObject = UpdateTrackerDAO.loadOrCreate(session, pid);
             Set<Record> otherRecordsThanThisWhichThisObjectIsPart = thisObject.getRecords().stream()
                                                     .filter(record -> !record.getEntryPid().equals(pid))
                                                     .collect(toSet());
@@ -130,7 +130,7 @@ public class UpdateTrackerBackend {
         otherRecord.getObjects().clear();
         for (String viewObject : bundle.getContained()) {
             log.debug("Marking object {} as part of record {},{},{}", viewObject, otherRecord.getEntryPid(), otherRecord.getViewAngle(), otherRecord.getCollection());
-            final DomsObject object = HibernateUtils.loadOrCreate(session, viewObject);
+            final DomsObject object = UpdateTrackerDAO.loadOrCreate(session, viewObject);
             otherRecord.getObjects().add(object);
         }
 
@@ -167,8 +167,8 @@ public class UpdateTrackerBackend {
         for (String entryViewAngle : entryViewAngles) {
             for (String collection : collections) {
                 Record record = new Record(pid, entryViewAngle, collection);
-                if (HibernateUtils.recordNotExists(session, record)){
-                    DomsObject object = HibernateUtils.loadOrCreate(session, pid);
+                if (UpdateTrackerDAO.recordNotExists(session, record)){
+                    DomsObject object = UpdateTrackerDAO.loadOrCreate(session, pid);
                     record.getObjects().add(object);
                     record.setInactive(date);
                     session.saveOrUpdate(record);
@@ -177,10 +177,10 @@ public class UpdateTrackerBackend {
         }
         //Remove old records
         //"not (A and B)" is the same as "(not A) or (not B)"
-        List<Record> previousRecords = HibernateUtils.getRecordsNotInTheseCollectionsAndViewAngles(pid,
-                                                                                                   session,
-                                                                                                   entryViewAngles,
-                                                                                                   collections);
+        List<Record> previousRecords = UpdateTrackerDAO.getRecordsNotInTheseCollectionsAndViewAngles(pid,
+                                                                                                     session,
+                                                                                                     entryViewAngles,
+                                                                                                     collections);
 
         for (Record previousRecord : previousRecords) {
             previousRecord.setDeleted(date);
@@ -199,7 +199,7 @@ public class UpdateTrackerBackend {
 
          */
 
-        Set<Record> records = HibernateUtils.loadOrCreate(session, pid).getRecords();
+        Set<Record> records = UpdateTrackerDAO.loadOrCreate(session, pid).getRecords();
         log.debug("Find all records {} containing {} ", records, pid);
         for (Record otherRecord : records) {
             reconnectObjectsInRecord(date, session, otherRecord);
@@ -250,11 +250,6 @@ public class UpdateTrackerBackend {
              .setParameter("collection", collection)
              .setParameter("viewAngle", viewAngle);
 
-        return listRecords(query);
-    }
-
-    @SuppressWarnings("unchecked")
-    static <T> List<T> listRecords(Query query) {
-        return query.list();
+        return UpdateTrackerDAO.listRecords(query);
     }
 }

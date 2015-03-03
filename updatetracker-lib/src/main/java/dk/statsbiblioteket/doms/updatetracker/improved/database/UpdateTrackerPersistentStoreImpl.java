@@ -1,7 +1,7 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
@@ -26,11 +26,11 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
 
     private SessionFactory sessionFactory;
 
-    private Fedora fedora;
+    private FedoraForUpdateTracker fedora;
     private UpdateTrackerBackend backend;
 
 
-    public UpdateTrackerPersistentStoreImpl(Fedora fedora) {
+    public UpdateTrackerPersistentStoreImpl(FedoraForUpdateTracker fedora) {
         this.fedora = fedora;
         // A SessionFactory is set up once for an application
         sessionFactory = new Configuration().addAnnotatedClass(DomsObject.class)
@@ -64,7 +64,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             log.info("ObjectCreated({},{}) Completed", pid, date);
         } catch (Exception e) {
             transaction.rollback();
-            throw new UpdateTrackerStorageException("Hibernate Failed", e);
+            throw new UpdateTrackerStorageException("Hibernate Failed in object created for pid='"+pid+"' at date='"+date.getTime()+"'", e);
         }
 
     }
@@ -88,7 +88,8 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             log.info("ObjectDeleted({},{}) Completed", pid, date);
         } catch (Exception e) {
             transaction.rollback();
-            throw new UpdateTrackerStorageException("Hibernate Failed", e);
+            throw new UpdateTrackerStorageException("Hibernate Failed in object deleted for pid='" + pid +
+                                                    "' at date='" + date.getTime() + "'", e);
         }
     }
 
@@ -120,7 +121,8 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             log.info("DatastreamChanged({},{},{}) Completed", pid, date, dsid);
         } catch (Exception e) {
             transaction.rollback();
-            throw new UpdateTrackerStorageException("Hibernate Failed", e);
+            throw new UpdateTrackerStorageException("Hibernate Failed in datastream changed for pid='" + pid +
+                                                    "' at date='" + date.getTime() + "' and dsid='"+dsid+"'", e);
         }
     }
 
@@ -154,7 +156,8 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             log.info("objectStateChanged({},{},{}) Completed", pid, date, newstate);
         } catch (Exception e) {
             transaction.rollback();
-            throw new UpdateTrackerStorageException("Hibernate Failed", e);
+            throw new UpdateTrackerStorageException("Hibernate Failed in object created for pid='" + pid +
+                                                    "' at date='" + date.getTime() + "' and state='"+newstate+"'", e);
         }
     }
 
@@ -178,7 +181,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             return entries;
         } catch (HibernateException e) {
             session.getTransaction().rollback();
-            throw new UpdateTrackerStorageException("Failed to query for", e);
+            throw new UpdateTrackerStorageException("Failed to query for since='"+since.getTime()+"', viewAngle='"+viewAngle+"', offset='"+offset+"', limit="+limit+"', state='"+state+"', collection='"+collection+"'", e);
         } finally {
             session.close();
         }

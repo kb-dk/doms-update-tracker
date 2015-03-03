@@ -1,8 +1,5 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.fedora;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
 import dk.statsbiblioteket.doms.central.connectors.BackendInvalidCredsException;
 import dk.statsbiblioteket.doms.central.connectors.BackendInvalidResourceException;
 import dk.statsbiblioteket.doms.central.connectors.BackendMethodFailedException;
@@ -14,13 +11,11 @@ import dk.statsbiblioteket.doms.central.connectors.fedora.tripleStore.TripleStor
 import dk.statsbiblioteket.doms.central.connectors.fedora.views.Views;
 import dk.statsbiblioteket.doms.central.connectors.fedora.views.ViewsImpl;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.ViewBundle;
-import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
 import dk.statsbiblioteket.util.Pair;
 import dk.statsbiblioteket.util.caching.TimeSensitiveCache;
 
 import javax.xml.bind.JAXBException;
 import java.lang.String;
-import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
@@ -32,7 +27,7 @@ import static java.util.stream.Collectors.toSet;
 /**
  * This class embeds the specific functions we need for Fedora in the update tracker
  */
-public class Fedora {
+public class FedoraForUpdateTracker {
 
     public static final String ENTRY_RELATION
             = "http://doms.statsbiblioteket.dk/types/view/default/0/1/#isEntryForViewAngle";
@@ -44,7 +39,7 @@ public class Fedora {
     private final Views views;
     private final TripleStoreRest tripleStoreRest;
     private final FedoraRest fedoraRest;
-    private final ContentModelCache cmCache;
+    private final EntryAngleCache cmCache;
 
 
     private static final int ONE_MINUTE_IN_MILLISECONDS = 60 * 1000;
@@ -60,7 +55,8 @@ public class Fedora {
 
 
 
-    public Fedora(ContentModelCache cmCache, FedoraRest fedoraRest, TripleStoreRest tripleStoreRest, ViewsImpl views) {
+    public FedoraForUpdateTracker(EntryAngleCache cmCache, FedoraRest fedoraRest, TripleStoreRest tripleStoreRest,
+                                  ViewsImpl views) {
 
         this.cmCache = cmCache;
         this.fedoraRest = fedoraRest;
@@ -133,6 +129,13 @@ public class Fedora {
                                   .collect(toSet());
     }
 
+    /**
+     * Check if this object is a content model at the given date
+     * @param pid
+     * @param date
+     * @return
+     * @throws FedoraFailedException
+     */
     public boolean isCurrentlyContentModel(String pid, Date date) throws FedoraFailedException {
         if (cmCache.isCachedContentModel(pid)){
             return true;

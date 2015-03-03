@@ -1,6 +1,6 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 
 import java.util.Arrays;
@@ -38,7 +38,7 @@ public class Tests {
      * @param fcmock
      * @throws FedoraFailedException
      */
-    static void setContentModelItem(String roundTrip, Fedora fcmock) throws FedoraFailedException {
+    static void setContentModelItem(String roundTrip, FedoraForUpdateTracker fcmock) throws FedoraFailedException {
         when(fcmock.calcViewBundle(eq(roundTrip), eq(SBOI), any(Date.class))).thenReturn(new ViewBundle(roundTrip,
                                                                                                         SBOI));
         when(fcmock.getEntryAngles(eq(roundTrip), gt(new Date()))).thenReturn(asList(SBOI));
@@ -55,7 +55,7 @@ public class Tests {
      * @throws FedoraFailedException
      */
     static void setContentModelFilm(String pid, Date date, String edition, String page, String image,
-                                    Fedora fcmock) throws FedoraFailedException {
+                                    FedoraForUpdateTracker fcmock) throws FedoraFailedException {
         when(fcmock.calcViewBundle(eq(pid), eq(GUI), geq(date))).thenReturn(new ViewBundle(pid, GUI, asList(pid,
                                                                                                             edition,
                                                                                                             page,
@@ -74,7 +74,7 @@ public class Tests {
      * @param fcmock
      * @throws FedoraFailedException
      */
-    static void setContentModelEditionAndItem(String pid, Date date, String page, String image, Fedora fcmock) throws
+    static void setContentModelEditionAndItem(String pid, Date date, String page, String image, FedoraForUpdateTracker fcmock) throws
                                                                                                                FedoraFailedException {
 
         when(fcmock.calcViewBundle(eq(pid), eq(GUI), geq(date))).thenReturn(new ViewBundle(pid, GUI, asList(pid,
@@ -102,7 +102,7 @@ public class Tests {
      * @throws FedoraFailedException
      */
     static void setContentModelPage(String pid, Date pageContentModel, String image, String edition,
-                                    Fedora fcmock) throws FedoraFailedException {
+                                    FedoraForUpdateTracker fcmock) throws FedoraFailedException {
         when(fcmock.calcViewBundle(eq(pid), eq(GUI), geq(pageContentModel))).thenReturn(new ViewBundle(pid,
                                                                                                        GUI,
                                                                                                        asList(pid,
@@ -124,7 +124,7 @@ public class Tests {
      * @param fcmock
      * @throws FedoraFailedException
      */
-    public static void setContentModelNewspaper(String pid, Date changeDate, Fedora fcmock) throws
+    public static void setContentModelNewspaper(String pid, Date changeDate, FedoraForUpdateTracker fcmock) throws
                                                                                             FedoraFailedException {
 
         when(fcmock.calcViewBundle(eq(pid), eq(GUI), geq(changeDate))).thenReturn(new ViewBundle(pid, GUI));
@@ -154,7 +154,7 @@ public class Tests {
      * @param newspaper
      * @throws FedoraFailedException
      */
-    public static void linkEditionToNewspaper(Fedora fcmock, String page1, Date editionLinkedToNewspaper,
+    public static void linkEditionToNewspaper(FedoraForUpdateTracker fcmock, String page1, Date editionLinkedToNewspaper,
                                               String edition, String newspaper) throws FedoraFailedException {
         when(fcmock.calcViewBundle(eq(edition), eq(SUMMA_VISIBLE), geq(editionLinkedToNewspaper))).thenReturn(new ViewBundle(edition,
                                                                                                          SUMMA_VISIBLE,
@@ -168,7 +168,7 @@ public class Tests {
 
     }
 
-    public static void linkNewspaperToNewspaper(Fedora fcmock, String edition, String page1,
+    public static void linkNewspaperToNewspaper(FedoraForUpdateTracker fcmock, String edition, String page1,
                                                 Date editionLinkedToNewspaper, String newspaper, String newspaper2) throws
                                                                                                  FedoraFailedException {
         when(fcmock.calcViewBundle(eq(edition), eq(SUMMA_VISIBLE), geq(editionLinkedToNewspaper))).thenReturn(new ViewBundle(edition,
@@ -436,7 +436,7 @@ public class Tests {
      * @throws FedoraFailedException
      */
     static Date runEditionMaintainer(UpdateTrackerPersistentStore db, String newspaper, String edition, String page1,
-                                     Fedora fcmock) throws
+                                     FedoraForUpdateTracker fcmock) throws
                                                                                       UpdateTrackerStorageException,
                                                                                       FedoraFailedException {
         //edition maintainer
@@ -488,7 +488,7 @@ public class Tests {
      * @throws FedoraFailedException
      */
     static Date enrichMimetypesAndRelations(UpdateTrackerPersistentStore db, String edition, String page1,
-                                            String image1, Fedora fcmock) throws
+                                            String image1, FedoraForUpdateTracker fcmock) throws
                                                                                           UpdateTrackerStorageException,
                                                                                           FedoraFailedException {
         db.datastreamChanged(page1, new Date(), MODS);
@@ -537,7 +537,7 @@ public class Tests {
      * @throws FedoraFailedException
      * @throws UpdateTrackerStorageException
      */
-    static Date createNewspaperObject(UpdateTrackerPersistentStore db, String newspaper, Fedora fcmock) throws FedoraFailedException, UpdateTrackerStorageException {
+    static Date createNewspaperObject(UpdateTrackerPersistentStore db, String newspaper, FedoraForUpdateTracker fcmock) throws FedoraFailedException, UpdateTrackerStorageException {
         final Date newspaperCreated = new Date();
         setContentModelNewspaper(newspaper,newspaperCreated, fcmock);
         db.objectCreated(newspaper, newspaperCreated);

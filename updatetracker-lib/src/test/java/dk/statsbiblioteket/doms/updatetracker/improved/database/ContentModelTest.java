@@ -9,8 +9,8 @@ import dk.statsbiblioteket.doms.central.connectors.fedora.structures.ObjectProfi
 import dk.statsbiblioteket.doms.central.connectors.fedora.structures.ObjectType;
 import dk.statsbiblioteket.doms.central.connectors.fedora.tripleStore.TripleStoreRest;
 import dk.statsbiblioteket.doms.central.connectors.fedora.views.ViewsImpl;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.ContentModelCache;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.EntryAngleCache;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import org.junit.Before;
 import org.junit.Test;
@@ -48,7 +48,7 @@ public class ContentModelTest {
         FedoraRest fedoraRest = mock(FedoraRest.class);
         TripleStoreRest tripleStoreRest = mock(TripleStoreRest.class);
         ViewsImpl views = new ViewsImpl(tripleStoreRest, fedoraRest);
-        Fedora fedora = new Fedora(new ContentModelCache(), fedoraRest, tripleStoreRest, views);
+        FedoraForUpdateTracker fedora = new FedoraForUpdateTracker(new EntryAngleCache(), fedoraRest, tripleStoreRest, views);
 
         final ObjectProfile profile = new ObjectProfile();
         profile.setType(ObjectType.DATA_OBJECT);
@@ -69,13 +69,13 @@ public class ContentModelTest {
         FedoraRest fedoraRest = mock(FedoraRest.class);
         TripleStoreRest tripleStoreRest = mock(TripleStoreRest.class);
         ViewsImpl views = new ViewsImpl(tripleStoreRest, fedoraRest);
-        Fedora fedora = new Fedora(new ContentModelCache(), fedoraRest, tripleStoreRest, views);
+        FedoraForUpdateTracker fedora = new FedoraForUpdateTracker(new EntryAngleCache(), fedoraRest, tripleStoreRest, views);
 
         final ObjectProfile cmprofile = new ObjectProfile();
         cmprofile.setType(ObjectType.CONTENT_MODEL);
 
-        when(fedoraRest.getNamedRelations(eq("doms:ContentModel1"),eq(Fedora.ENTRY_RELATION), anyLong()))
-                .thenReturn(asList(new FedoraRelation("doms:ContentModel1", Fedora.ENTRY_RELATION, "SummaVisible")));
+        when(fedoraRest.getNamedRelations(eq("doms:ContentModel1"),eq(FedoraForUpdateTracker.ENTRY_RELATION), anyLong()))
+                .thenReturn(asList(new FedoraRelation("doms:ContentModel1", FedoraForUpdateTracker.ENTRY_RELATION, "SummaVisible")));
         when(fedoraRest.getLimitedObjectProfile(eq("doms:ContentModel1"), anyLong())).thenReturn(cmprofile);
         ObjectProfile objectprofile = new ObjectProfile();
         objectprofile.setContentModels(asList("doms:ContentModel1"));
@@ -88,7 +88,7 @@ public class ContentModelTest {
 
         //No remove the entry relation from the content model
         when(fedoraRest.getNamedRelations(eq("doms:ContentModel1"),
-                                          eq(Fedora.ENTRY_RELATION),
+                                          eq(FedoraForUpdateTracker.ENTRY_RELATION),
                                           anyLong())).thenReturn(emptyList());
         //But this is not visible as we get the cached copy
         angles = fedora.getEntryAngles("doms:Object1", new Date());

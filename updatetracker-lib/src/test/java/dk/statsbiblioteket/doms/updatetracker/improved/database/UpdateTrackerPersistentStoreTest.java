@@ -1,6 +1,6 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import org.junit.After;
 import org.junit.Before;
@@ -11,7 +11,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.HibernateUtils.asSet;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerDAO.asSet;
 import static java.util.Collections.emptyList;
 import static junit.framework.Assert.assertEquals;
 import static org.mockito.Matchers.any;
@@ -24,11 +24,11 @@ public class UpdateTrackerPersistentStoreTest {
 
     private final String collection = "doms:Root_Collection";
     UpdateTrackerPersistentStore db;
-    Fedora fedora;
+    FedoraForUpdateTracker fedora;
 
     @Before
     public void setUp() throws Exception {
-        fedora = mock(Fedora.class);
+        fedora = mock(FedoraForUpdateTracker.class);
         //Collections for everybody
         when(fedora.getCollections(anyString(), any(Date.class))).thenReturn(asSet(collection));
         //No entry objects or view stuff until initialised

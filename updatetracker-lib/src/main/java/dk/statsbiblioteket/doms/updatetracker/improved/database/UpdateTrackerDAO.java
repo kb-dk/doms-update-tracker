@@ -1,6 +1,7 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import org.hibernate.Criteria;
+import org.hibernate.Query;
 import org.hibernate.Session;
 
 import java.util.Arrays;
@@ -14,7 +15,7 @@ import static org.hibernate.criterion.Restrictions.eq;
 import static org.hibernate.criterion.Restrictions.in;
 import static org.hibernate.criterion.Restrictions.not;
 
-public class HibernateUtils {
+public class UpdateTrackerDAO {
     @SuppressWarnings("unchecked")
     private static <T> List<T> listRecords(Criteria criteria) {
         return criteria.list();
@@ -56,5 +57,10 @@ public class HibernateUtils {
             session.save(new DomsObject(pid));
         }
         return (DomsObject) session.load(DomsObject.class, pid);
+    }
+
+    @SuppressWarnings("unchecked")
+    static <T> List<T> listRecords(Query query) {
+        return query.list();
     }
 }

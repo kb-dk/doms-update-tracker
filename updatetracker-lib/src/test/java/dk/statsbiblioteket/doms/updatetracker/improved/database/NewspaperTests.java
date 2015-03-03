@@ -1,6 +1,6 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.Fedora;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import org.junit.After;
 import org.junit.Before;
@@ -9,7 +9,7 @@ import org.junit.Test;
 import java.util.Date;
 import java.util.List;
 
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.HibernateUtils.asSet;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerDAO.asSet;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.ACTIVE;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.GUI;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.SBOI;
@@ -24,7 +24,7 @@ public class NewspaperTests {
 
 
     UpdateTrackerPersistentStore db;
-    Fedora fcmock;
+    FedoraForUpdateTracker fcmock;
 
     Date beginning = new Date(1);
     protected static final String COLLECTION = "doms:Root_Collection";
@@ -32,7 +32,7 @@ public class NewspaperTests {
 
     @Before
     public void setUp() throws Exception {
-        fcmock = mock(Fedora.class);
+        fcmock = mock(FedoraForUpdateTracker.class);
         db = new UpdateTrackerPersistentStoreImpl(fcmock);
         tearDown();
         db = new UpdateTrackerPersistentStoreImpl(fcmock);
