@@ -88,18 +88,17 @@ public class Database implements AutoCloseable {
 
 
         try (Connection conn = getReadWriteConnection(cPool);
-             PreparedStatement statement = conn.prepareStatement("INSERT INTO Logs(pid,happened,method,param) VALUES (?,?,?,?)", Statement.RETURN_GENERATED_KEYS);) {
+             PreparedStatement statement = conn.prepareStatement("INSERT INTO updateTrackerLogs(pid,happened,method,param) VALUES (?,?,?,?)", Statement.RETURN_GENERATED_KEYS);) {
             statement.setString(1,pid);
             statement.setTimestamp(2, new Timestamp(timestamp.getTime()));
             statement.setString(3, name);
             statement.setString(4,param);
             statement.executeUpdate();
             ResultSet generatedKeys = statement.getGeneratedKeys();
+            generatedKeys.next();
+            long key;
+            key = generatedKeys.getLong("key");
 
-            long key = -1;
-            if (generatedKeys.first()){
-                key = generatedKeys.getLong("key");
-            }
             return key;
 
 
@@ -113,7 +112,7 @@ public class Database implements AutoCloseable {
         }
 
         try (Connection conn = getReadWriteConnection(cPool);
-             PreparedStatement statement = conn.prepareStatement("DELETE FROM Logs WHERE key = ?");) {
+             PreparedStatement statement = conn.prepareStatement("DELETE FROM updateTrackerLogs WHERE key = ?");) {
             statement.setLong(1, key);
             statement.executeUpdate();
         } catch (SQLException e) {
