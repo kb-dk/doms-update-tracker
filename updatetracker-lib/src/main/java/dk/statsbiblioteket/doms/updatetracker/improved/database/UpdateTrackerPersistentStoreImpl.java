@@ -12,6 +12,7 @@ import org.hibernate.cfg.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
@@ -30,12 +31,12 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     private UpdateTrackerBackend backend;
 
 
-    public UpdateTrackerPersistentStoreImpl(FedoraForUpdateTracker fedora) {
+    public UpdateTrackerPersistentStoreImpl(File configFile, FedoraForUpdateTracker fedora) {
         this.fedora = fedora;
         // A SessionFactory is set up once for an application
         sessionFactory = new Configuration().addAnnotatedClass(DomsObject.class)
                                             .addAnnotatedClass(Record.class)
-                                            .configure()
+                                            .configure(configFile)
                                             .buildSessionFactory();
         backend = new UpdateTrackerBackend(fedora);
     }
@@ -64,8 +65,12 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             transaction.commit();
             log.info("ObjectCreated({},{}) Completed", pid, date);
         } catch (Exception e) {
-            transaction.rollback();
-            throw new UpdateTrackerStorageException("Hibernate Failed in object created for pid='"+pid+"' at date='"+date.getTime()+"'", e);
+            try {
+                transaction.rollback();
+            } finally {
+                throw new UpdateTrackerStorageException("Hibernate Failed in object created for pid='" + pid +
+                                                        "' at date='" + date.getTime() + "'", e);
+            }
         }
 
     }
@@ -188,6 +193,23 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         }
     }
 
+    @Override
+    public Date lastChanged() throws UpdateTrackerStorageException {
+        StatelessSession session = sessionFactory.openStatelessSession();
+        session.beginTransaction();
+        try {
+            final Date lastChangeRecord = backend.lastChanged(session);
+            session.getTransaction()
+                   .commit();
+            return lastChangeRecord;
+        } catch (HibernateException e) {
+            session.getTransaction()
+                   .rollback();
+            throw new UpdateTrackerStorageException("Failed to query for last changed object", e);
+        } finally {
+            session.close();
+        }
+    }
 
 
     /**

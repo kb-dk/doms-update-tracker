@@ -3,11 +3,15 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
+import dk.statsbiblioteket.util.Files;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.util.Date;
 import java.util.List;
 
@@ -32,17 +36,19 @@ import static org.mockito.Mockito.when;
 
 public class NewspaperBatchTests {
 
+    private final File configFile;
     UpdateTrackerPersistentStore db;
     FedoraForUpdateTracker fcmock;
 
-    public NewspaperBatchTests() throws MalformedURLException {
+    public NewspaperBatchTests() throws URISyntaxException {
         fcmock = mock(FedoraForUpdateTracker.class);
+        configFile = new File(Thread.currentThread().getContextClassLoader().getResource("hibernate.cfg.xml").toURI());
     }
 
 
     @Before
     public void setUp() throws Exception {
-        db = new UpdateTrackerPersistentStoreImpl(fcmock);
+        db = new UpdateTrackerPersistentStoreImpl(configFile,fcmock);
     }
 
     @After

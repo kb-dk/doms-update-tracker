@@ -6,9 +6,9 @@
 <hibernate-configuration>
    <session-factory>
        <!-- database connection settings -->
-       <property name="hibernate.dialect"> org.hibernate.dialect.DerbyDialect</property>
+       <property name="hibernate.dialect">org.hibernate.dialect.DerbyTenSevenDialect</property>
        <property name="hibernate.connection.driver_class"> org.apache.derby.jdbc.EmbeddedDriver</property>
-       <property name="hibernate.connection.url">jdbc:derby:/home/abr/Projects/doms-bundle/doms-update-tracker/updatetracker-lib/derby;create=true </property>
+       <property name="hibernate.connection.url">jdbc:derby:database;create=true</property>
 
        <property name="hibernate.connection.username"></property>
        <property name="hibernate.connection.password"></property>

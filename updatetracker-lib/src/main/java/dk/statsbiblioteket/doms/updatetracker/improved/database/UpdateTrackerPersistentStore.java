@@ -81,6 +81,8 @@ public interface UpdateTrackerPersistentStore extends AutoCloseable{
      */
     public List<Record> lookup(Date since, String viewAngle, int offset, int limit, String state, String collection) throws UpdateTrackerStorageException;
 
+    public Date lastChanged() throws UpdateTrackerStorageException;
+
         @Override
     void close();
 }

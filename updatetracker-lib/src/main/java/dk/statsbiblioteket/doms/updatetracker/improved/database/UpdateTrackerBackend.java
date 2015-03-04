@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.Timestamp;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
@@ -251,5 +252,18 @@ public class UpdateTrackerBackend {
              .setParameter("viewAngle", viewAngle);
 
         return UpdateTrackerDAO.listRecords(query);
+    }
+
+    public Date lastChanged(StatelessSession session) {
+
+        final Query query = session.createQuery("select max(e.inactive) from Record e order by e.inactive desc");
+        query.setMaxResults(1);
+        Object result = query.uniqueResult();
+        if (result != null){
+            if (result instanceof Timestamp) {
+                return (Timestamp) result;
+            }
+        }
+        return null;
     }
 }

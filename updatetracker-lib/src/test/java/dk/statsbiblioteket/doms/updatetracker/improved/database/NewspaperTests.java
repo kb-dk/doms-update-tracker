@@ -2,10 +2,13 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
+import dk.statsbiblioteket.util.Files;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 
@@ -28,14 +31,20 @@ public class NewspaperTests {
 
     Date beginning = new Date(1);
     protected static final String COLLECTION = "doms:Root_Collection";
+    private File configFile;
 
 
     @Before
     public void setUp() throws Exception {
+        configFile = new File(Thread.currentThread()
+                                    .getContextClassLoader()
+                                    .getResource("hibernate.cfg.xml")
+                                    .toURI());
+
         fcmock = mock(FedoraForUpdateTracker.class);
-        db = new UpdateTrackerPersistentStoreImpl(fcmock);
+        db = new UpdateTrackerPersistentStoreImpl(configFile,fcmock);
         tearDown();
-        db = new UpdateTrackerPersistentStoreImpl(fcmock);
+        db = new UpdateTrackerPersistentStoreImpl(configFile,fcmock);
 
         //Collections for everybody
         when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(asSet(COLLECTION));
@@ -43,6 +52,7 @@ public class NewspaperTests {
         //No entry objects or view stuff until initialised
         when(fcmock.getEntryAngles(anyString(), any(Date.class))).thenReturn(emptyList());
     }
+
 
     @After
     public void tearDown() throws Exception {

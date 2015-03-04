@@ -1,5 +1,6 @@
 package dk.statsbiblioteket.doms.updatetracker;
 
+import dk.statsbiblioteket.doms.updatetracker.improved.UpdateTrackingConfig;
 import dk.statsbiblioteket.doms.updatetracker.improved.UpdateTrackingSystem;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerStorageException;
@@ -7,18 +8,21 @@ import dk.statsbiblioteket.doms.updatetracker.webservice.InvalidCredentialsExcep
 import dk.statsbiblioteket.doms.updatetracker.webservice.MethodFailedException;
 import dk.statsbiblioteket.doms.updatetracker.webservice.PidDatePidPid;
 import dk.statsbiblioteket.doms.updatetracker.webservice.UpdateTrackerWebservice;
+import dk.statsbiblioteket.doms.webservices.configuration.ConfigCollection;
 
 import javax.annotation.Resource;
 import javax.jms.JMSException;
 import javax.jws.WebParam;
 import javax.jws.WebService;
 import javax.xml.ws.WebServiceContext;
+import java.io.File;
 import java.net.MalformedURLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
 
 /**
  * Update tracker webservice. Provides upper layers of DOMS with info on changes
@@ -30,19 +34,35 @@ import java.util.Optional;
                       + ".UpdateTrackerWebservice")
 public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
 
+    private final UpdateTrackingSystem updateTrackingSystem;
     @Resource
     WebServiceContext context;
 
-    public UpdateTrackerWebserviceLib() throws MethodFailedException {
-        try {
-            UpdateTrackingSystem.startup();
-            //TODO
-        } catch (MalformedURLException e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-        } catch (JMSException e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-        }
 
+    public UpdateTrackerWebserviceLib()  {
+
+        UpdateTrackingConfig config = convert(ConfigCollection.getProperties());
+        updateTrackingSystem = UpdateTrackingSystem.getInstance(null);
+
+    }
+
+    private UpdateTrackingConfig convert(Properties properties) {
+
+        String fedoraWebUrl = properties.getProperty("fedora.web.URL");
+        String fedoraWebUsername = properties.getProperty("fedora.web.Username");
+        String fedoraWebPassword = properties.getProperty("fedora.web.Password");
+
+        String fedoraDatabaseDriver = properties.getProperty("fedora.database.driver");
+        String fedoraDatabaseURL = properties.getProperty("fedora.database.URL");
+        String fedoraDatabaseUsername = properties.getProperty("fedora.database.username");
+        String fedoraDatabasePassword = properties.getProperty("fedora.database.password");
+
+        int fedoraUpdatetrackerDelay = Integer.parseInt(properties.getProperty("fedora.updatetracker.delay"));
+        int fedoraUpdatetrackerPeriod = Integer.parseInt(properties.getProperty("fedora.updatetracker.period"));
+        int fedoraUpdatetrackerLimit = Integer.parseInt(properties.getProperty("fedora.updatetracker.limit"));
+        File updatetrackerHibernateConfig = new File(properties.getProperty("fedora.updatetracker.hibernateConfigFile"));
+
+        return new UpdateTrackingConfig(fedoraWebUrl, fedoraWebUsername, fedoraWebPassword, fedoraDatabaseDriver, fedoraDatabaseURL, fedoraDatabaseUsername, fedoraDatabasePassword, fedoraUpdatetrackerDelay, fedoraUpdatetrackerPeriod, fedoraUpdatetrackerLimit, updatetrackerHibernateConfig);
     }
 
     /**
@@ -79,7 +99,7 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
 
         List<Record> entries = null;
         try {
-            entries = UpdateTrackingSystem.getStore().lookup(new Date(beginTime), viewAngle, offset, limit, state, collectionPid);
+            entries = updateTrackingSystem.getStore().lookup(new Date(beginTime), viewAngle, offset, limit, state, collectionPid);
         } catch (UpdateTrackerStorageException e) {
             throw new MethodFailedException("Failed to query the persistent storage","",e);
         }
@@ -143,7 +163,7 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
         List<Record> entries = null;
         try {
             //TODO no way to control sorting order
-            entries = UpdateTrackingSystem.getStore().lookup(new Date(0), viewAngle, 0, 1,state,collectionPid);
+            entries = updateTrackingSystem.getStore().lookup(new Date(0), viewAngle, 0, 1,state,collectionPid);
         } catch (UpdateTrackerStorageException e) {
             throw new MethodFailedException("Failed to query the persistent storage","",e);
         }

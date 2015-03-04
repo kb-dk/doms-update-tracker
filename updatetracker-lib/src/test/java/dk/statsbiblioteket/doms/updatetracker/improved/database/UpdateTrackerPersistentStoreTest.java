@@ -2,10 +2,13 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
+import dk.statsbiblioteket.util.Files;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -25,16 +28,23 @@ public class UpdateTrackerPersistentStoreTest {
     private final String collection = "doms:Root_Collection";
     UpdateTrackerPersistentStore db;
     FedoraForUpdateTracker fedora;
+    private File configFile;
 
     @Before
     public void setUp() throws Exception {
+        configFile = new File(Thread.currentThread()
+                                    .getContextClassLoader()
+                                    .getResource("hibernate.cfg.xml")
+                                    .toURI());
+
         fedora = mock(FedoraForUpdateTracker.class);
         //Collections for everybody
         when(fedora.getCollections(anyString(), any(Date.class))).thenReturn(asSet(collection));
         //No entry objects or view stuff until initialised
         when(fedora.getEntryAngles(anyString(), any(Date.class))).thenReturn(emptyList());
-        db = new UpdateTrackerPersistentStoreImpl(fedora);
+        db = new UpdateTrackerPersistentStoreImpl(configFile,fedora);
     }
+
 
     @After
     public void tearDown() throws Exception {
@@ -44,6 +54,7 @@ public class UpdateTrackerPersistentStoreTest {
 
     @Test
     public void testObjectCreatedBasic() throws Exception {
+        init();
         Date now = new Date();
         final String pid = "doms:test1";
         addEntry(pid);
@@ -53,6 +64,11 @@ public class UpdateTrackerPersistentStoreTest {
 
         list = db.lookup(new Date(), "SummaVisible", 0, 100, null, "doms:Root_Collection");
         assertEquals("To many objects, some should have been deleted", 0, list.size());
+    }
+
+    private void init() throws Exception {
+        tearDown();
+        setUp();
     }
 
     private void addEntry(String pid, String... contained) throws FedoraFailedException {
@@ -74,7 +90,7 @@ public class UpdateTrackerPersistentStoreTest {
 
     @Test
     public void testObjectCreatedBeforeAndAfter() throws Exception {
-
+        init();
         Date start = new Date();
         addEntry("doms:test1");
         db.objectCreated("doms:test1", start);
@@ -91,7 +107,7 @@ public class UpdateTrackerPersistentStoreTest {
 
     @Test
     public void testObjectCreatedMany() throws Exception {
-
+        init();
         Date start = new Date();
         addEntry("doms:test1");
         db.objectCreated("doms:test1", start);
@@ -112,7 +128,7 @@ public class UpdateTrackerPersistentStoreTest {
 
     @Test
     public void testObjectDeletedBasic() throws Exception {
-
+        init();
         Date test1Create = new Date();
         addEntry("doms:test1");
         db.objectCreated("doms:test1", test1Create);
@@ -132,7 +148,7 @@ public class UpdateTrackerPersistentStoreTest {
 
     @Test
     public void testObjectPurgedBasic() throws Exception {
-
+        init();
         Date test1Create = new Date();
         addEntry("doms:test1");
         db.objectCreated("doms:test1", test1Create);
@@ -154,7 +170,7 @@ public class UpdateTrackerPersistentStoreTest {
 
     @Test
     public void testObjectDeletedMultiple() throws Exception {
-
+        init();
         Date test1Create = new Date();
         addEntry("doms:test1");
         db.objectCreated("doms:test1", test1Create);
@@ -185,7 +201,7 @@ public class UpdateTrackerPersistentStoreTest {
 
     @Test
     public void testObjectRessurection() throws Exception {
-
+        init();
         Date test1Create = new Date();
         addEntry("doms:test1");
         db.objectCreated("doms:test1", test1Create);
@@ -212,6 +228,7 @@ public class UpdateTrackerPersistentStoreTest {
 
     @Test
     public void testObjectPublished() throws Exception {
+        init();
         Date test1Create = new Date(0);
         addEntry("doms:test1");
         db.objectCreated("doms:test1", test1Create);
@@ -235,6 +252,7 @@ public class UpdateTrackerPersistentStoreTest {
 
     @Test
     public void testObjectPublishedAndUnpublished() throws Exception {
+        init();
         Date test1Create = new Date(0);
         addEntry("doms:test1");
         db.objectCreated("doms:test1", test1Create);
@@ -270,6 +288,7 @@ public class UpdateTrackerPersistentStoreTest {
 
     @Test
     public void testObjectPublishedAndDeleted() throws Exception {
+        init();
         Date test1Create = new Date(0);
         addEntry("doms:test1");
         db.objectCreated("doms:test1", test1Create);
@@ -306,6 +325,7 @@ public class UpdateTrackerPersistentStoreTest {
 
     @Test
     public void testObjectRelationsChangedBasic() throws Exception {
+        init();
         Date frozen = new Date(0);
         addEntry("doms:test1");
         db.objectCreated("doms:test1", frozen);
@@ -344,6 +364,7 @@ public class UpdateTrackerPersistentStoreTest {
 
     @Test
     public void testObjectRelationsChangedDeep() throws Exception {
+        init();
         Date ingest1 = new Date(0);
         Date ingest2 = new Date(10);
         Date ingest3 = new Date(20);
@@ -376,6 +397,7 @@ public class UpdateTrackerPersistentStoreTest {
 
     @Test
     public void testObjectRelationsChangedPublished() throws Exception {
+        init();
         Date ingest1 = new Date(0);
         Date ingest2 = new Date(10);
         Date ingest3 = new Date(20);
@@ -428,6 +450,7 @@ public class UpdateTrackerPersistentStoreTest {
 
     @Test
     public void testObjectRelationsChangedDeepMultiple() throws Exception {
+        init();
         Date ingest1 = new Date(0);
         Date ingest2 = new Date(10);
         Date ingest3 = new Date(20);
