@@ -23,9 +23,9 @@ import java.util.Date;
 /**
  * The update tracker fedora hook. This hook stores information about all changing methods in a database, for later
  * replay in the update tracker.
- * The databse is chosen via the fedora ConnectionPoolManager. Set the variable updateTrackerPoolName alongside the
+ * The database is chosen via the fedora ConnectionPoolManager. Set the variable updateTrackerPoolName alongside the
  * decorator to specify which pool should be used.
- * Only changing operations are hooked, but all operations are logged on info level, as an extra precausion.
+ * Only changing operations are hooked.
  */
 public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements ModuleConfiguredInvocationHandler {
 
@@ -92,52 +92,48 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
                 param = args[2].toString();
             }
         } catch (Exception e) {
-            logger.error("Failed to parse params '" + Arrays.toString(args) + "'", e);
-            return method.invoke(target, args);
+            final String message = "Failed to parse params for method '" + methodName + "': " + Arrays.toString(args) + "'";
+            logger.error(message, e);
+            throw new InvocationTargetException(e, message);
         }
 
-        try {
-
-            switch (methodName) {
-                case "ingest":
-                    param = null;
-                    pid = invokeIngestHook(method, args, now);
-                    return pid;
-
-                case "modifyObject":
-                case "purgeObject":
-                case "addDatastream":
-                case "modifyDatastreamByReference":
-                case "modifyDatastreamByValue":
-                case "purgeDatastream":
-                case "setDatastreamState":
-                case "setDatastreamVersionable":
-                case "addRelationship":
-                case "purgeRelationship":
-                    return invokeHook(method, args, methodName, pid, now, param);
-
-                case "getObjectXML":
-                case "export":
-                case "getDatastream":
-                case "getDatastreams":
-                case "getDatastreamHistory":
-                case "putTempStream":
-                case "getTempStream":
-                case "compareDatastreamChecksum":
-                case "getNextPID":
-                case "getRelationships":
-                case "validate":
-                    return method.invoke(target, args);
-
-                default:
-                    logger.warn("Unknown method invoked: " + methodName + "(" + pid + ", " + now.getTime() + ", " +
-                                param +
-                                ")");
-                    return method.invoke(target, args);
-            }
-        } finally {
-            replayableLog.info("Method: " + methodName + "(" + pid + ", " + now.getTime() + ", " + param + ")");
+        switch (methodName) {
+            case "ingest":
+                param = null;
+                pid = invokeIngestHook(method, args, now);
+                replayableLog.info("Method: " + methodName + "(" + pid + ", " + now.getTime() + ", " + param + ")");
+                return pid;
+            case "modifyObject":
+            case "purgeObject":
+            case "addDatastream":
+            case "modifyDatastreamByReference":
+            case "modifyDatastreamByValue":
+            case "purgeDatastream":
+            case "setDatastreamState":
+            case "setDatastreamVersionable":
+            case "addRelationship":
+            case "purgeRelationship":
+                replayableLog.info("Method: " + methodName + "(" + pid + ", " + now.getTime() + ", " + param + ")");
+                return invokeHook(method, args, methodName, pid, now, param);
+            case "getObjectXML":
+            case "export":
+            case "getDatastream":
+            case "getDatastreams":
+            case "getDatastreamHistory":
+            case "putTempStream":
+            case "getTempStream":
+            case "compareDatastreamChecksum":
+            case "getNextPID":
+            case "getRelationships":
+            case "validate":
+                return method.invoke(target, args);
+            default:
+                logger.warn("Unknown method invoked: " + methodName + "(" + pid + ", " + now.getTime() + ", " +
+                            param +
+                            ")");
+                return  method.invoke(target, args);
         }
+
     }
 
     /**

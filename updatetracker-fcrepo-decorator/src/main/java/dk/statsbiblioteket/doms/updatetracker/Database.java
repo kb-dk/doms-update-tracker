@@ -129,7 +129,8 @@ public class Database implements AutoCloseable {
 
 
     /**
-     * Utility method for getting a database connection from the connection pool, that is freed when closed automatically
+     * Utility method for getting a database connection from the connection pool, that is freed when closed automatically.
+     * This is just so that we can use this in try-with-resources statements
      * @param cPool
      * @return a new database connection
      * @throws SQLException
