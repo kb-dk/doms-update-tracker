@@ -67,10 +67,11 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         } catch (Exception e) {
             try {
                 transaction.rollback();
-            } finally {
-                throw new UpdateTrackerStorageException("Hibernate Failed in object created for pid='" + pid +
-                                                        "' at date='" + date.getTime() + "'", e);
+            } catch (HibernateException he){
+                log.error("Failed to rollback transaction",he);
             }
+            throw new UpdateTrackerStorageException("Hibernate Failed in object created for pid='" + pid +
+                                                    "' at date='" + date.getTime() + "'", e);
         }
 
     }
@@ -93,7 +94,11 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             transaction.commit();
             log.info("ObjectDeleted({},{}) Completed", pid, date);
         } catch (Exception e) {
-            transaction.rollback();
+            try {
+                transaction.rollback();
+            } catch (HibernateException he) {
+                log.error("Failed to rollback transaction", he);
+            }
             throw new UpdateTrackerStorageException("Hibernate Failed in object deleted for pid='" + pid +
                                                     "' at date='" + date.getTime() + "'", e);
         }
@@ -126,7 +131,11 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             transaction.commit();
             log.info("DatastreamChanged({},{},{}) Completed", pid, date, dsid);
         } catch (Exception e) {
-            transaction.rollback();
+            try {
+                transaction.rollback();
+            } catch (HibernateException he) {
+                log.error("Failed to rollback transaction", he);
+            }
             throw new UpdateTrackerStorageException("Hibernate Failed in datastream changed for pid='" + pid +
                                                     "' at date='" + date.getTime() + "' and dsid='"+dsid+"'", e);
         }
@@ -161,7 +170,11 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             transaction.commit();
             log.info("objectStateChanged({},{},{}) Completed", pid, date, newstate);
         } catch (Exception e) {
-            transaction.rollback();
+            try {
+                transaction.rollback();
+            } catch (HibernateException he) {
+                log.error("Failed to rollback transaction", he);
+            }
             throw new UpdateTrackerStorageException("Hibernate Failed in object created for pid='" + pid +
                                                     "' at date='" + date.getTime() + "' and state='"+newstate+"'", e);
         }
@@ -186,7 +199,12 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             log.info("lookup({},{},{},{},{},{}) Completed", since, viewAngle, offset, limit, state, collection);
             return entries;
         } catch (HibernateException e) {
-            session.getTransaction().rollback();
+            try {
+                session.getTransaction()
+                       .rollback();
+            } catch (HibernateException he) {
+                log.error("Failed to rollback transaction", he);
+            }
             throw new UpdateTrackerStorageException("Failed to query for since='"+since.getTime()+"', viewAngle='"+viewAngle+"', offset='"+offset+"', limit="+limit+"', state='"+state+"', collection='"+collection+"'", e);
         } finally {
             session.close();
@@ -203,8 +221,12 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                    .commit();
             return lastChangeRecord;
         } catch (HibernateException e) {
-            session.getTransaction()
-                   .rollback();
+            try {
+                session.getTransaction()
+                       .rollback();
+            } catch (HibernateException he) {
+                log.error("Failed to rollback transaction", he);
+            }
             throw new UpdateTrackerStorageException("Failed to query for last changed object", e);
         } finally {
             session.close();
