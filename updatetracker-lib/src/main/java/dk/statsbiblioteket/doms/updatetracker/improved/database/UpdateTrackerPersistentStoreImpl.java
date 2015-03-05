@@ -233,45 +233,6 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         }
     }
 
-
-    /**
-     * Clear the entire database. Dangerous operation
-     * TODO Remove this
-     */
-    public void clear() {
-        Session session = sessionFactory.getCurrentSession();
-        Transaction transaction = session.beginTransaction();
-
-        List results = session.createCriteria(DomsObject.class).list();
-        for (Object result : results) {
-            session.delete(result);
-        }
-        results = session.createCriteria(Record.class).list();
-        for (Object result : results) {
-            session.delete(result);
-        }
-        transaction.commit();
-    }
-
-
-    /**
-     * Print the entire database.
-     */
-    public void dumpToStdOut() {
-        Session session = sessionFactory.getCurrentSession();
-        Transaction transaction = session.beginTransaction();
-
-        List results = session.createCriteria(DomsObject.class).list();
-        for (Object result : results) {
-            System.out.println(result.toString());
-        }
-        results = session.createCriteria(Record.class).list();
-        for (Object result : results) {
-            System.out.println(result.toString());
-        }
-        transaction.commit();
-    }
-
     @Override
     public void close() {
         sessionFactory.close();

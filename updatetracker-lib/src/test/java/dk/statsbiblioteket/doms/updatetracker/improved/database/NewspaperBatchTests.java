@@ -53,7 +53,6 @@ public class NewspaperBatchTests {
 
     @After
     public void tearDown() throws Exception {
-        db.clear();
         db.close();
     }
 

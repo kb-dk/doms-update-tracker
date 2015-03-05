@@ -5,6 +5,7 @@ import org.hibernate.annotations.CascadeType;
 
 import javax.persistence.*;
 import javax.persistence.Entity;
+import javax.persistence.Index;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
@@ -61,7 +62,8 @@ import java.util.Set;
  * This is the RECORDS table in the persistent storage. The RECORDS table lists the records that can be found in DOMS.
  */
 @Entity
-@Table(name = "RECORDS")
+@Table(name = "RECORDS", indexes = {@Index(name = "INACTIVE_IDX",columnList = "inactive"),
+                                    @Index(name = "ENTRYPID_IDX", columnList = "ENTRYPID")})
 public class Record implements Serializable {
 
     public enum State {
@@ -112,9 +114,7 @@ public class Record implements Serializable {
     private Timestamp deleted = null;
 
     @ManyToMany
-    @JoinTable(name = "MEMBERSHIPS",
-                      joinColumns = {@JoinColumn(referencedColumnName = "ENTRYPID"), @JoinColumn(referencedColumnName = "VIEWANGLE"),@JoinColumn(referencedColumnName = "COLLECTION")},
-                      inverseJoinColumns = @JoinColumn(referencedColumnName = "OBJECTPID"))
+    @JoinTable(name = "MEMBERSHIPS")
     @Cascade({CascadeType.REFRESH,CascadeType.REPLICATE,CascadeType.SAVE_UPDATE,CascadeType.PERSIST,CascadeType.MERGE})
     private Set<DomsObject> objects = new HashSet<>();
 

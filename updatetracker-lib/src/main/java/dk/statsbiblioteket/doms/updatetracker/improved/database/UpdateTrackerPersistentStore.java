@@ -11,10 +11,6 @@ import java.util.List;
  */
 public interface UpdateTrackerPersistentStore extends AutoCloseable{
 
-    void clear();
-
-    void dumpToStdOut();
-
     /**
      * Invoke to register a new object, that has been created
      *

@@ -48,7 +48,6 @@ public class UpdateTrackerPersistentStoreTest {
 
     @After
     public void tearDown() throws Exception {
-        db.clear();
         db.close();
     }
 
@@ -67,8 +66,8 @@ public class UpdateTrackerPersistentStoreTest {
     }
 
     private void init() throws Exception {
-        tearDown();
-        setUp();
+        //tearDown();
+        //setUp();
     }
 
     private void addEntry(String pid, String... contained) throws FedoraFailedException {

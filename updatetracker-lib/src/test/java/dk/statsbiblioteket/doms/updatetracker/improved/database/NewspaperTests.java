@@ -56,7 +56,6 @@ public class NewspaperTests {
 
     @After
     public void tearDown() throws Exception {
-        db.clear();
         db.close();
     }
 
