@@ -1,13 +1,20 @@
 package dk.statsbiblioteket.doms.updatetracker.webservice;
 
-import dk.statsbiblioteket.doms.updatetracker.UpdateTrackerWebserviceLib;
+import dk.statsbiblioteket.doms.updatetracker.improved.UpdateTrackingConfig;
+import dk.statsbiblioteket.doms.updatetracker.improved.UpdateTrackingSystem;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.Record;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerStorageException;
+import dk.statsbiblioteket.doms.webservices.configuration.ConfigCollection;
 
 import javax.annotation.Resource;
 import javax.jws.WebParam;
 import javax.jws.WebService;
 import javax.xml.ws.WebServiceContext;
-import java.util.List;
+import java.io.File;
+import java.lang.*;
 import java.lang.String;
+import java.util.*;
+import java.util.Date;
 
 /**
  * Update tracker webservice. Provides upper layers of DOMS with info on changes
@@ -19,13 +26,18 @@ import java.lang.String;
         + ".UpdateTrackerWebservice")
 public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
 
+    private final UpdateTrackingSystem updateTrackingSystem;
     @Resource
     WebServiceContext context;
-    UpdateTrackerWebservice updateTrackerWebservice;
 
     public UpdateTrackerWebserviceImpl() throws MethodFailedException {
-        this.updateTrackerWebservice = new UpdateTrackerWebserviceLib();
+
+        UpdateTrackingConfig config = new UpdateTrackingConfig(ConfigCollection.getProperties());
+        updateTrackingSystem = UpdateTrackingSystem.getInstance(config);
     }
+
+
+
 
     /**
      * Lists the entry objects of views (records) in Fedora, in the given
@@ -57,8 +69,20 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
             throws InvalidCredentialsException, MethodFailedException
 
     {
-        return updateTrackerWebservice.listObjectsChangedSince(collectionPid, viewAngle, beginTime, state, offset,
-                                                               limit);
+        //Filter: state, collection
+
+        List<Record> entries = null;
+        try {
+            entries = updateTrackingSystem.getStore().lookup(new java.util.Date(beginTime),
+                                                                                     viewAngle,
+                                                                                     offset,
+                                                                                     limit,
+                                                                                     state,
+                                                                                     collectionPid);
+        } catch (UpdateTrackerStorageException e) {
+            throw new MethodFailedException("Failed to query the persistent storage","",e);
+        }
+        return convert(entries, state);
     }
 
     /**
@@ -81,8 +105,57 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
             java.lang.String state)
             throws InvalidCredentialsException, MethodFailedException
     {
-        return updateTrackerWebservice.getLatestModificationTime(collectionPid, viewAngle, state);
+
+        List<Record> entries = null;
+        try {
+            //TODO no way to control sorting order
+            entries = updateTrackingSystem.getStore().lookup(new Date(0),
+                                                                                     viewAngle, 0, 1,
+                                                                                     state,
+                                                                                     collectionPid);
+        } catch (UpdateTrackerStorageException e) {
+            throw new MethodFailedException("Failed to query the persistent storage","",e);
+        }
+
+        Optional<java.lang.Long> timestampStream = entries.stream().findFirst()
+                                                .map(record -> convert(record, state).getLastChangedTime());
+        return timestampStream.orElse(0L);
     }
 
 
+    private List<PidDatePidPid> convert(List<Record> entries, String state) {
+        List<PidDatePidPid> list2 = new ArrayList<PidDatePidPid>(entries.size());
+        for (Record record : entries) {
+            list2.add(convert(record, state));
+        }
+        return list2;
+    }
+
+    private PidDatePidPid convert(Record thing, String state) {
+        PidDatePidPid thang = new PidDatePidPid();
+        switch (state) {
+            case "A":
+                thang.setLastChangedTime(thing.getActive()
+                                              .getTime());
+                break;
+            case "I":
+                thang.setLastChangedTime(thing.getInactive()
+                                              .getTime());
+                break;
+            case "D":
+                thang.setLastChangedTime(thing.getDeleted()
+                                              .getTime());
+                break;
+            default:
+                thang.setLastChangedTime(Math.max(thing.getActive()
+                                                       .getTime(), Math.max(thing.getInactive()
+                                                                                 .getTime(),
+                                                                            thing.getDeleted()
+                                                                                 .getTime())));
+                break;
+        }
+
+        thang.setPid(thing.getEntryPid());
+        return thang;
+    }
 }

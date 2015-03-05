@@ -10,8 +10,6 @@ import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTra
 import dk.statsbiblioteket.doms.updatetracker.improved.fedoraLog.DatabaseLogRetriever;
 import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
 
-import javax.jms.JMSException;
-import java.net.MalformedURLException;
 import java.util.Timer;
 
 /**
@@ -31,12 +29,12 @@ public class UpdateTrackingSystem implements AutoCloseable{
 
 
         try {
-            Credentials creds = new Credentials(updateTrackingConfig.getFedoraUser(),
-                                                updateTrackingConfig.getFedoraPass());
+            Credentials creds = new Credentials(updateTrackingConfig.getFedoraWebUsername(),
+                                                updateTrackingConfig.getFedoraWebPassword());
             EntryAngleCache cmCache = new EntryAngleCache();
-            FedoraRest fedoraRest = new FedoraRest(creds, updateTrackingConfig.getFedoraLocation());
+            FedoraRest fedoraRest = new FedoraRest(creds, updateTrackingConfig.getFedoraWebUrl());
             TripleStoreRest tripleStoreRest = new TripleStoreRest(creds,
-                                                                  updateTrackingConfig.getFedoraLocation(), fedoraRest);
+                                                                  updateTrackingConfig.getFedoraWebUrl(), fedoraRest);
             ViewsImpl views = new ViewsImpl(tripleStoreRest, fedoraRest);
 
 
@@ -44,20 +42,20 @@ public class UpdateTrackingSystem implements AutoCloseable{
             FedoraForUpdateTracker fedora = new FedoraForUpdateTracker(cmCache, fedoraRest, tripleStoreRest, views);
 
             //Start up the database
-            store = new UpdateTrackerPersistentStoreImpl(updateTrackingConfig.getHibernateConfigFile(), fedora);
+            store = new UpdateTrackerPersistentStoreImpl(updateTrackingConfig.getUpdatetrackerHibernateConfig(), fedora);
 
 
             //initialise the jms connection to Fedora
-            consumer = new DatabaseLogRetriever(updateTrackingConfig.getFedoraDatabaseDriver(), updateTrackingConfig.getFedoraDatabaseUrl(),
-                                                updateTrackingConfig.getFedoraDatabaseUser(),
+            consumer = new DatabaseLogRetriever(updateTrackingConfig.getFedoraDatabaseDriver(), updateTrackingConfig.getFedoraDatabaseURL(),
+                                                updateTrackingConfig.getFedoraDatabaseUsername(),
                                                 updateTrackingConfig.getFedoraDatabasePassword());
 
             final boolean isDaemon = false;
             timer = new Timer(isDaemon);
             //Tie it all together
-            final int delay = updateTrackingConfig.getDelay();
-            final int period = updateTrackingConfig.getPeriod();
-            final int limit = updateTrackingConfig.getLimit();
+            final int delay = updateTrackingConfig.getFedoraUpdatetrackerDelay();
+            final int period = updateTrackingConfig.getFedoraUpdatetrackerPeriod();
+            final int limit = updateTrackingConfig.getFedoraUpdatetrackerLimit();
             timer.schedule(new FedoraMessageListener(consumer, store, limit),
                            delay,
                            period);
