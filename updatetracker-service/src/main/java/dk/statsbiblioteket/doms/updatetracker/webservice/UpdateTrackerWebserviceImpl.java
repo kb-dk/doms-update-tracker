@@ -1,5 +1,6 @@
 package dk.statsbiblioteket.doms.updatetracker.webservice;
 
+import dk.statsbiblioteket.doms.updatetracker.improved.UpdateTrackerWebserviceLib;
 import dk.statsbiblioteket.doms.updatetracker.improved.UpdateTrackingConfig;
 import dk.statsbiblioteket.doms.updatetracker.improved.UpdateTrackingSystem;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.Record;
@@ -26,14 +27,13 @@ import java.util.Date;
         + ".UpdateTrackerWebservice")
 public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
 
-    private final UpdateTrackingSystem updateTrackingSystem;
+    private final UpdateTrackerWebserviceLib updateTrackingSystem;
     @Resource
     WebServiceContext context;
 
     public UpdateTrackerWebserviceImpl() throws MethodFailedException {
 
-        UpdateTrackingConfig config = new UpdateTrackingConfig(ConfigCollection.getProperties());
-        updateTrackingSystem = UpdateTrackingSystem.getInstance(config);
+        updateTrackingSystem = new UpdateTrackerWebserviceLib();
     }
 
 
@@ -69,20 +69,7 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
             throws InvalidCredentialsException, MethodFailedException
 
     {
-        //Filter: state, collection
-
-        List<Record> entries = null;
-        try {
-            entries = updateTrackingSystem.getStore().lookup(new java.util.Date(beginTime),
-                                                                                     viewAngle,
-                                                                                     offset,
-                                                                                     limit,
-                                                                                     state,
-                                                                                     collectionPid);
-        } catch (UpdateTrackerStorageException e) {
-            throw new MethodFailedException("Failed to query the persistent storage","",e);
-        }
-        return convert(entries, state);
+        return updateTrackingSystem.listObjectsChangedSince(collectionPid,viewAngle,beginTime,state,offset,limit);
     }
 
     /**
@@ -106,56 +93,9 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
             throws InvalidCredentialsException, MethodFailedException
     {
 
-        List<Record> entries = null;
-        try {
-            //TODO no way to control sorting order
-            entries = updateTrackingSystem.getStore().lookup(new Date(0),
-                                                                                     viewAngle, 0, 1,
-                                                                                     state,
-                                                                                     collectionPid);
-        } catch (UpdateTrackerStorageException e) {
-            throw new MethodFailedException("Failed to query the persistent storage","",e);
-        }
-
-        Optional<java.lang.Long> timestampStream = entries.stream().findFirst()
-                                                .map(record -> convert(record, state).getLastChangedTime());
-        return timestampStream.orElse(0L);
+       return updateTrackingSystem.getLatestModificationTime(collectionPid,viewAngle,state);
     }
 
 
-    private List<PidDatePidPid> convert(List<Record> entries, String state) {
-        List<PidDatePidPid> list2 = new ArrayList<PidDatePidPid>(entries.size());
-        for (Record record : entries) {
-            list2.add(convert(record, state));
-        }
-        return list2;
-    }
 
-    private PidDatePidPid convert(Record thing, String state) {
-        PidDatePidPid thang = new PidDatePidPid();
-        switch (state) {
-            case "A":
-                thang.setLastChangedTime(thing.getActive()
-                                              .getTime());
-                break;
-            case "I":
-                thang.setLastChangedTime(thing.getInactive()
-                                              .getTime());
-                break;
-            case "D":
-                thang.setLastChangedTime(thing.getDeleted()
-                                              .getTime());
-                break;
-            default:
-                thang.setLastChangedTime(Math.max(thing.getActive()
-                                                       .getTime(), Math.max(thing.getInactive()
-                                                                                 .getTime(),
-                                                                            thing.getDeleted()
-                                                                                 .getTime())));
-                break;
-        }
-
-        thang.setPid(thing.getEntryPid());
-        return thang;
-    }
 }
