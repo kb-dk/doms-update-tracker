@@ -3,11 +3,13 @@ package dk.statsbiblioteket.doms.updatetracker.improved;
 import dk.statsbiblioteket.doms.central.connectors.fedora.FedoraRest;
 import dk.statsbiblioteket.doms.central.connectors.fedora.tripleStore.TripleStoreRest;
 import dk.statsbiblioteket.doms.central.connectors.fedora.views.ViewsImpl;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerBackend;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStoreImpl;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStore;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.EntryAngleCache;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedoraLog.DatabaseLogRetriever;
+import dk.statsbiblioteket.doms.updatetracker.improved.worklog.WorkLogPoller;
+import dk.statsbiblioteket.doms.updatetracker.improved.worklog.WorkLogPollTask;
 import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
 
 import java.util.Timer;
@@ -19,7 +21,7 @@ public class UpdateTrackingSystem implements AutoCloseable{
 
 
     private  UpdateTrackerPersistentStore store;
-    private  DatabaseLogRetriever consumer;
+    private WorkLogPoller consumer;
     private  Timer timer;
 
 
@@ -42,11 +44,13 @@ public class UpdateTrackingSystem implements AutoCloseable{
             FedoraForUpdateTracker fedora = new FedoraForUpdateTracker(cmCache, fedoraRest, tripleStoreRest, views);
 
             //Start up the database
-            store = new UpdateTrackerPersistentStoreImpl(updateTrackingConfig.getUpdatetrackerHibernateConfig(), fedora);
+            final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fedora);
+            store = new UpdateTrackerPersistentStoreImpl(updateTrackingConfig.getUpdatetrackerHibernateConfig(), fedora,
+                                                         updateTrackerBackend);
 
 
             //initialise the jms connection to Fedora
-            consumer = new DatabaseLogRetriever(updateTrackingConfig.getFedoraDatabaseDriver(), updateTrackingConfig.getFedoraDatabaseURL(),
+            consumer = new WorkLogPoller(updateTrackingConfig.getFedoraDatabaseDriver(), updateTrackingConfig.getFedoraDatabaseURL(),
                                                 updateTrackingConfig.getFedoraDatabaseUsername(),
                                                 updateTrackingConfig.getFedoraDatabasePassword());
 
@@ -56,7 +60,7 @@ public class UpdateTrackingSystem implements AutoCloseable{
             final int delay = updateTrackingConfig.getFedoraUpdatetrackerDelay();
             final int period = updateTrackingConfig.getFedoraUpdatetrackerPeriod();
             final int limit = updateTrackingConfig.getFedoraUpdatetrackerLimit();
-            timer.schedule(new FedoraMessageListener(consumer, store, limit),
+            timer.schedule(new WorkLogPollTask(consumer, store, limit),
                            delay,
                            period);
         } catch (Exception e){

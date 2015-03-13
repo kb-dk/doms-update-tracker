@@ -1,8 +1,12 @@
-package dk.statsbiblioteket.doms.updatetracker.improved.fedoraLog;
+package dk.statsbiblioteket.doms.updatetracker.improved.worklog;
 
 import java.util.Date;
 
-public class FedoraLogEvent {
+/**
+ * The java representation of an work unit in the worklog. Each fedora operation (which change something) will
+ * be serialised as one of these work units in the database work log.
+ */
+public class WorkLogUnit {
 
     private String method;
 
@@ -12,7 +16,7 @@ public class FedoraLogEvent {
 
     private String param;
 
-    public FedoraLogEvent(String method, Date date, String pid, String param) {
+    public WorkLogUnit(String method, Date date, String pid, String param) {
         this.method = method;
         this.date = date;
         this.pid = pid;

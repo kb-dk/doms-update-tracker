@@ -2,13 +2,11 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
-import dk.statsbiblioteket.util.Files;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 
@@ -42,9 +40,10 @@ public class NewspaperTests {
                                     .toURI());
 
         fcmock = mock(FedoraForUpdateTracker.class);
-        db = new UpdateTrackerPersistentStoreImpl(configFile,fcmock);
+        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock);
+        db = new UpdateTrackerPersistentStoreImpl(configFile, fcmock, updateTrackerBackend);
         tearDown();
-        db = new UpdateTrackerPersistentStoreImpl(configFile,fcmock);
+        db = new UpdateTrackerPersistentStoreImpl(configFile, fcmock, updateTrackerBackend);
 
         //Collections for everybody
         when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(asSet(COLLECTION));

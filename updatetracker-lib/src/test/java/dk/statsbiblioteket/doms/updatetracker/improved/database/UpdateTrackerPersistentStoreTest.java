@@ -2,13 +2,11 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
-import dk.statsbiblioteket.util.Files;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -42,7 +40,8 @@ public class UpdateTrackerPersistentStoreTest {
         when(fedora.getCollections(anyString(), any(Date.class))).thenReturn(asSet(collection));
         //No entry objects or view stuff until initialised
         when(fedora.getEntryAngles(anyString(), any(Date.class))).thenReturn(emptyList());
-        db = new UpdateTrackerPersistentStoreImpl(configFile,fedora);
+        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fedora);
+        db = new UpdateTrackerPersistentStoreImpl(configFile, fedora, updateTrackerBackend);
     }
 
 

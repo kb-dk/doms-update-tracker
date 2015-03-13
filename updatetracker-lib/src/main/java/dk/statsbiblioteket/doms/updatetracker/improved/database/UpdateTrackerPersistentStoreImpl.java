@@ -21,6 +21,18 @@ import java.util.Set;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State.DELETED;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State.INACTIVE;
 
+/**
+ * This class correspond the the operations detailed in <a href="https://sbforge.org/display/DOMS/Update+Tracking#UpdateTracking-HighLevelChanges">https://sbforge.org/display/DOMS/Update+Tracking#UpdateTracking-HighLevelChanges</a>
+ * <br>
+ *
+ * The lower level operations are detailed in UpdateTrackerBackend
+ *
+ * This class handles the database sessions, and commits or rolls back the started transactions.
+ *
+ * TODO the javadoc in this class corresponds to the linked wiki page. Make sure the code correspond to the javadoc
+ *
+ * @see dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerBackend
+ */
 public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistentStore, AutoCloseable {
 
     private static Logger log = LoggerFactory.getLogger(UpdateTrackerPersistentStoreImpl.class);
@@ -31,18 +43,28 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     private UpdateTrackerBackend backend;
 
 
-    public UpdateTrackerPersistentStoreImpl(File configFile, FedoraForUpdateTracker fedora) {
+    public UpdateTrackerPersistentStoreImpl(File configFile, FedoraForUpdateTracker fedora,
+                                            UpdateTrackerBackend backend) {
         this.fedora = fedora;
+        this.backend = backend;
         // A SessionFactory is set up once for an application
         sessionFactory = new Configuration().addAnnotatedClass(DomsObject.class)
                                             .addAnnotatedClass(Record.class)
                                             .configure(configFile)
                                             .buildSessionFactory();
-        backend = new UpdateTrackerBackend(fedora);
+
     }
 
     /**
      * The object  was created.
+     *
+     * Object Created: The Object was created in DOMS
+     *   Fedora operations:
+     *       - ingest
+     *   Action:
+     *       modifyState(Inactive)
+     *       reconnectObjects()
+     *       updateTimestamps()
      *
      * @param pid  the pid of the new object
      * @param date the date of the object creation
@@ -79,6 +101,24 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     /**
      * The object was deleted
      *
+     * Object Deleted: The Object was purged from DOMS
+     *      Fedora operations:
+     *           - purgeObject
+     *      Action:
+     *           modifyState(Deleted)
+     *           updateTimestamps()
+     *           if content model
+     *              for all objects of this class
+     *                  reconnectObjects()
+     *                  updateTimestamp()
+     *
+     *
+     *  If you purge a content model, that people still link to, you are breaking the link structure, and I feel the
+     *  update tracker is justified in ignoring it. If nobody links to the content model, it does not matter that you
+     *  purged it.
+     If you just changed the state to Deleted, it does, per definition, not matter
+      TODO update the wiki page
+
      * @param pid  the pid of the object
      * @param date the date of the change
      */
@@ -104,7 +144,32 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         }
     }
 
-
+    /**
+     * Datastream Changed: The Object datastreams changed. Handled differently depending on whether this is the relations datastream
+     *      Fedora operations:
+     *           - addDatastream
+     *           - modifyDatastreamByReference
+     *           - modifyDatastreamByValue
+     *           - purgeDatastream
+     *           - setDatastreamState
+     *           - setDatastreamVersionable
+     *           - updateTimestamp
+     *      Action:
+     *           if RELS-EXT
+     *                reconnectObjects(this)
+     *           fi
+     *           updateTimestamp(this)
+     *           if VIEW and Content Model
+     *                for all objects of this class
+     *                     reconnectObjects(object)
+     *                     updateTimestamp(object)
+     fi
+     * @param pid
+     * @param date
+     * @param dsid
+     * @throws UpdateTrackerStorageException
+     * @throws FedoraFailedException
+     */
     @Override
     public void datastreamChanged(String pid, Date date, String dsid) throws
                                                                       UpdateTrackerStorageException,
@@ -145,6 +210,18 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     /**
      * The object's relations changed. This can cause a recalculation of the viewStructure.
      *
+     * Object Relations Changed: The Object changed in a fashion that DOES require the view to be recomputed.
+     *      Fedora operations:
+     *           - addRelationship
+     *           - purgeRelationship
+     *      Action:
+     *           reconnectObjects(this)
+     *           updateTimestamp(this)
+     *           if this is a content model
+     *                for all objects of this class
+     *                     reconnectObjects(object of this class)
+     *                     updateTimestamp(object of this class)
+     *
      * @param pid  the pid of the object that changed
      * @param date the date of the change
      */
@@ -155,6 +232,20 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     }
 
 
+    /**
+     * Object State Changed: The Object changed state in DOMS
+     *      Fedora operations:
+     *           - modifyObject
+     *       Action:
+     *            modifyState(state)
+     *            updateTimestamp()
+     *
+     * @param pid
+     * @param date
+     * @param newstate
+     * @throws UpdateTrackerStorageException
+     * @throws FedoraFailedException
+     */
     @Override
     public void objectStateChanged(String pid, Date date, String newstate) throws
                                                                            UpdateTrackerStorageException,

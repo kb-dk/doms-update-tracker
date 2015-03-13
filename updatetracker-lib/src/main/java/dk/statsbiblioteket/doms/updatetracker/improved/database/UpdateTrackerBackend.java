@@ -17,6 +17,16 @@ import java.util.Set;
 
 import static java.util.stream.Collectors.toSet;
 
+/**
+ * This class implements the lower level update tracker operations, detailed in
+ * <a href="https://sbforge.org/display/DOMS/Update+Tracking#UpdateTracking-LowLevelChanges">https://sbforge
+ * .org/display/DOMS/Update+Tracking#UpdateTracking-LowLevelChanges</a>
+ * <br>
+ * All methods in this class takes a session object as a parameter. They should have to care about transactions.
+ *
+ * @see dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStoreImpl
+ *
+ */
 public class UpdateTrackerBackend {
     private FedoraForUpdateTracker fedora;
     private Logger log = LoggerFactory.getLogger(UpdateTrackerBackend.class);
@@ -30,7 +40,7 @@ public class UpdateTrackerBackend {
 
     /**
      * Modify the persistent storage regarding a change.
-     *  @param pid     the pid of the object that was changed
+     * @param pid     the pid of the object that was changed
      * @param date    the date of the change
      * @param collection
      * @param state   the state of the entries that should be updated
@@ -94,7 +104,7 @@ public class UpdateTrackerBackend {
                 unset Active and Inactive Timestamp
          */
 
-        if (state == State.DELETED){
+        else if (state == State.DELETED){
             log.debug("Switching on states for pid {}, got the Deleted branch", pid);
 
             //TODO This code duplicates code in recalc view

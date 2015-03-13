@@ -77,6 +77,12 @@ public interface UpdateTrackerPersistentStore extends AutoCloseable{
      */
     public List<Record> lookup(Date since, String viewAngle, int offset, int limit, String state, String collection) throws UpdateTrackerStorageException;
 
+
+    /**
+     * Get the timestamp of the last fedora operation that caused ANY change to the update tracker state
+     * @return the last timestamp of any change in the update tracker
+     * @throws UpdateTrackerStorageException
+     */
     public Date lastChanged() throws UpdateTrackerStorageException;
 
         @Override

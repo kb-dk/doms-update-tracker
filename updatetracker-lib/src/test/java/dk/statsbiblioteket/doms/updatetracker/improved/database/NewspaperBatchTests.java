@@ -3,14 +3,11 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
-import dk.statsbiblioteket.util.Files;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.util.Date;
 import java.util.List;
@@ -48,7 +45,8 @@ public class NewspaperBatchTests {
 
     @Before
     public void setUp() throws Exception {
-        db = new UpdateTrackerPersistentStoreImpl(configFile,fcmock);
+        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock);
+        db = new UpdateTrackerPersistentStoreImpl(configFile,fcmock, updateTrackerBackend);
     }
 
     @After
