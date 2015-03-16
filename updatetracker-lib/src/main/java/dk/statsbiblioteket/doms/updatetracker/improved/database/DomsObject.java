@@ -26,7 +26,7 @@ public class DomsObject implements Serializable {
 
 
     @ManyToMany(mappedBy = "objects")
-    private Set<Record> records = new HashSet<>();
+    private Set<Record> records = new HashSet<Record>();
 
     public DomsObject() {
     }

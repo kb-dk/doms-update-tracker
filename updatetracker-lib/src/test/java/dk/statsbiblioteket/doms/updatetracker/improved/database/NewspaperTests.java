@@ -7,6 +7,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -49,7 +50,7 @@ public class NewspaperTests {
         when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(asSet(COLLECTION));
 
         //No entry objects or view stuff until initialised
-        when(fcmock.getEntryAngles(anyString(), any(Date.class))).thenReturn(emptyList());
+        when(fcmock.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptyList());
     }
 
 

@@ -116,7 +116,7 @@ public class Record implements Serializable {
     @ManyToMany
     @JoinTable(name = "MEMBERSHIPS")
     @Cascade({CascadeType.REFRESH,CascadeType.REPLICATE,CascadeType.SAVE_UPDATE,CascadeType.PERSIST,CascadeType.MERGE})
-    private Set<DomsObject> objects = new HashSet<>();
+    private Set<DomsObject> objects = new HashSet<DomsObject>();
 
     public Record() {
     }

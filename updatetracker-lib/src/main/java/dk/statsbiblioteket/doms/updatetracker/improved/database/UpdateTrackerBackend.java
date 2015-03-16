@@ -3,6 +3,8 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.Predicate;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.StatelessSession;
@@ -12,10 +14,10 @@ import org.slf4j.LoggerFactory;
 import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static java.util.stream.Collectors.toSet;
 
 /**
  * This class implements the lower level update tracker operations, detailed in
@@ -109,9 +111,7 @@ public class UpdateTrackerBackend {
 
             //TODO This code duplicates code in recalc view
             DomsObject thisObject = UpdateTrackerDAO.loadOrCreate(session, pid);
-            Set<Record> otherRecordsThanThisWhichThisObjectIsPart = thisObject.getRecords().stream()
-                                                    .filter(record -> !record.getEntryPid().equals(pid))
-                                                    .collect(toSet());
+            Set<Record> otherRecordsThanThisWhichThisObjectIsPart = removeThis(pid, thisObject);
 
 
             for (Record otherRecord : otherRecordsThanThisWhichThisObjectIsPart) {
@@ -119,11 +119,7 @@ public class UpdateTrackerBackend {
             }
             session.delete(thisObject);
 
-            Set<Record> recordsWhichThisObjectIsEntry = thisObject.getRecords()
-                                                                  .stream()
-                                                                  .filter(record -> record.getEntryPid()
-                                                                                          .equals(pid))
-                                                                  .collect(toSet());
+            Set<Record> recordsWhichThisObjectIsEntry = removeOthers(pid, thisObject);
 
             for (Record record : recordsWhichThisObjectIsEntry) {
                 record.getObjects().clear();
@@ -134,6 +130,26 @@ public class UpdateTrackerBackend {
             }
         }
 
+    }
+
+    private Set<Record> removeOthers(final String pid, DomsObject thisObject) {
+        final Set<Record> records = new HashSet<Record>(thisObject.getRecords());
+        CollectionUtils.filter(records, new Predicate<Record>() {
+            @Override
+            public boolean evaluate(Record object) {return object.getEntryPid().equals(pid);
+            }
+        });
+        return records;
+    }
+
+    private Set<Record> removeThis(final String pid, DomsObject thisObject) {
+        final Set<Record> records = new HashSet<Record>(thisObject.getRecords());
+        CollectionUtils.filter(records, new Predicate<Record>() {
+            @Override
+            public boolean evaluate(Record object) { return !object.getEntryPid().equals(pid);
+            }
+        });
+        return records;
     }
 
     private void reconnectObjectsInRecord(Timestamp date, Session session, Record otherRecord) throws FedoraFailedException {
@@ -237,19 +253,14 @@ public class UpdateTrackerBackend {
         if (state == null) {
             query = session.getNamedQuery("All");
         } else {
-            switch (state) {
-                case "A":
-                    query = session.getNamedQuery("ActiveAndDeleted");
-                    break;
-                case "I":
-                    query = session.getNamedQuery("InactiveOrDeleted");
-                    break;
-                case "D":
-                    query = session.getNamedQuery("Deleted");
-                    break;
-                default:
-                    query = session.getNamedQuery("All");
-                    break;
+            if (state.equals("A")) {
+                query = session.getNamedQuery("ActiveAndDeleted");
+            } else if (state.equals("I")) {
+                query = session.getNamedQuery("InactiveOrDeleted");
+            } else if (state.equals("D")) {
+                query = session.getNamedQuery("Deleted");
+            } else {
+                query = session.getNamedQuery("All");
             }
         }
 

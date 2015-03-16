@@ -2,6 +2,7 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 
+import java.io.Closeable;
 import java.util.Date;
 import java.util.List;
 
@@ -9,7 +10,7 @@ import java.util.List;
  * This is the interface representing the storage system, which holds the updates from doms.
  * The methods represents events that can take place, except the lookup method
  */
-public interface UpdateTrackerPersistentStore extends AutoCloseable{
+public interface UpdateTrackerPersistentStore extends Closeable {
 
     /**
      * Invoke to register a new object, that has been created

@@ -2,6 +2,9 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.Predicate;
+import org.apache.commons.collections4.PredicateUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -9,7 +12,10 @@ import org.junit.Test;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerDAO.asSet;
@@ -39,7 +45,7 @@ public class UpdateTrackerPersistentStoreTest {
         //Collections for everybody
         when(fedora.getCollections(anyString(), any(Date.class))).thenReturn(asSet(collection));
         //No entry objects or view stuff until initialised
-        when(fedora.getEntryAngles(anyString(), any(Date.class))).thenReturn(emptyList());
+        when(fedora.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptyList());
         final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fedora);
         db = new UpdateTrackerPersistentStoreImpl(configFile, fedora, updateTrackerBackend);
     }
@@ -72,7 +78,7 @@ public class UpdateTrackerPersistentStoreTest {
     private void addEntry(String pid, String... contained) throws FedoraFailedException {
         final String viewAngle = "SummaVisible";
         when(fedora.getEntryAngles(eq(pid), any(Date.class))).thenReturn(Arrays.asList(viewAngle));
-        List<String> objects = new ArrayList<>(Arrays.asList(contained));
+        List<String> objects = new ArrayList<String>(Arrays.asList(contained));
         objects.add(pid);
         when(fedora.calcViewBundle(eq(pid),eq(viewAngle),any(Date.class))).thenReturn(new ViewBundle(pid,
                                                                                                                viewAngle,
@@ -210,7 +216,7 @@ public class UpdateTrackerPersistentStoreTest {
 
         //Test how many Inactive objects there are
         final List<Record> inactive = db.lookup(test1Create, "SummaVisible", 0, 100, "I", "doms:Root_Collection");
-        assertEquals("To many objects", 0, inactive.stream().filter(record -> record.getState() != Record.State.DELETED).count());
+        assertEquals("To many objects", 0, filter(inactive).size());
         final List<Record> deleted = db.lookup(test1Delete, "SummaVisible", 0, 100, "D", "doms:Root_Collection");
         assertEquals("To many objects", 1, deleted.size());
         assertEquals(test1Delete.getTime(), deleted.get(0).getDeleted().getTime());
@@ -222,6 +228,17 @@ public class UpdateTrackerPersistentStoreTest {
         assertEquals("To many objects", 1, db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection").size());
         assertEquals("To many objects", 1, db.lookup(test1CreateAgain, "SummaVisible", 0, 100, null, "doms:Root_Collection").size());
         assertEquals("To many objects", 1, db.lookup(test1Create, "SummaVisible", 0, 100, "I", "doms:Root_Collection").size());
+    }
+
+    private Collection<Record> filter(List<Record> inactive) {
+        Collection<Record> result = new ArrayList<Record>(inactive);
+        CollectionUtils.filter(result, new Predicate<Record>() {
+            @Override
+            public boolean evaluate(Record record) {
+                return record.getState() != Record.State.DELETED;
+            }
+        });
+        return result;
     }
 
     @Test

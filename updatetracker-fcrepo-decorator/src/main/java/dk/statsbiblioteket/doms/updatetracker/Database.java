@@ -8,6 +8,7 @@ import org.fcrepo.server.utilities.SQLUtility;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Array;
@@ -36,7 +37,7 @@ import java.util.concurrent.Executor;
 /**
  * This is the database access object. Use it to add and remove log entries from the update tracker log database
  */
-public class Database implements AutoCloseable {
+public class Database implements Closeable {
 
 
     private static Logger logger = LoggerFactory.getLogger(Database.class);
@@ -87,23 +88,34 @@ public class Database implements AutoCloseable {
     public Long addLogEntry(String pid, Date timestamp, String name, String param) throws IOException {
 
 
-        try (Connection conn = getReadWriteConnection(cPool);
-             PreparedStatement statement = conn.prepareStatement("INSERT INTO updateTrackerLogs(pid,happened,method,param) VALUES (?,?,?,?)", Statement.RETURN_GENERATED_KEYS);) {
-            statement.setString(1,pid);
-            statement.setTimestamp(2, new Timestamp(timestamp.getTime()));
-            statement.setString(3, name);
-            statement.setString(4,param);
-            statement.executeUpdate();
-            ResultSet generatedKeys = statement.getGeneratedKeys();
-            generatedKeys.next();
-            long key;
-            key = generatedKeys.getLong("key");
+        try {
+            Connection conn = getReadWriteConnection(cPool);
+            try {
+                PreparedStatement statement = conn.prepareStatement("INSERT INTO updateTrackerLogs(pid,happened," +
+                                                                    "method,param) VALUES (?,?,?,?)",
+                                                                    Statement.RETURN_GENERATED_KEYS);
+                try {
+                    statement.setString(1, pid);
+                    statement.setTimestamp(2, new Timestamp(timestamp.getTime()));
+                    statement.setString(3, name);
+                    statement.setString(4, param);
+                    statement.executeUpdate();
+                    ResultSet generatedKeys = statement.getGeneratedKeys();
+                    generatedKeys.next();
+                    long key;
+                    key = generatedKeys.getLong("key");
 
-            return key;
-
-
+                    return key;
+                } finally {
+                    statement.close();
+                }
+            } finally {
+                conn.close();
+            }
         } catch (SQLException e) {
-            throw new IOException("Failed to add log entry with with pid='"+pid+"', happened='"+timestamp.getTime()+"', method='"+name+"', param='"+param+"' to update tracker database", e);
+            throw new IOException("Failed to add log entry with with pid='" + pid + "', happened='" +
+                                  timestamp.getTime() + "', method='" + name + "', param='" + param +
+                                  "' to update tracker database", e);
         }
     }
     public void removeLogEntry(Long key) throws IOException {
@@ -111,10 +123,19 @@ public class Database implements AutoCloseable {
             return;
         }
 
-        try (Connection conn = getReadWriteConnection(cPool);
-             PreparedStatement statement = conn.prepareStatement("DELETE FROM updateTrackerLogs WHERE key = ?");) {
-            statement.setLong(1, key);
-            statement.executeUpdate();
+        try {
+            Connection conn = getReadWriteConnection(cPool);
+            try {
+                PreparedStatement statement = conn.prepareStatement("DELETE FROM updateTrackerLogs WHERE key = ?");
+                try {
+                    statement.setLong(1, key);
+                    statement.executeUpdate();
+                } finally {
+                    statement.close();
+                }
+            } finally {
+                conn.close();
+            }
         } catch (SQLException e) {
             throw new IOException("Failed to remove log entry with key '"+key+"' from update tracker database",e);
         }
@@ -335,25 +356,7 @@ public class Database implements AutoCloseable {
                 return conn.createStruct(typeName, attributes);
             }
 
-            public void setSchema(String schema) throws SQLException {
-                conn.setSchema(schema);
-            }
 
-            public String getSchema() throws SQLException {
-                return conn.getSchema();
-            }
-
-            public void abort(Executor executor) throws SQLException {
-                conn.abort(executor);
-            }
-
-            public void setNetworkTimeout(Executor executor, int milliseconds) throws SQLException {
-                conn.setNetworkTimeout(executor, milliseconds);
-            }
-
-            public int getNetworkTimeout() throws SQLException {
-                return conn.getNetworkTimeout();
-            }
 
             public <T> T unwrap(Class<T> iface) throws SQLException {
                 return conn.unwrap(iface);

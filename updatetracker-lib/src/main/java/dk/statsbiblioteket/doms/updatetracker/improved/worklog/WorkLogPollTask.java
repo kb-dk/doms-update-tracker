@@ -43,47 +43,54 @@ public class WorkLogPollTask extends TimerTask {
                 Date date = event.getDate();
                 String param = event.getParam();
 
-                switch (event.getMethod()) {
-                    case "ingest":
-                        updateTrackerPersistentStore.objectCreated(pid, date);
-                        break;
-                    case "modifyObject":
-                        updateTrackerPersistentStore.objectStateChanged(pid, date, param);
-                        break;
-                    case "purgeObject":
-                        updateTrackerPersistentStore.objectDeleted(pid, date);
-                        break;
-                    case "addDatastream":
-                    case "modifyDatastreamByReference":
-                    case "modifyDatastreamByValue":
-                    case "purgeDatastream":
-                    case "setDatastreamState":
-                    case "setDatastreamVersionable":
-                        updateTrackerPersistentStore.datastreamChanged(pid, date, param);
-                        break;
-                    case "addRelationship":
-                    case "purgeRelationship":
-                        updateTrackerPersistentStore.objectRelationsChanged(pid, date);
-                        break;
-                    case "getObjectXML":
-                    case "export":
-                    case "getDatastream":
-                    case "getDatastreams":
-                    case "getDatastreamHistory":
-                    case "putTempStream":
-                    case "getTempStream":
-                    case "compareDatastreamChecksum":
-                    case "getNextPID":
-                    case "getRelationships":
-                    case "validate":
-                        // Nothing to do
-                        break;
-                    default:
-                        // TODO log this
-                        break;
+                if (event.getMethod()
+                         .equals("ingest")) {
+                    updateTrackerPersistentStore.objectCreated(pid, date);
+                } else if (event.getMethod()
+                                .equals("modifyObject")) {
+                    updateTrackerPersistentStore.objectStateChanged(pid, date, param);
+                } else if (event.getMethod()
+                                .equals("purgeObject")) {
+                    updateTrackerPersistentStore.objectDeleted(pid, date);
+                } else if (event.getMethod()
+                                .equals("addDatastream") || event.getMethod()
+                                                                 .equals("modifyDatastreamByReference") ||
+                           event.getMethod()
+                                .equals("modifyDatastreamByValue") || event.getMethod()
+                                                                           .equals("purgeDatastream") ||
+                           event.getMethod()
+                                .equals("setDatastreamState") || event.getMethod()
+                                                                      .equals("setDatastreamVersionable")) {
+                    updateTrackerPersistentStore.datastreamChanged(pid, date, param);
+                } else if (event.getMethod()
+                                .equals("addRelationship") || event.getMethod()
+                                                                   .equals("purgeRelationship")) {
+                    updateTrackerPersistentStore.objectRelationsChanged(pid, date);
+                } else if (event.getMethod()
+                                .equals("getObjectXML") || event.getMethod()
+                                                                .equals("export") || event.getMethod()
+                                                                                          .equals("getDatastream") ||
+                           event.getMethod()
+                                .equals("getDatastreams") || event.getMethod()
+                                                                  .equals("getDatastreamHistory") || event.getMethod()
+                                                                                                          .equals("putTempStream") ||
+                           event.getMethod()
+                                .equals("getTempStream") || event.getMethod()
+                                                                 .equals("compareDatastreamChecksum") ||
+                           event.getMethod()
+                                .equals("getNextPID") || event.getMethod()
+                                                              .equals("getRelationships") || event.getMethod()
+                                                                                                  .equals("validate")) {// Nothing to do
+
+                } else {// TODO log this
+
                 }
             }
-        } catch (IOException | UpdateTrackerStorageException | FedoraFailedException e) {
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } catch (UpdateTrackerStorageException e) {
+            throw new RuntimeException(e);
+        } catch (FedoraFailedException e) {
             throw new RuntimeException(e);
         }
     }

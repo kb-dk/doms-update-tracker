@@ -29,9 +29,7 @@
                         <configuration>
                             <packageName>${project.groupId}.webservice</packageName>
                             <wsdlDirectory>src/main/resources/wsdl</wsdlDirectory>
-                            <vmArgs>
-                                <vmArg>-Djavax.xml.accessExternalSchema=all</vmArg>
-                            </vmArgs>
+                            <target>2.1</target>
                         </configuration>
                     </execution>
                 </executions>

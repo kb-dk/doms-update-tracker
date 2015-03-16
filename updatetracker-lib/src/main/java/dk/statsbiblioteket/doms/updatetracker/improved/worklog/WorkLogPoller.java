@@ -5,6 +5,7 @@ import com.mchange.v2.c3p0.DataSources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -17,7 +18,7 @@ import java.util.List;
 import java.util.Properties;
 
 
-public class WorkLogPoller implements AutoCloseable{
+public class WorkLogPoller implements Closeable {
 
     private final String driver;
     private final String jdbcUrl;
@@ -97,23 +98,34 @@ public class WorkLogPoller implements AutoCloseable{
 
     public List<WorkLogUnit> getFedoraEvents(Date since, int limit) throws IOException {
 
-        ArrayList<WorkLogUnit> result = new ArrayList<>(limit);
+        ArrayList<WorkLogUnit> result = new ArrayList<WorkLogUnit>(limit);
 
-        try (Connection conn = getConnection();
-             PreparedStatement statement = conn.prepareStatement("SELECT pid,happened,method,param FROM updateTrackerLogs WHERE happened >= ? ORDER BY happened ASC LIMIT ?");) {
-            statement.setTimestamp(1, new Timestamp(since.getTime()));
-            statement.setInt(2, limit);
+        try {
+            Connection conn = getConnection();
+            try {
+                PreparedStatement statement
+                        = conn.prepareStatement("SELECT pid,happened,method,param FROM updateTrackerLogs WHERE " +
+                                                "happened >= ? ORDER BY happened ASC LIMIT ?");
+                try {
+                    statement.setTimestamp(1, new Timestamp(since.getTime()));
+                    statement.setInt(2, limit);
 
-            statement.execute();
-            ResultSet resultSet = statement.getResultSet();
-            while (resultSet.next()){
-                String pid = resultSet.getString("pid");
-                String method = resultSet.getString("method");
-                String param = resultSet.getString("param");
-                Timestamp timestamp = resultSet.getTimestamp("happened");
-                result.add(new WorkLogUnit(method,timestamp,pid,param));
+                    statement.execute();
+                    ResultSet resultSet = statement.getResultSet();
+                    while (resultSet.next()) {
+                        String pid = resultSet.getString("pid");
+                        String method = resultSet.getString("method");
+                        String param = resultSet.getString("param");
+                        Timestamp timestamp = resultSet.getTimestamp("happened");
+                        result.add(new WorkLogUnit(method, timestamp, pid, param));
+                    }
+                    return result;
+                } finally {
+                    statement.close();
+                }
+            } finally {
+                conn.close();
             }
-            return result;
         } catch (SQLException e) {
             throw new IOException(e);
         }

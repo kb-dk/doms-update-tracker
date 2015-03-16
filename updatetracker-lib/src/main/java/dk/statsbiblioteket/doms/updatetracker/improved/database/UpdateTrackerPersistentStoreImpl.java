@@ -12,6 +12,7 @@ import org.hibernate.cfg.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.File;
 import java.sql.Timestamp;
 import java.util.Date;
@@ -33,7 +34,7 @@ import static dk.statsbiblioteket.doms.updatetracker.improved.database.Record.St
  *
  * @see dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerBackend
  */
-public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistentStore, AutoCloseable {
+public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistentStore, Closeable {
 
     private static Logger log = LoggerFactory.getLogger(UpdateTrackerPersistentStoreImpl.class);
 

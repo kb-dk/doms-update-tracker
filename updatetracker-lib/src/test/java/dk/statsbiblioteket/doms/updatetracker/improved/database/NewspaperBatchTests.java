@@ -9,6 +9,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.net.URISyntaxException;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -106,7 +107,7 @@ public class NewspaperBatchTests {
         when(fcmock.calcViewBundle(eq(roundTrip), eq(viewAngle), any(Date.class))).thenReturn(new ViewBundle(roundTrip,
                                                                                                                     viewAngle));
         //Not a entry object before this time
-        when(fcmock.getEntryAngles(eq(roundTrip), lt(becomingItemTime))).thenReturn(emptyList());
+        when(fcmock.getEntryAngles(eq(roundTrip), lt(becomingItemTime))).thenReturn(Collections.<String>emptyList());
 
         //But after this time, the object is an entry
         when(fcmock.getEntryAngles(eq(roundTrip), geq(becomingItemTime))).thenReturn(asList(viewAngle));
@@ -157,7 +158,7 @@ public class NewspaperBatchTests {
         when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(asSet(collection));
 
         //No entry objects or view stuff until initialised
-        when(fcmock.getEntryAngles(anyString(), any(Date.class))).thenReturn(emptyList());
+        when(fcmock.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptyList());
 
         //Content Model for roundtrip
         Tests.setContentModelItem(roundTrip, fcmock);

@@ -94,7 +94,7 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
 
 
     private List<PidDatePidPid> convert(List<Record> entries, String state) {
-        List<PidDatePidPid> list2 = new ArrayList<>(entries.size());
+        List<PidDatePidPid> list2 = new ArrayList<PidDatePidPid>(entries.size());
         for (Record record : entries) {
             list2.add(convert(record, state));
         }
@@ -103,26 +103,21 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
 
     private PidDatePidPid convert(Record thing, String state) {
         PidDatePidPid thang = new PidDatePidPid();
-        switch (state) {
-            case "A":
-                thang.setLastChangedTime(thing.getActive()
-                                              .getTime());
-                break;
-            case "I":
-                thang.setLastChangedTime(thing.getInactive()
-                                              .getTime());
-                break;
-            case "D":
-                thang.setLastChangedTime(thing.getDeleted()
-                                              .getTime());
-                break;
-            default:
-                thang.setLastChangedTime(Math.max(thing.getActive()
-                                                       .getTime(), Math.max(thing.getInactive()
-                                                                                 .getTime(),
-                                                                            thing.getDeleted()
-                                                                                 .getTime())));
-                break;
+        if (state.equals("A")) {
+            thang.setLastChangedTime(thing.getActive()
+                                          .getTime());
+        } else if (state.equals("I")) {
+            thang.setLastChangedTime(thing.getInactive()
+                                          .getTime());
+        } else if (state.equals("D")) {
+            thang.setLastChangedTime(thing.getDeleted()
+                                          .getTime());
+        } else {
+            thang.setLastChangedTime(Math.max(thing.getActive()
+                                                   .getTime(), Math.max(thing.getInactive()
+                                                                             .getTime(),
+                                                                        thing.getDeleted()
+                                                                             .getTime())));
         }
 
         thang.setPid(thing.getEntryPid());

@@ -1,5 +1,6 @@
 package dk.statsbiblioteket.doms.updatetracker.improved;
 
+import dk.statsbiblioteket.doms.central.connectors.fedora.Fedora;
 import dk.statsbiblioteket.doms.central.connectors.fedora.FedoraRest;
 import dk.statsbiblioteket.doms.central.connectors.fedora.tripleStore.TripleStoreRest;
 import dk.statsbiblioteket.doms.central.connectors.fedora.views.ViewsImpl;
@@ -12,12 +13,13 @@ import dk.statsbiblioteket.doms.updatetracker.improved.worklog.WorkLogPoller;
 import dk.statsbiblioteket.doms.updatetracker.improved.worklog.WorkLogPollTask;
 import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
 
+import java.io.Closeable;
 import java.util.Timer;
 
 /**
  * This is the system that starts the persistent store and the jms listener and ties them together
  */
-public class UpdateTrackingSystem implements AutoCloseable{
+public class UpdateTrackingSystem implements Closeable {
 
 
     private  UpdateTrackerPersistentStore store;
@@ -34,7 +36,7 @@ public class UpdateTrackingSystem implements AutoCloseable{
             Credentials creds = new Credentials(updateTrackingConfig.getFedoraWebUsername(),
                                                 updateTrackingConfig.getFedoraWebPassword());
             EntryAngleCache cmCache = new EntryAngleCache();
-            FedoraRest fedoraRest = new FedoraRest(creds, updateTrackingConfig.getFedoraWebUrl());
+            Fedora fedoraRest = new FedoraRest(creds, updateTrackingConfig.getFedoraWebUrl());
             TripleStoreRest tripleStoreRest = new TripleStoreRest(creds,
                                                                   updateTrackingConfig.getFedoraWebUrl(), fedoraRest);
             ViewsImpl views = new ViewsImpl(tripleStoreRest, fedoraRest);

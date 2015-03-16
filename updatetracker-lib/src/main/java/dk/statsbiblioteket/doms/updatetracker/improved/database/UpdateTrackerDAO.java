@@ -22,9 +22,8 @@ public class UpdateTrackerDAO {
     }
 
 
-    @SafeVarargs
     static <T> Set<T> asSet(T... vars){
-        return new HashSet<>(Arrays.asList(vars));
+        return new HashSet<T>(Arrays.asList(vars));
     }
 
     static boolean recordNotExists(Session session, Record newRecord) {

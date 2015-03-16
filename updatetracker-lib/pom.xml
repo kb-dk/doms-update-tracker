@@ -25,7 +25,7 @@
             <plugin>
                 <groupId>org.jvnet.jaxb2.maven2</groupId>
                 <artifactId>maven-jaxb2-plugin</artifactId>
-                <version>0.9.0</version>
+                <version>0.10.0</version>
                 <executions>
                     <execution>
                         <id>fedoratypes</id>
@@ -35,24 +35,14 @@
                                 <include>viewDatastream.xml2.xsd</include>
                                 <include>objectprofile.xsd</include>
                             </schemaIncludes>
+                            <specVersion>2.1</specVersion>
                         </configuration>
                         <goals>
                             <goal>generate</goal>
                         </goals>
 
                     </execution>
-                    <execution>
-                        <id>atomtypes</id>
-                        <configuration>
-                            <generatePackage>dk.statsbiblioteket.doms.updatetracker.improved.jms</generatePackage>
-                            <schemaIncludes>
-                                <include>atom.xsd</include>
-                            </schemaIncludes>
-                        </configuration>
-                        <goals>
-                            <goal>generate</goal>
-                        </goals>
-                    </execution>
+
 
                 </executions>
                 <configuration>
@@ -66,6 +56,11 @@
 
     <dependencies>
 
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+            <version>4.0</version>
+        </dependency>
         <dependency>
             <groupId>c3p0</groupId>
             <artifactId>c3p0</artifactId>
