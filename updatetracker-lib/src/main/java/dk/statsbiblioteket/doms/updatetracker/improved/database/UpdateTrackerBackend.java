@@ -136,8 +136,7 @@ public class UpdateTrackerBackend {
         final Set<Record> records = new HashSet<Record>(thisObject.getRecords());
         CollectionUtils.filter(records, new Predicate<Record>() {
             @Override
-            public boolean evaluate(Record object) {return object.getEntryPid().equals(pid);
-            }
+            public boolean evaluate(Record object) { return object.getEntryPid().equals(pid); }
         });
         return records;
     }
@@ -146,8 +145,7 @@ public class UpdateTrackerBackend {
         final Set<Record> records = new HashSet<Record>(thisObject.getRecords());
         CollectionUtils.filter(records, new Predicate<Record>() {
             @Override
-            public boolean evaluate(Record object) { return !object.getEntryPid().equals(pid);
-            }
+            public boolean evaluate(Record object) { return !object.getEntryPid().equals(pid); }
         });
         return records;
     }

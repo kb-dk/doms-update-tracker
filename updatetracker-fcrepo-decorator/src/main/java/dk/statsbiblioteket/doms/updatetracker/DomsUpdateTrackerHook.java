@@ -37,21 +37,25 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
 
     @Override
     public void init(Server server) throws InitializationException {
-        ConnectionPoolManager cpm = (ConnectionPoolManager) server.getModule("org.fcrepo.server.storage.ConnectionPoolManager");
+        ConnectionPoolManager cpm
+                = (ConnectionPoolManager) server.getModule("org.fcrepo.server.storage.ConnectionPoolManager");
         if (cpm == null) {
-            throw new InitializationException("ConnectionPoolManager module was required, but apparently has not been loaded.");
+            throw new InitializationException("ConnectionPoolManager module was required, but apparently has not been" +
+                                              " loaded.");
         }
 
-        ManagementModule managementModule = (ManagementModule) server.getModule("org.fcrepo.server.management.Management");
+        ManagementModule managementModule
+                = (ManagementModule) server.getModule("org.fcrepo.server.management.Management");
         if (managementModule == null) {
-            throw new InitializationException("ManagementModule module was required, but apparently has not been loaded.");
+            throw new InitializationException("ManagementModule module was required, but apparently has not been " +
+                                              "loaded.");
         }
 
 
         String cPoolName = managementModule.getParameter("updateTrackerPoolName");
         ConnectionPool cPool = null;
         try {
-            if (cPoolName == null){
+            if (cPoolName == null) {
                 logger.debug("connectionPool unspecified; using default from ConnectionPoolManager.");
                 cPool = cpm.getPool();
             } else {
@@ -59,15 +63,15 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
                 cPool = cpm.getPool(cPoolName);
             }
         } catch (ConnectionPoolNotFoundException e) {
-            throw new InitializationException("Failed to find specified connection '"+cPoolName+"'",e);
+            throw new InitializationException("Failed to find specified connection '" + cPoolName + "'", e);
         }
         try {
             database = new Database(cPool);
-        } catch (Exception e){
+        } catch (Exception e) {
             cPool.close();
             final StringWriter out = new StringWriter();
             e.printStackTrace(new PrintWriter(out));
-            throw new InitializationException("Failed to open connection: "+ out.toString(), e);
+            throw new InitializationException("Failed to open connection: " + out.toString(), e);
         }
     }
 
@@ -92,7 +96,8 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
                 param = args[2].toString();
             }
         } catch (Exception e) {
-            final String message = "Failed to parse params for method '" + methodName + "': " + Arrays.toString(args) + "'";
+            final String message = "Failed to parse params for method '" + methodName + "': " + Arrays.toString(args) +
+                                   "'";
             logger.error(message, e);
             throw new InvocationTargetException(e, message);
         }
@@ -122,35 +127,39 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
                         ")");
             return method.invoke(target, args);
         }
-
     }
 
     /**
      * For ingest, we do not know the pid until after the operation completes
+     *
      * @param method
      * @param args
      * @param now
+     *
      * @return
      * @throws InvocationTargetException
      * @throws IllegalAccessException
      */
-    private String invokeIngestHook(Method method, Object[] args,  Date now) throws InvocationTargetException, IllegalAccessException {
+    private String invokeIngestHook(Method method, Object[] args, Date now) throws
+                                                                            InvocationTargetException,
+                                                                            IllegalAccessException {
         String methodName = "ingest";
 
         String pid = (String) method.invoke(target, args);
-        addLogEntry(methodName,pid,now,null);
+        addLogEntry(methodName, pid, now, null);
         return pid;
-
     }
 
     /**
      * First, add the log entry. Then invoke the method. Should the method fail, remove the log entry
-     * @param method the method
-     * @param args args for the method
+     *
+     * @param method     the method
+     * @param args       args for the method
      * @param methodName the name of the method
-     * @param pid the pid of the object
-     * @param now timestamp of the invocation
-     * @param param the first param, can be null
+     * @param pid        the pid of the object
+     * @param now        timestamp of the invocation
+     * @param param      the first param, can be null
+     *
      * @return the result of the method invocation
      * @throws IllegalAccessException
      * @throws InvocationTargetException
@@ -186,13 +195,13 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
             database.removeLogEntry(logkey);
 
             logger.info("For method" + "" + methodName + "(" + pid + ", " + now.getTime() + ", " +
-                                   param +
-                                   ")" + ", we removed logKey '" + logkey + "' from the database");
+                        param +
+                        ")" + ", we removed logKey '" + logkey + "' from the database");
         } catch (IOException e) {
 
             logger.error("For method" + "" + methodName + "(" + pid + ", " + now.getTime() + ", " +
-                                   param +
-                                   ")" + ", we failed to remove logKey '"+logkey+"' from the database",e);
+                         param +
+                         ")" + ", we failed to remove logKey '" + logkey + "' from the database", e);
         }
     }
 
@@ -205,7 +214,7 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
         } catch (IOException e) {
             final String message = "For method" + "" + methodName + "(" + pid + ", " + now.getTime() + ", " + param +
                                    ")" + ", we failed to add log to database";
-            logger.error(message,e);
+            logger.error(message, e);
             throw new InvocationTargetException(e, message);
         }
         return logkey;
