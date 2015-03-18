@@ -1,11 +1,11 @@
 #!/bin/bash
 # Dump database table with timestamps to a file. Note: It should be checked that t1 is the correct table beforehand.
-echo "Dumping all lastModified triples from database"
+date; echo "Dumping all lastModified triples from database"
 lastmodifiedtable=$(psql domsTripleStore -c "\copy (SELECT pkey FROM tmap WHERE p='<info:fedora/fedora-system:def/view#lastModifiedDate>') TO STDOUT")
 psql domsTripleStore -c "\copy (SELECT * FROM t$lastmodifiedtable ORDER BY o) TO STDOUT" > alltimestamps
-echo "Done dumping. Now parsing triples."
+date; echo "Done dumping. Now parsing triples."
 # Rename old input file if any
-if [[ -e updatetrackerdata ]]; then mv updatetrackerdata updatetrackerdata.$(date -Iseconds)
+if [[ -e updatetrackerdata ]]; then mv updatetrackerdata updatetrackerdata.$(date -Iseconds); fi
 
 # Read each timestamp. Format looks like this:
 #   <info:fedora/uuid:b994d7bf-7911-4413-8475-bb8dc3f7b804>	"2014-10-21T04:26:13.987Z"^^<http://www.w3.org/2001/XMLSchema#dateTime>
@@ -30,6 +30,6 @@ cat alltimestamps | while read object timestamp; do
     if [[ $((i%100000)) == 0 ]]; then date; echo "Handled $i timestamps"; fi
 done
 # Ingest into updatetracker log database table. Assumes table already exists.
-echo "Ingesting all triples into database"
+date; echo "Ingesting all triples into database"
 cat updatetrackerdata | psql avisdoms -c "\copy \"updateTrackerLogs\" (pid, happened, method) from stdin"
-echo "All done."
+date; echo "All done."
