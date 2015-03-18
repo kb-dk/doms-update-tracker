@@ -21,7 +21,7 @@ public class DomsObject implements Serializable {
      * The pid of the Object
      */
     @Id
-    @Column(name = "OBJECTPID")
+    @Column(name = "OBJECTPID",length = 64)
     private String objectPid;
 
 

@@ -14,7 +14,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.File;
-import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -68,25 +67,24 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      *       updateTimestamps()
      *
      * @param pid  the pid of the new object
-     * @param date the date of the object creation
+     * @param timestamp the date of the object creation
      */
     @Override
-    public void objectCreated(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException {
+    public void objectCreated(String pid, Date timestamp) throws UpdateTrackerStorageException, FedoraFailedException {
         Session session = sessionFactory.getCurrentSession();
         Transaction transaction = session.beginTransaction();
-        log.info("ObjectCreated({},{}) Starting",pid,date);
+        log.info("ObjectCreated({},{}) Starting",pid,timestamp);
         try {
-            Set<String> collections = fedora.getCollections(pid, date);
-            Timestamp timestamp = new Timestamp(date.getTime());
+            Set<String> collections = fedora.getCollections(pid, timestamp);
             for (String collection : collections) {
-                State ingestState = fedora.getState(pid,date);
+                State ingestState = fedora.getState(pid,timestamp);
                 backend.modifyState(pid, timestamp, collection, ingestState, session);
                 backend.reconnectObjects(pid, timestamp, session);
             }
-            backend.updateTimestamps(pid, timestamp, session);
+            backend.updateDates(pid, timestamp, session);
 
             transaction.commit();
-            log.info("ObjectCreated({},{}) Completed", pid, date);
+            log.info("ObjectCreated({},{}) Completed", pid, timestamp);
         } catch (Exception e) {
             try {
                 transaction.rollback();
@@ -94,7 +92,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                 log.error("Failed to rollback transaction",he);
             }
             throw new UpdateTrackerStorageException("Hibernate Failed in object created for pid='" + pid +
-                                                    "' at date='" + date.getTime() + "'", e);
+                                                    "' at date='" + timestamp.getTime() + "'", e);
         }
 
     }
@@ -107,11 +105,11 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      *           - purgeObject
      *      Action:
      *           modifyState(Deleted)
-     *           updateTimestamps()
+     *           updateDates()
      *           if content model
      *              for all objects of this class
      *                  reconnectObjects()
-     *                  updateTimestamp()
+     *                  updateDate()
      *
      *
      *  If you purge a content model, that people still link to, you are breaking the link structure, and I feel the
@@ -121,19 +119,18 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
       TODO update the wiki page
 
      * @param pid  the pid of the object
-     * @param date the date of the change
+     * @param timestamp the date of the change
      */
     @Override
-    public void objectDeleted(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException {
+    public void objectDeleted(String pid, Date timestamp) throws UpdateTrackerStorageException, FedoraFailedException {
         Session session = sessionFactory.getCurrentSession();
         Transaction transaction = session.beginTransaction();
-        log.info("ObjectDeleted({},{}) Starting", pid, date);
+        log.info("ObjectDeleted({},{}) Starting", pid, timestamp);
         try {
-            Timestamp timestamp = new Timestamp(date.getTime());
             backend.modifyState(pid, timestamp, null, DELETED, session);
-            backend.updateTimestamps(pid, timestamp, session);
+            backend.updateDates(pid, timestamp, session);
             transaction.commit();
-            log.info("ObjectDeleted({},{}) Completed", pid, date);
+            log.info("ObjectDeleted({},{}) Completed", pid, timestamp);
         } catch (Exception e) {
             try {
                 transaction.rollback();
@@ -141,7 +138,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                 log.error("Failed to rollback transaction", he);
             }
             throw new UpdateTrackerStorageException("Hibernate Failed in object deleted for pid='" + pid +
-                                                    "' at date='" + date.getTime() + "'", e);
+                                                    "' at date='" + timestamp.getTime() + "'", e);
         }
     }
 
@@ -154,48 +151,47 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      *           - purgeDatastream
      *           - setDatastreamState
      *           - setDatastreamVersionable
-     *           - updateTimestamp
+     *           - updateDate
      *      Action:
      *           if RELS-EXT
      *                reconnectObjects(this)
      *           fi
-     *           updateTimestamp(this)
+     *           updateDate(this)
      *           if VIEW and Content Model
      *                for all objects of this class
      *                     reconnectObjects(object)
-     *                     updateTimestamp(object)
+     *                     updateDate(object)
      fi
      * @param pid
-     * @param date
+     * @param timestamp
      * @param dsid
      * @throws UpdateTrackerStorageException
      * @throws FedoraFailedException
      */
     @Override
-    public void datastreamChanged(String pid, Date date, String dsid) throws
+    public void datastreamChanged(String pid, Date timestamp, String dsid) throws
                                                                       UpdateTrackerStorageException,
                                                                       FedoraFailedException {
         Session session = sessionFactory.getCurrentSession();
         Transaction transaction = session.beginTransaction();
-        log.info("DatastreamChanged({},{},{}) Starting", pid, date,dsid);
+        log.info("DatastreamChanged({},{},{}) Starting", pid, timestamp,dsid);
         try {
-            Timestamp timestamp = new Timestamp(date.getTime());
             if (dsid != null) {
                 if ((dsid.equals("VIEW") || dsid.equals("RELS-EXT"))) {
-                    if (fedora.isCurrentlyContentModel(pid, date)) {
+                    if (fedora.isCurrentlyContentModel(pid, timestamp)) {
                         fedora.invalidateContentModel(pid);
                         for (String object : fedora.getObjectsOfThisContentModel(pid)) {
                             backend.reconnectObjects(object, timestamp, session);
-                            backend.updateTimestamps(object, timestamp, session);
+                            backend.updateDates(object, timestamp, session);
                         }
                     } else if (dsid.equals("RELS-EXT")) {
                         backend.reconnectObjects(pid, timestamp, session);
                     }
                 }
             }
-            backend.updateTimestamps(pid, timestamp, session);
+            backend.updateDates(pid, timestamp, session);
             transaction.commit();
-            log.info("DatastreamChanged({},{},{}) Completed", pid, date, dsid);
+            log.info("DatastreamChanged({},{},{}) Completed", pid, timestamp, dsid);
         } catch (Exception e) {
             try {
                 transaction.rollback();
@@ -203,7 +199,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                 log.error("Failed to rollback transaction", he);
             }
             throw new UpdateTrackerStorageException("Hibernate Failed in datastream changed for pid='" + pid +
-                                                    "' at date='" + date.getTime() + "' and dsid='"+dsid+"'", e);
+                                                    "' at date='" + timestamp.getTime() + "' and dsid='"+dsid+"'", e);
         }
     }
 
@@ -217,19 +213,19 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      *           - purgeRelationship
      *      Action:
      *           reconnectObjects(this)
-     *           updateTimestamp(this)
+     *           updateDate(this)
      *           if this is a content model
      *                for all objects of this class
      *                     reconnectObjects(object of this class)
-     *                     updateTimestamp(object of this class)
+     *                     updateDate(object of this class)
      *
      * @param pid  the pid of the object that changed
-     * @param date the date of the change
+     * @param timestamp the date of the change
      */
-    public void objectRelationsChanged(String pid, Date date) throws
+    public void objectRelationsChanged(String pid, Date timestamp) throws
                                                               UpdateTrackerStorageException,
                                                               FedoraFailedException {
-        datastreamChanged(pid,date,"RELS-EXT");
+        datastreamChanged(pid,timestamp,"RELS-EXT");
     }
 
 
@@ -239,28 +235,27 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      *           - modifyObject
      *       Action:
      *            modifyState(state)
-     *            updateTimestamp()
+     *            updateDate()
      *
      * @param pid
-     * @param date
+     * @param timestamp
      * @param newstate
      * @throws UpdateTrackerStorageException
      * @throws FedoraFailedException
      */
     @Override
-    public void objectStateChanged(String pid, Date date, String newstate) throws
+    public void objectStateChanged(String pid, Date timestamp, String newstate) throws
                                                                            UpdateTrackerStorageException,
                                                                            FedoraFailedException {
 
         Session session = sessionFactory.getCurrentSession();
         Transaction transaction = session.beginTransaction();
-        log.info("objectStateChanged({},{},{}) Starting", pid, date,newstate);
+        log.info("objectStateChanged({},{},{}) Starting", pid, timestamp,newstate);
         try {
-            Timestamp timestamp = new Timestamp(date.getTime());
             backend.modifyState(pid, timestamp, null, State.fromName(newstate), session);
-            backend.updateTimestamps(pid, timestamp, session);
+            backend.updateDates(pid, timestamp, session);
             transaction.commit();
-            log.info("objectStateChanged({},{},{}) Completed", pid, date, newstate);
+            log.info("objectStateChanged({},{},{}) Completed", pid, timestamp, newstate);
         } catch (Exception e) {
             try {
                 transaction.rollback();
@@ -268,7 +263,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                 log.error("Failed to rollback transaction", he);
             }
             throw new UpdateTrackerStorageException("Hibernate Failed in object created for pid='" + pid +
-                                                    "' at date='" + date.getTime() + "' and state='"+newstate+"'", e);
+                                                    "' at date='" + timestamp.getTime() + "' and state='"+newstate+"'", e);
         }
     }
 
@@ -280,7 +275,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             log.info("lookup({},{},{},{},{},{}) Starting", since,viewAngle,offset,limit,state,collection);
 
 
-            final List<Record> entries = backend.lookup(new Timestamp(since.getTime()),
+            final List<Record> entries = backend.lookup(new Date(since.getTime()),
                                                         viewAngle,
                                                         offset,
                                                         limit,

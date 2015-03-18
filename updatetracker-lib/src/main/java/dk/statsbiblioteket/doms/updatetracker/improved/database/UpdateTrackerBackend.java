@@ -11,7 +11,6 @@ import org.hibernate.StatelessSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
@@ -48,7 +47,7 @@ public class UpdateTrackerBackend {
      * @param state   the state of the entries that should be updated
      * @param session
      */
-    public void modifyState(String pid, Timestamp date, String collection, State state, Session session) throws
+    public void modifyState(String pid, Date date, String collection, State state, Session session) throws
                                                                            UpdateTrackerStorageException,
                                                                            FedoraFailedException {
         log.debug("Starting modifyState({},{},{})", pid, date, state);
@@ -57,14 +56,14 @@ public class UpdateTrackerBackend {
         if new state is not Deleted
             If the object was not previously known in RECORDS
                 if the object is an Entry object # Check content models vs. content model cache
-                    Create row in RECORDS and OBJECTS denoting this Record, with the Inactive Timestamp set
+                    Create row in RECORDS and OBJECTS denoting this Record, with the Inactive Date set
                     if the new state is Active
-                        also set the Active Timestamp
+                        also set the Active Date
             else
                 For each row in RECORDS with entryPid = this pid
-                    set Inactive Timestamp
+                    set Inactive Date
                     if new state is Active
-                        set Active Timestamp
+                        set Active Date
          */
         if ( state != State.DELETED) {
             List<Record> allRecordsWithThisEntryPid = UpdateTrackerDAO.getAllRecordsWithThisEntryPid(pid, session);
@@ -102,8 +101,8 @@ public class UpdateTrackerBackend {
                 reconnectObjects(record.entryPid) # Recalculate the records
             Delete all rows with objectPid=this pid from OBJECTS # Remove reference to this object
             For each Record with entryPid = this pid # And mark is as deleted if it is an entry
-                set Deleted Timestamp
-                unset Active and Inactive Timestamp
+                set Deleted Date
+                unset Active and Inactive Date
          */
 
         else if (state == State.DELETED){
@@ -150,7 +149,7 @@ public class UpdateTrackerBackend {
         return records;
     }
 
-    private void reconnectObjectsInRecord(Timestamp date, Session session, Record otherRecord) throws FedoraFailedException {
+    private void reconnectObjectsInRecord(Date date, Session session, Record otherRecord) throws FedoraFailedException {
         ViewBundle bundle = fedora.calcViewBundle(otherRecord.getEntryPid(), otherRecord.getViewAngle(), date);
         otherRecord.getObjects().clear();
         for (String viewObject : bundle.getContained()) {
@@ -167,16 +166,16 @@ public class UpdateTrackerBackend {
     }
 
 
-    public void reconnectObjects(String pid, Timestamp date, Session session) throws
+    public void reconnectObjects(String pid, Date date, Session session) throws
                                                                  FedoraFailedException,
                                                                  UpdateTrackerStorageException {
         /*
         Get the view Information about this object (Which viewAngles is this object entry for)
         get the Collection information about this object (which collections is it in)
-        Create Records in RECORDS corresponding to all these view angles and collections (if they do not exist already) with the Inactive Timestamp set
+        Create Records in RECORDS corresponding to all these view angles and collections (if they do not exist already) with the Inactive Date set
         For each Record in RECORDS with this entry pid and not in this set of view angles or not in this set of collections
-            Set Deleted Timestamp
-            unset Inactive and Active Timestamp
+            Set Deleted Date
+            unset Inactive and Active Date
             remove all objects from OBJECTS linked to this Record
         for each Record this object is part of (query OBJECTS with objectPid = this pull)
             remove all Objects relating to this Record from OBJECTS
@@ -231,7 +230,7 @@ public class UpdateTrackerBackend {
         }
     }
 
-    public void updateTimestamps(String pid, Timestamp date, Session session) {
+    public void updateDates(String pid, Date date, Session session) {
 
             final Query query
                     = session.createQuery("update Record e " +
@@ -245,7 +244,7 @@ public class UpdateTrackerBackend {
             query.executeUpdate();
     }
 
-    public List<Record> lookup(Timestamp since, String viewAngle, int offset, int limit, String state, String collection,
+    public List<Record> lookup(Date since, String viewAngle, int offset, int limit, String state, String collection,
                                 StatelessSession session) {
         Query query;
         if (state == null) {
@@ -279,8 +278,8 @@ public class UpdateTrackerBackend {
         query.setMaxResults(1);
         Object result = query.uniqueResult();
         if (result != null){
-            if (result instanceof Timestamp) {
-                return (Timestamp) result;
+            if (result instanceof Date) {
+                return (Date) result;
             }
         }
         return null;

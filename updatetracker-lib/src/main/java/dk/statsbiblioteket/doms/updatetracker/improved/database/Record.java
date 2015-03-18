@@ -11,6 +11,7 @@ import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 import java.io.Serializable;
 import java.sql.Timestamp;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -24,7 +25,7 @@ import java.util.Set;
                                    "order by case " +
                                           "when e.deleted is not null and (e.active is null or e.deleted>=e.active) then e.deleted " +
                                           "when e.active is not null and (e.deleted is null or e.active>=e.deleted) then e.active " +
-                                          " end"),
+                                          " end, e.entryPid"),
 
                @NamedQuery(name = "InactiveOrDeleted",
                            query = "from Record e where (" +
@@ -36,7 +37,7 @@ import java.util.Set;
                                    "order by case " +
                                           "when e.deleted is not null and (e.inactive is null or e.deleted>=e.inactive) then e.deleted " +
                                           "when e.inactive is not null and (e.deleted is null or e.inactive>=e.deleted) then e.inactive" +
-                                          " end"),
+                                          " end, e.entryPid"),
 
                @NamedQuery(name = "Deleted",
                            query = "from Record e where (e.deleted is not null and e.deleted>=:since) and e.viewAngle=:viewAngle and e.collection=:collection order by e.deleted asc "),
@@ -54,7 +55,7 @@ import java.util.Set;
                                           "when e.deleted is not null and (e.active is null or e.deleted>=e.active) and (e.inactive is null or e.deleted>=e.inactive) then e.deleted " +
                                           "when e.active is not null and (e.deleted is null or e.active>=e.deleted) and (e.inactive is null or e.active>=e.inactive) then e.active " +
                                           "when e.inactive is not null and (e.deleted is null or e.inactive>=e.deleted) and ( e.active is null or e.inactive>=e.active) then e.inactive " +
-                                          " end")}
+                                          " end, e.entryPid")}
 
 )
 
@@ -95,23 +96,29 @@ public class Record implements Serializable {
 
     /** The pid of the object */
     @Id
-    @Column(name = "ENTRYPID")
+    @Column(name = "ENTRYPID",length = 64)
     private String entryPid;
 
     /** The viewangle the object is an entry for */
     @Id
-    @Column(name = "VIEWANGLE")
+    @Column(name = "VIEWANGLE",length = 64)
     private String viewAngle;
 
     @Id
-    @Column(name = "COLLECTION")
+    @Column(name = "COLLECTION",length = 64)
     private String collection;
 
-    private Timestamp active = null;
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "active",columnDefinition = "timestamp with time zone")
+    private Date active = null;
 
-    private Timestamp inactive = null;
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name="inactive",columnDefinition = "timestamp with time zone")
+    private Date inactive = null;
 
-    private Timestamp deleted = null;
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name="deleted",columnDefinition = "timestamp with time zone")
+    private Date deleted = null;
 
     @ManyToMany
     @JoinTable(name = "MEMBERSHIPS")
@@ -170,7 +177,7 @@ public class Record implements Serializable {
     }
 
     @Transient
-    public Timestamp getDateForChange(){
+    public Date getDateForChange(){
         switch (getState()){
             case ACTIVE:return active;
             case INACTIVE: return inactive;
@@ -179,9 +186,9 @@ public class Record implements Serializable {
         }
     }
 
-    private Timestamp real(Timestamp timestamp) {
+    private Date real(Date timestamp) {
         if (timestamp == null){
-            return new Timestamp(Long.MIN_VALUE);
+            return new Date(Long.MIN_VALUE);
         }
         return timestamp;
     }
@@ -247,27 +254,27 @@ public class Record implements Serializable {
         return result;
     }
 
-    public Timestamp getActive() {
+    public Date getActive() {
         return active;
     }
 
-    public void setActive(Timestamp active) {
+    public void setActive(Date active) {
         this.active = active;
     }
 
-    public Timestamp getInactive() {
+    public Date getInactive() {
         return inactive;
     }
 
-    public void setInactive(Timestamp inactive) {
+    public void setInactive(Date inactive) {
         this.inactive = inactive;
     }
 
-    public Timestamp getDeleted() {
+    public Date getDeleted() {
         return deleted;
     }
 
-    public void setDeleted(Timestamp deleted) {
+    public void setDeleted(Date deleted) {
         this.deleted = deleted;
     }
 
