@@ -11,7 +11,7 @@ import dk.statsbiblioteket.doms.updatetracker.improved.fedora.EntryAngleCache;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.worklog.WorkLogPoller;
 import dk.statsbiblioteket.doms.updatetracker.improved.worklog.WorkLogPollTask;
-import dk.statsbiblioteket.doms.webservices.authentication.Credentials;
+import dk.statsbiblioteket.sbutil.webservices.authentication.Credentials;
 
 import java.io.Closeable;
 import java.util.Timer;

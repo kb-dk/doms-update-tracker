@@ -135,7 +135,7 @@ public class NewspaperTests {
         db.datastreamChanged(newspaper, newspaperChanged,"MODS");
         //Both the page and newspaper is updated
         items = db.lookup(beginning, SUMMA_VISIBLE, 0, 10, null, COLLECTION);
-        Tests.verifyTwoHits(items, page1, newspaperChanged, newspaper, newspaperChanged);
+        Tests.verifyTwoHits(items, newspaper, newspaperChanged, page1, newspaperChanged);
 
         //We now simulate a change to edition, which is in the view of page
         final Date editionChanged = new Date();

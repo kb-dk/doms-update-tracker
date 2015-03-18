@@ -5,7 +5,6 @@ import dk.statsbiblioteket.doms.updatetracker.improved.UpdateTrackingConfig;
 import dk.statsbiblioteket.doms.updatetracker.improved.UpdateTrackingSystem;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerStorageException;
-import dk.statsbiblioteket.doms.webservices.configuration.ConfigCollection;
 
 import javax.annotation.Resource;
 import javax.jws.WebParam;

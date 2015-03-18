@@ -6,7 +6,7 @@ import dk.statsbiblioteket.doms.updatetracker.webservice.InvalidCredentialsExcep
 import dk.statsbiblioteket.doms.updatetracker.webservice.MethodFailedException;
 import dk.statsbiblioteket.doms.updatetracker.webservice.PidDatePidPid;
 import dk.statsbiblioteket.doms.updatetracker.webservice.UpdateTrackerWebservice;
-import dk.statsbiblioteket.doms.webservices.configuration.ConfigCollection;
+import dk.statsbiblioteket.sbutil.webservices.configuration.ConfigCollection;
 
 import java.util.ArrayList;
 import java.util.List;
