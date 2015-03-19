@@ -16,14 +16,12 @@ import java.util.List;
  * to objects in Fedora. Used by DOMS Server aka. Central to provide Summa with
  * said info.
  */
-public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
+public class UpdateTrackerLib implements UpdateTrackerWebservice {
 
     private final UpdateTrackingSystem updateTrackingSystem;
 
-    public UpdateTrackerWebserviceLib() {
-
-        UpdateTrackingConfig config = new UpdateTrackingConfig(ConfigCollection.getProperties());
-        updateTrackingSystem = UpdateTrackingSystem.getInstance(config);
+    public UpdateTrackerLib(UpdateTrackingSystem updateTrackingSystem) {
+        this.updateTrackingSystem = updateTrackingSystem;
     }
 
 
