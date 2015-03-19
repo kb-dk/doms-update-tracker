@@ -3,7 +3,7 @@
     <parent>
         <groupId>dk.statsbiblioteket.doms</groupId>
         <artifactId>doms</artifactId>
-        <version>1.1</version>
+        <version>1.2-SNAPSHOT</version>
     </parent>
 
     <groupId>dk.statsbiblioteket.doms.updatetracker</groupId>
@@ -125,6 +125,12 @@
                 <version>0.9.28</version>
             </dependency>
 
+
+            <dependency>
+                <groupId>dk.statsbiblioteket.sbutil</groupId>
+                <artifactId>sbutil-webservices-log4j</artifactId>
+                <version>0.5.29</version>
+            </dependency>
 
             <dependency>
                 <groupId>dk.statsbiblioteket.doms.central</groupId>
