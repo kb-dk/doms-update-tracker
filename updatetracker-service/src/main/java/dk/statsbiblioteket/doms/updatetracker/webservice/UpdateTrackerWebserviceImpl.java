@@ -1,6 +1,6 @@
 package dk.statsbiblioteket.doms.updatetracker.webservice;
 
-import dk.statsbiblioteket.doms.updatetracker.improved.UpdateTrackerLib;
+import dk.statsbiblioteket.doms.updatetracker.improved.UpdateTrackerClient;
 import dk.statsbiblioteket.doms.updatetracker.improved.UpdateTrackingConfig;
 import dk.statsbiblioteket.doms.updatetracker.improved.UpdateTrackingSystem;
 import dk.statsbiblioteket.sbutil.webservices.configuration.ConfigCollection;
@@ -9,9 +9,8 @@ import javax.annotation.Resource;
 import javax.jws.WebParam;
 import javax.jws.WebService;
 import javax.xml.ws.WebServiceContext;
-import java.lang.*;
 import java.lang.String;
-import java.util.*;
+import java.util.List;
 
 /**
  * Update tracker webservice. Provides upper layers of DOMS with info on changes
@@ -23,13 +22,13 @@ import java.util.*;
         + ".UpdateTrackerWebservice")
 public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
 
-    private final UpdateTrackerLib updateTrackingSystem;
+    private final UpdateTrackerClient updateTrackingSystem;
     @Resource
     WebServiceContext context;
 
     public UpdateTrackerWebserviceImpl() throws MethodFailedException {
         UpdateTrackingConfig config = new UpdateTrackingConfig(ConfigCollection.getProperties());
-        updateTrackingSystem = new UpdateTrackerLib(UpdateTrackingSystem.getInstance(config));
+        updateTrackingSystem = new UpdateTrackerClient(UpdateTrackingSystem.getInstance(config));
     }
 
 

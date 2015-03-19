@@ -22,8 +22,8 @@ public class UpdateTrackingConfig {
     /**
      * Create a Config object from a java properties. Will look for these keys which are required
      * fedora.updatetracker.web.URL
-     * fedora.updatetracker.web.Username
-     * fedora.updatetracker.web.Password
+     * fedora.updatetracker.web.username
+     * fedora.updatetracker.web.password
      * fedora.worklog.database.driver
      * fedora.worklog.database.URL
      * fedora.worklog.database.username
@@ -43,8 +43,8 @@ public class UpdateTrackingConfig {
     public UpdateTrackingConfig(Properties properties) {
 
         this.fedoraWebUrl = properties.getProperty("fedora.updatetracker.web.URL");
-        this.fedoraWebUsername = properties.getProperty("fedora.updatetracker.web.Username");
-        this.fedoraWebPassword = properties.getProperty("fedora.updatetracker.web.Password");
+        this.fedoraWebUsername = properties.getProperty("fedora.updatetracker.web.username");
+        this.fedoraWebPassword = properties.getProperty("fedora.updatetracker.web.password");
         this.fedoraDatabaseDriver = properties.getProperty("fedora.worklog.database.driver");
         this.fedoraDatabaseURL = properties.getProperty("fedora.worklog.database.URL");
         this.fedoraDatabaseUsername = properties.getProperty("fedora.worklog.database.username");
