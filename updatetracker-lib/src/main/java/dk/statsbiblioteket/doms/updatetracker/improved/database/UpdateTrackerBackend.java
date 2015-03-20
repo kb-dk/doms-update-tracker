@@ -274,7 +274,7 @@ public class UpdateTrackerBackend {
 
     public Date lastChanged(StatelessSession session) {
 
-        final Query query = session.createQuery("select max(e.inactive) from Record e order by e.inactive desc");
+        final Query query = session.createQuery("select max(e.inactive) from Record e");
         query.setMaxResults(1);
         Object result = query.uniqueResult();
         if (result != null){
