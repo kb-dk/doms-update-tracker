@@ -3,6 +3,8 @@ package dk.statsbiblioteket.doms.updatetracker.improved.worklog;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStore;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerStorageException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Date;
@@ -13,6 +15,8 @@ import java.util.TimerTask;
  * This timertasks regularly polls the fedora worklog and calls the update tracker with the unit of work
  */
 public class WorkLogPollTask extends TimerTask {
+
+    private static Logger log = LoggerFactory.getLogger(WorkLogPollTask.class);
 
     private final WorkLogPoller workLogPoller;
     private final UpdateTrackerPersistentStore updateTrackerPersistentStore;
@@ -35,12 +39,15 @@ public class WorkLogPollTask extends TimerTask {
         try {
             //TODO DO NOT USE LASTMODIFIED, USE THE INCREMENTING KEY
             Date lastRegisteredChange = updateTrackerPersistentStore.lastChanged();
+            log.info("Looking for events since '{}'",lastRegisteredChange);
             List<WorkLogUnit> events = workLogPoller.getFedoraEvents(lastRegisteredChange, limit);
+            log.info("Found  '{}' events ", events.size());
 
             for (WorkLogUnit event : events) {
                 String pid = event.getPid();
                 Date date = event.getDate();
                 String param = event.getParam();
+                log.info("Registering the event '{}'",event);
 
                 if (event.getMethod().equals("ingest")) {
                     updateTrackerPersistentStore.objectCreated(pid, date);
@@ -72,12 +79,13 @@ public class WorkLogPollTask extends TimerTask {
 
                 }
             }
+            log.info("No further events to work on");
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            log.error("Failed to get Fedora events",e);
         } catch (UpdateTrackerStorageException e) {
-            throw new RuntimeException(e);
+            log.error("Failed to store events in update tracker", e);
         } catch (FedoraFailedException e) {
-            throw new RuntimeException(e);
+            log.error("Failed to communicate with fedora", e);
         }
     }
 }

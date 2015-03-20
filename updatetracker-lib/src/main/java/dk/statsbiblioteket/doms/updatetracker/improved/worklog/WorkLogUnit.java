@@ -38,4 +38,14 @@ public class WorkLogUnit {
     public String getParam() {
         return param;
     }
+
+    @Override
+    public String toString() {
+        return "WorkLogUnit{" +
+               "method='" + method + '\'' +
+               ", date=" + date +
+               ", pid='" + pid + '\'' +
+               ", param='" + param + '\'' +
+               '}';
+    }
 }
