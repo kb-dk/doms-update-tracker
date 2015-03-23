@@ -11,7 +11,7 @@
         <dbspec:column name="pid" type="varchar(64)" notNull="true" index="pid" binary="true">
             <dbspec:comment>The PID of the object</dbspec:comment>
         </dbspec:column>
-        <dbspec:column name="happened" type="TIMESTAMP" notNull="true" index="happened" binary="true">
+        <dbspec:column name="happened" type="timestamp with time zone" notNull="true" index="happened" binary="true" >
             <dbspec:comment>when the method happened</dbspec:comment>
         </dbspec:column>
         <dbspec:column name="method" type="varchar(64)" notNull="true" binary="true">

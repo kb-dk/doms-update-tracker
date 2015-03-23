@@ -16,7 +16,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.TimeZone;
 
 
 /**
@@ -24,6 +26,7 @@ import java.util.Date;
  */
 public class Database implements Closeable {
 
+    public static final Calendar tzUTC = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
 
     private static Logger logger = LoggerFactory.getLogger(Database.class);
     private final ConnectionPool cPool;
@@ -81,7 +84,7 @@ public class Database implements Closeable {
                                                                     Statement.RETURN_GENERATED_KEYS);
                 try {
                     statement.setString(1, pid);
-                    statement.setTimestamp(2, new Timestamp(timestamp.getTime()));
+                    statement.setTimestamp(2, new Timestamp(timestamp.getTime()),tzUTC);
                     statement.setString(3, name);
                     statement.setString(4, param);
                     statement.executeUpdate();
