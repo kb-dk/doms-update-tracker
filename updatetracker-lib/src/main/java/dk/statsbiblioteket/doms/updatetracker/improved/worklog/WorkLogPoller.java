@@ -13,9 +13,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
+import java.util.TimeZone;
 
 
 public class WorkLogPoller implements Closeable {
@@ -24,6 +26,8 @@ public class WorkLogPoller implements Closeable {
     private final String jdbcUrl;
     private final String username;
     private final String password;
+    public static final Calendar tzUTC = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+
     private Logger log = LoggerFactory.getLogger(WorkLogPoller.class);
 
 
@@ -107,7 +111,7 @@ public class WorkLogPoller implements Closeable {
                         = conn.prepareStatement("SELECT pid,happened,method,param FROM updateTrackerLogs WHERE " +
                                                 "happened >= ? ORDER BY happened ASC LIMIT ?");
                 try {
-                    statement.setTimestamp(1, new Timestamp(since.getTime()));
+                    statement.setTimestamp(1, new Timestamp(since.getTime()),tzUTC);
                     statement.setInt(2, limit);
 
                     statement.execute();
@@ -116,8 +120,8 @@ public class WorkLogPoller implements Closeable {
                         String pid = resultSet.getString("pid");
                         String method = resultSet.getString("method");
                         String param = resultSet.getString("param");
-                        Timestamp timestamp = resultSet.getTimestamp("happened");
-                        result.add(new WorkLogUnit(method, timestamp, pid, param));
+                        Timestamp timestamp = resultSet.getTimestamp("happened",tzUTC);
+                        result.add(new WorkLogUnit(method, new Date(timestamp.getTime()), pid, param));
                     }
                     return result;
                 } finally {
