@@ -252,7 +252,10 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         Transaction transaction = session.beginTransaction();
         log.info("objectStateChanged({},{},{}) Starting", pid, timestamp,newstate);
         try {
-            backend.modifyState(pid, timestamp, null, State.fromName(newstate), session);
+            Set<String> collections = fedora.getCollections(pid, timestamp);
+            for (String collection : collections) {
+                backend.modifyState(pid, timestamp, collection, State.fromName(newstate), session);
+            }
             backend.updateDates(pid, timestamp, session);
             transaction.commit();
             log.info("objectStateChanged({},{},{}) Completed", pid, timestamp, newstate);
