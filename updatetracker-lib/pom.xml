@@ -50,6 +50,17 @@
                 </configuration>
 
             </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration combine.self="append">
+                    <systemPropertyVariables>
+                        <org.jboss.logging.provider>slf4j</org.jboss.logging.provider>
+                    </systemPropertyVariables>
+                    <environmentVariables>
+                        <org.jboss.logging.provider>slf4j</org.jboss.logging.provider>
+                    </environmentVariables>
+                </configuration>
+            </plugin>
 
         </plugins>
     </build>
