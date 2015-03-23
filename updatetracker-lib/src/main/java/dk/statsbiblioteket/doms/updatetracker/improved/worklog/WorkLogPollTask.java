@@ -39,6 +39,9 @@ public class WorkLogPollTask extends TimerTask {
         try {
             //TODO DO NOT USE LASTMODIFIED, USE THE INCREMENTING KEY
             Date lastRegisteredChange = updateTrackerPersistentStore.lastChanged();
+            if (lastRegisteredChange == null){
+                lastRegisteredChange = new Date(0);
+            }
             log.info("Looking for events since '{}'",lastRegisteredChange);
             List<WorkLogUnit> events = workLogPoller.getFedoraEvents(lastRegisteredChange, limit);
             log.info("Found  '{}' events ", events.size());
