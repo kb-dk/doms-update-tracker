@@ -33,7 +33,7 @@ import java.util.Set;
 public class FedoraForUpdateTracker {
 
     public static final String ENTRY_RELATION
-            = "http://doms.statsbiblioteket.dk/types/view/default/0/1/#isEntryForViewAngle";
+            = "http://doms.statsbiblioteket.dk/relations/default/0/1/#isEntryForViewAngle";
     protected static final String COLLECTION_RELATION
             = "http://doms.statsbiblioteket.dk/relations/default/0/1/#isPartOfCollection";
     protected static final String HASMODEL_RELATION
@@ -153,7 +153,7 @@ public class FedoraForUpdateTracker {
         } catch (BackendMethodFailedException e) {
             throw new FedoraFailedException("Failed to get collection info from Fedora for pid " + pid, e);
         } catch (BackendInvalidResourceException e) {
-            throw new FedoraFailedException("Failed to get collection info from Fedora for pid " + pid, e);
+            return new HashSet<String>();
         }
         return getObject(collectionRelations);
     }
