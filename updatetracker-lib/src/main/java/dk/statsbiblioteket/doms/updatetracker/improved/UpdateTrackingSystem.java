@@ -29,7 +29,7 @@ public class UpdateTrackingSystem implements Closeable {
 
     private static UpdateTrackingSystem instance = null;
 
-    protected UpdateTrackingSystem(UpdateTrackingConfig updateTrackingConfig) {
+    public UpdateTrackingSystem(UpdateTrackingConfig updateTrackingConfig) {
 
 
         try {

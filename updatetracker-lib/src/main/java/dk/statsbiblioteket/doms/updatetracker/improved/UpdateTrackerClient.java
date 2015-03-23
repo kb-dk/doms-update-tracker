@@ -13,17 +13,14 @@ import java.util.List;
 
 /**
  * Update tracker webservice. Provides upper layers of DOMS with info on changes
- * to objects in Fedora. Used by DOMS Server aka. Central to provide Summa with
- * said info.
+ * to objects in Fedora. Used by DOMS Server aka. Central
  */
-public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
+public class UpdateTrackerClient implements UpdateTrackerWebservice {
 
     private final UpdateTrackingSystem updateTrackingSystem;
 
-    public UpdateTrackerWebserviceLib() {
-
-        UpdateTrackingConfig config = new UpdateTrackingConfig(ConfigCollection.getProperties());
-        updateTrackingSystem = UpdateTrackingSystem.getInstance(config);
+    public UpdateTrackerClient(UpdateTrackingSystem updateTrackingSystem) {
+        this.updateTrackingSystem = updateTrackingSystem;
     }
 
 
@@ -42,24 +39,18 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
      * @throws dk.statsbiblioteket.doms.updatetracker.webservice.MethodFailedException
      * @throws dk.statsbiblioteket.doms.updatetracker.webservice.InvalidCredentialsException
      */
-    public List<PidDatePidPid> listObjectsChangedSince(String collectionPid, String viewAngle, long beginTime, String state,
-                                                       Integer offset, Integer limit)
-
-
-            throws InvalidCredentialsException, MethodFailedException
-
-    {
-        //Filter: state, collection
-
+    public List<PidDatePidPid> listObjectsChangedSince(String collectionPid, String viewAngle, long beginTime,
+                                                       String state, Integer offset, Integer limit) throws
+                                                                                                    InvalidCredentialsException,
+                                                                                                    MethodFailedException {
         List<Record> entries = null;
         try {
-            entries = updateTrackingSystem.getStore()
-                                          .lookup(new java.util.Date(beginTime),
-                                                  viewAngle,
-                                                  offset,
-                                                  limit,
-                                                  state,
-                                                  collectionPid);
+            entries = updateTrackingSystem.getStore().lookup(new java.util.Date(beginTime),
+                                                             viewAngle,
+                                                             offset,
+                                                             limit,
+                                                             state,
+                                                             collectionPid);
         } catch (UpdateTrackerStorageException e) {
             throw new MethodFailedException("Failed to query the persistent storage", "", e);
         }
@@ -84,9 +75,7 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
                                                                   MethodFailedException {
 
         try {
-            return updateTrackingSystem.getStore()
-                                       .lastChanged()
-                                       .getTime();
+            return updateTrackingSystem.getStore().lastChanged().getTime();
         } catch (UpdateTrackerStorageException e) {
             throw new MethodFailedException("Failed to query the persistent storage", "", e);
         }
@@ -104,20 +93,14 @@ public class UpdateTrackerWebserviceLib implements UpdateTrackerWebservice {
     private PidDatePidPid convert(Record thing, String state) {
         PidDatePidPid thang = new PidDatePidPid();
         if (state.equals("A")) {
-            thang.setLastChangedTime(thing.getActive()
-                                          .getTime());
+            thang.setLastChangedTime(thing.getActive().getTime());
         } else if (state.equals("I")) {
-            thang.setLastChangedTime(thing.getInactive()
-                                          .getTime());
+            thang.setLastChangedTime(thing.getInactive().getTime());
         } else if (state.equals("D")) {
-            thang.setLastChangedTime(thing.getDeleted()
-                                          .getTime());
+            thang.setLastChangedTime(thing.getDeleted().getTime());
         } else {
-            thang.setLastChangedTime(Math.max(thing.getActive()
-                                                   .getTime(), Math.max(thing.getInactive()
-                                                                             .getTime(),
-                                                                        thing.getDeleted()
-                                                                             .getTime())));
+            thang.setLastChangedTime(Math.max(thing.getActive().getTime(), Math.max(thing.getInactive().getTime(),
+                                                                                    thing.getDeleted().getTime())));
         }
 
         thang.setPid(thing.getEntryPid());

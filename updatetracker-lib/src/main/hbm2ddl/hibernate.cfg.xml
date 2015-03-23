@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-configuration PUBLIC
+        "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+<hibernate-configuration xmlns="http://www.hibernate.org/xsd/hibernate-configuration">
+    <session-factory>
+        <property name="hibernate.dialect">org.hibernate.dialect.PostgreSQL9Dialect</property>
+        <mapping class="dk.statsbiblioteket.doms.updatetracker.improved.database.Record"/>
+        <mapping class="dk.statsbiblioteket.doms.updatetracker.improved.database.DomsObject"/>
+    </session-factory>
+</hibernate-configuration>

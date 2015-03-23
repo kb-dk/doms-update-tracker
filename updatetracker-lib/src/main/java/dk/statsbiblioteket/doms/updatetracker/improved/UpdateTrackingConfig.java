@@ -21,13 +21,13 @@ public class UpdateTrackingConfig {
 
     /**
      * Create a Config object from a java properties. Will look for these keys which are required
-     * fedora.web.URL
-     * fedora.web.Username
-     * fedora.web.Password
-     * fedora.database.driver
-     * fedora.database.URL
-     * fedora.database.username
-     * fedora.database.password
+     * fedora.updatetracker.web.URL
+     * fedora.updatetracker.web.username
+     * fedora.updatetracker.web.password
+     * fedora.worklog.database.driver
+     * fedora.worklog.database.URL
+     * fedora.worklog.database.username
+     * fedora.worklog.database.password
      * fedora.updatetracker.hibernateConfigFile
      *
      * These properties are optional, and the default value is mentioned
@@ -42,13 +42,13 @@ public class UpdateTrackingConfig {
      */
     public UpdateTrackingConfig(Properties properties) {
 
-        this.fedoraWebUrl = properties.getProperty("fedora.web.URL");
-        this.fedoraWebUsername = properties.getProperty("fedora.web.Username");
-        this.fedoraWebPassword = properties.getProperty("fedora.web.Password");
-        this.fedoraDatabaseDriver = properties.getProperty("fedora.database.driver");
-        this.fedoraDatabaseURL = properties.getProperty("fedora.database.URL");
-        this.fedoraDatabaseUsername = properties.getProperty("fedora.database.username");
-        this.fedoraDatabasePassword = properties.getProperty("fedora.database.password");
+        this.fedoraWebUrl = properties.getProperty("fedora.updatetracker.web.URL");
+        this.fedoraWebUsername = properties.getProperty("fedora.updatetracker.web.username");
+        this.fedoraWebPassword = properties.getProperty("fedora.updatetracker.web.password");
+        this.fedoraDatabaseDriver = properties.getProperty("fedora.worklog.database.driver");
+        this.fedoraDatabaseURL = properties.getProperty("fedora.worklog.database.URL");
+        this.fedoraDatabaseUsername = properties.getProperty("fedora.worklog.database.username");
+        this.fedoraDatabasePassword = properties.getProperty("fedora.worklog.database.password");
         this.fedoraUpdatetrackerDelay = Integer.parseInt(properties.getProperty("fedora.updatetracker.delay","1000"));
         this.fedoraUpdatetrackerPeriod = Integer.parseInt(properties.getProperty("fedora.updatetracker.period","1000"));
         this.fedoraUpdatetrackerLimit = Integer.parseInt(properties.getProperty("fedora.updatetracker.limit","1000"));
