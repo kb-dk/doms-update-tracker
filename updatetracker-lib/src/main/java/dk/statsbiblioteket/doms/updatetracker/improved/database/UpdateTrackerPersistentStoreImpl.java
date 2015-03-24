@@ -73,7 +73,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     public void objectCreated(String pid, Date timestamp) throws UpdateTrackerStorageException, FedoraFailedException {
         Session session = sessionFactory.getCurrentSession();
         Transaction transaction = session.beginTransaction();
-        log.info("ObjectCreated({},{}) Starting",pid,timestamp);
+        log.debug("ObjectCreated({},{}) Starting",pid,timestamp);
         try {
             Set<String> collections = fedora.getCollections(pid, timestamp);
             for (String collection : collections) {
@@ -125,7 +125,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     public void objectDeleted(String pid, Date timestamp) throws UpdateTrackerStorageException, FedoraFailedException {
         Session session = sessionFactory.getCurrentSession();
         Transaction transaction = session.beginTransaction();
-        log.info("ObjectDeleted({},{}) Starting", pid, timestamp);
+        log.debug("ObjectDeleted({},{}) Starting", pid, timestamp);
         try {
             backend.modifyState(pid, timestamp, null, DELETED, session);
             backend.updateDates(pid, timestamp, session);
@@ -174,7 +174,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                                                                       FedoraFailedException {
         Session session = sessionFactory.getCurrentSession();
         Transaction transaction = session.beginTransaction();
-        log.info("DatastreamChanged({},{},{}) Starting", pid, timestamp,dsid);
+        log.debug("DatastreamChanged({},{},{}) Starting", pid, timestamp,dsid);
         try {
             if (dsid != null) {
                 if ((dsid.equals("VIEW") || dsid.equals("RELS-EXT"))) {
@@ -250,7 +250,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
 
         Session session = sessionFactory.getCurrentSession();
         Transaction transaction = session.beginTransaction();
-        log.info("objectStateChanged({},{},{}) Starting", pid, timestamp,newstate);
+        log.debug("objectStateChanged({},{},{}) Starting", pid, timestamp,newstate);
         try {
             Set<String> collections = fedora.getCollections(pid, timestamp);
             for (String collection : collections) {
@@ -286,7 +286,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                                                         collection,
                                                         session);
             session.getTransaction().commit();
-            log.info("lookup({},{},{},{},{},{}) Completed", since, viewAngle, offset, limit, state, collection);
+            log.debug("lookup({},{},{},{},{},{}) Completed", since, viewAngle, offset, limit, state, collection);
             return entries;
         } catch (HibernateException e) {
             try {
