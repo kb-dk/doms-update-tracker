@@ -278,7 +278,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             log.info("lookup({},{},{},{},{},{}) Starting", since,viewAngle,offset,limit,state,collection);
 
 
-            final List<Record> entries = backend.lookup(new Date(since.getTime()),
+            final List<Record> entries = backend.lookup(since,
                                                         viewAngle,
                                                         offset,
                                                         limit,
