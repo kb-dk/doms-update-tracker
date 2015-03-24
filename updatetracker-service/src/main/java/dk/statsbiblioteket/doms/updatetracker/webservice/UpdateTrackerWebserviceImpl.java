@@ -22,13 +22,13 @@ import java.util.List;
         + ".UpdateTrackerWebservice")
 public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
 
-    private final UpdateTrackerClient updateTrackingSystem;
+    private final UpdateTrackerClient updateTrackerClient;
     @Resource
     WebServiceContext context;
 
     public UpdateTrackerWebserviceImpl() throws MethodFailedException {
         UpdateTrackingConfig config = new UpdateTrackingConfig(ConfigCollection.getProperties());
-        updateTrackingSystem = new UpdateTrackerClient(UpdateTrackingSystem.getInstance(config));
+        updateTrackerClient = new UpdateTrackerClient(UpdateTrackingSystem.getInstance(config));
     }
 
 
@@ -64,7 +64,7 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
             throws InvalidCredentialsException, MethodFailedException
 
     {
-        return updateTrackingSystem.listObjectsChangedSince(collectionPid,viewAngle,beginTime,state,offset,limit);
+        return updateTrackerClient.listObjectsChangedSince(collectionPid,viewAngle,beginTime,state,offset,limit);
     }
 
     /**
@@ -88,7 +88,7 @@ public class UpdateTrackerWebserviceImpl implements UpdateTrackerWebservice {
             throws InvalidCredentialsException, MethodFailedException
     {
 
-       return updateTrackingSystem.getLatestModificationTime(collectionPid,viewAngle,state);
+       return updateTrackerClient.getLatestModificationTime(collectionPid,viewAngle,state);
     }
 
 
