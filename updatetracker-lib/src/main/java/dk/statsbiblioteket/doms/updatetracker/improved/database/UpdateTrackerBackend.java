@@ -265,9 +265,9 @@ public class UpdateTrackerBackend {
         query.setReadOnly(true);
         query.setFirstResult(offset)
              .setMaxResults(limit);
-        query.setParameter("since", since)
-             .setParameter("collection", collection)
-             .setParameter("viewAngle", viewAngle);
+        query.setTimestamp("since", since)
+             .setString("collection", collection)
+             .setString("viewAngle", viewAngle);
 
         return UpdateTrackerDAO.listRecords(query);
     }
