@@ -9,6 +9,7 @@ import dk.statsbiblioteket.doms.updatetracker.webservice.UpdateTrackerWebservice
 import dk.statsbiblioteket.sbutil.webservices.configuration.ConfigCollection;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -92,18 +93,27 @@ public class UpdateTrackerClient implements UpdateTrackerWebservice {
 
     private PidDatePidPid convert(Record thing, String state) {
         PidDatePidPid thang = new PidDatePidPid();
-        if (state.equals("A")) {
-            thang.setLastChangedTime(thing.getActive().getTime());
-        } else if (state.equals("I")) {
-            thang.setLastChangedTime(thing.getInactive().getTime());
-        } else if (state.equals("D")) {
-            thang.setLastChangedTime(thing.getDeleted().getTime());
-        } else {
-            thang.setLastChangedTime(Math.max(thing.getActive().getTime(), Math.max(thing.getInactive().getTime(),
-                                                                                    thing.getDeleted().getTime())));
-        }
 
+        final long active = real(thing.getActive()).getTime();
+        final long deleted = real(thing.getDeleted()).getTime();
+        final long inactive = real(thing.getInactive()).getTime();
+        if (state.equals("A")) {
+            thang.setLastChangedTime(active);
+        } else if (state.equals("I")) {
+            thang.setLastChangedTime(inactive);
+        } else if (state.equals("D")) {
+            thang.setLastChangedTime(deleted);
+        } else {
+            thang.setLastChangedTime(Math.max(active, Math.max(inactive, deleted)));
+        }
         thang.setPid(thing.getEntryPid());
         return thang;
+    }
+
+    private Date real(Date date) {
+        if (date == null){
+            return new Date(0);
+        }
+        return date;
     }
 }
