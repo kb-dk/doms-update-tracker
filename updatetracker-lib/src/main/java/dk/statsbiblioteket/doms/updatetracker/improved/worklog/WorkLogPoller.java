@@ -100,7 +100,7 @@ public class WorkLogPoller implements Closeable {
         }
     }
 
-    public List<WorkLogUnit> getFedoraEvents(Date since, int limit) throws IOException {
+    public List<WorkLogUnit> getFedoraEvents(Long lastRegisteredKey, int limit) throws IOException {
 
         ArrayList<WorkLogUnit> result = new ArrayList<WorkLogUnit>(limit);
 
@@ -108,20 +108,21 @@ public class WorkLogPoller implements Closeable {
             Connection conn = getConnection();
             try {
                 PreparedStatement statement
-                        = conn.prepareStatement("SELECT pid,happened,method,param FROM updateTrackerLogs WHERE " +
-                                                "happened >= ? ORDER BY happened ASC LIMIT ?");
+                        = conn.prepareStatement("SELECT key,pid,happened,method,param FROM updateTrackerLogs WHERE " +
+                                                "key > ? ORDER BY happened ASC LIMIT ?");
                 try {
-                    statement.setTimestamp(1, new Timestamp(since.getTime()),tzUTC);
+                    statement.setLong(1, lastRegisteredKey);
                     statement.setInt(2, limit);
 
                     statement.execute();
                     ResultSet resultSet = statement.getResultSet();
                     while (resultSet.next()) {
+                        Long key = resultSet.getLong("key");
                         String pid = resultSet.getString("pid");
                         String method = resultSet.getString("method");
                         String param = resultSet.getString("param");
                         Timestamp timestamp = resultSet.getTimestamp("happened",tzUTC);
-                        result.add(new WorkLogUnit(method, new Date(timestamp.getTime()), pid, param));
+                        result.add(new WorkLogUnit(key, method, new Date(timestamp.getTime()), pid, param));
                     }
                     return result;
                 } finally {

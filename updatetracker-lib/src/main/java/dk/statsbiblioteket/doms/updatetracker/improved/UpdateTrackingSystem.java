@@ -14,6 +14,7 @@ import dk.statsbiblioteket.doms.updatetracker.improved.worklog.WorkLogPollTask;
 import dk.statsbiblioteket.sbutil.webservices.authentication.Credentials;
 
 import java.io.Closeable;
+import java.io.File;
 import java.util.Timer;
 
 /**
@@ -63,7 +64,7 @@ public class UpdateTrackingSystem implements Closeable {
             final int delay = updateTrackingConfig.getFedoraUpdatetrackerDelay();
             final int period = updateTrackingConfig.getFedoraUpdatetrackerPeriod();
             final int limit = updateTrackingConfig.getFedoraUpdatetrackerLimit();
-            timer.schedule(new WorkLogPollTask(consumer, store, limit),
+            timer.schedule(new WorkLogPollTask(consumer, store, limit, new File(updateTrackingConfig.getFedoraUpdatetrackerProgressFile())),
                            delay,
                            period);
         } catch (Exception e){

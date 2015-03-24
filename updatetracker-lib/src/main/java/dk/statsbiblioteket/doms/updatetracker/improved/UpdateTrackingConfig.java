@@ -17,6 +17,7 @@ public class UpdateTrackingConfig {
     private final int fedoraUpdatetrackerPeriod;
     private final int fedoraUpdatetrackerLimit;
     private final File updatetrackerHibernateConfig;
+    private final String fedoraUpdatetrackerProgressFile;
 
 
     /**
@@ -28,6 +29,7 @@ public class UpdateTrackingConfig {
      * fedora.worklog.database.URL
      * fedora.worklog.database.username
      * fedora.worklog.database.password
+     * fedora.updatetracker.progressFile = /tmp/updateTracker.progress
      * fedora.updatetracker.hibernateConfigFile
      *
      * These properties are optional, and the default value is mentioned
@@ -52,13 +54,16 @@ public class UpdateTrackingConfig {
         this.fedoraUpdatetrackerDelay = Integer.parseInt(properties.getProperty("fedora.updatetracker.delay","1000"));
         this.fedoraUpdatetrackerPeriod = Integer.parseInt(properties.getProperty("fedora.updatetracker.period","1000"));
         this.fedoraUpdatetrackerLimit = Integer.parseInt(properties.getProperty("fedora.updatetracker.limit","1000"));
+        this.fedoraUpdatetrackerProgressFile = properties.getProperty("fedora.updatetracker.progressFile","/tmp/updateTracker.progress");
         this.updatetrackerHibernateConfig = new File(properties.getProperty("fedora.updatetracker.hibernateConfigFile"));
     }
 
 
     public UpdateTrackingConfig(String fedoraWebUrl, String fedoraWebUsername, String fedoraWebPassword,
-                                String fedoraDatabaseDriver, String fedoraDatabaseURL, String fedoraDatabaseUsername, String fedoraDatabasePassword, int fedoraUpdatetrackerDelay, int fedoraUpdatetrackerPeriod,
-                                int fedoraUpdatetrackerLimit, File updatetrackerHibernateConfig) {
+                                String fedoraDatabaseDriver, String fedoraDatabaseURL, String fedoraDatabaseUsername,
+                                String fedoraDatabasePassword, int fedoraUpdatetrackerDelay, int fedoraUpdatetrackerPeriod,
+                                int fedoraUpdatetrackerLimit, File updatetrackerHibernateConfig,
+                                String fedoraUpdatetrackerProgressFile) {
         this.fedoraWebUrl = fedoraWebUrl;
         this.fedoraWebUsername = fedoraWebUsername;
         this.fedoraWebPassword = fedoraWebPassword;
@@ -70,6 +75,7 @@ public class UpdateTrackingConfig {
         this.fedoraUpdatetrackerPeriod = fedoraUpdatetrackerPeriod;
         this.fedoraUpdatetrackerLimit = fedoraUpdatetrackerLimit;
         this.updatetrackerHibernateConfig = updatetrackerHibernateConfig;
+        this.fedoraUpdatetrackerProgressFile = fedoraUpdatetrackerProgressFile;
     }
 
     public String getFedoraWebUrl() {
@@ -116,4 +122,7 @@ public class UpdateTrackingConfig {
         return updatetrackerHibernateConfig;
     }
 
+    public String getFedoraUpdatetrackerProgressFile() {
+        return fedoraUpdatetrackerProgressFile;
+    }
 }

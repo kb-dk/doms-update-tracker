@@ -3,9 +3,13 @@ package dk.statsbiblioteket.doms.updatetracker.improved.worklog;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStore;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerStorageException;
+import org.mapdb.Atomic;
+import org.mapdb.DB;
+import org.mapdb.DBMaker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -22,6 +26,7 @@ public class WorkLogPollTask extends TimerTask {
     private final WorkLogPoller workLogPoller;
     private final UpdateTrackerPersistentStore updateTrackerPersistentStore;
     private int limit;
+    private final File progressDBFile;
 
     /**
      * @param workLogPoller
@@ -29,25 +34,34 @@ public class WorkLogPollTask extends TimerTask {
      * @param limit                        the amount of work units to retrieve in each invocation
      */
     public WorkLogPollTask(WorkLogPoller workLogPoller, UpdateTrackerPersistentStore updateTrackerPersistentStore,
-                           int limit) {
+                           int limit, File progressDBFile) {
         this.workLogPoller = workLogPoller;
         this.updateTrackerPersistentStore = updateTrackerPersistentStore;
         this.limit = limit;
+
+        this.progressDBFile = progressDBFile;
     }
 
     @Override
     public void run() {
 
         try {
-            Date lastRegisteredChange = getStartDate();
+            DB stateDB = DBMaker.newFileDB(progressDBFile).closeOnJvmShutdown().make();
+            try {
+                Atomic.Long latestKey = stateDB.getAtomicLong("worklog.latestKey");//Start transaction
 
-            List<WorkLogUnit> events = getEvents(lastRegisteredChange);
+                List<WorkLogUnit> events = getEvents(latestKey.get());
 
-            for (WorkLogUnit event : events) {
-                handleEvent(event);
-            }
-            if (!events.isEmpty()) {
-                log.info("No further events to work on");
+                for (WorkLogUnit event : events) {
+                    handleEvent(event);
+                    latestKey.set(event.getKey());//update value
+                }
+                if (!events.isEmpty()) {
+                    log.info("No further events to work on");
+                }
+                stateDB.commit(); //commit transaction
+            } finally {
+                stateDB.close();
             }
         } catch (Exception e){//Fault barrier
             //If this method bombs out, the timer is stopped, and will not start until the webservice is reloaded
@@ -56,26 +70,14 @@ public class WorkLogPollTask extends TimerTask {
         }
     }
 
-    private Date getStartDate() {
-        Date lastRegisteredChange = null;
-        try {
-            //TODO DO NOT USE LASTMODIFIED, USE THE INCREMENTING KEY
-            lastRegisteredChange = updateTrackerPersistentStore.lastChanged();
-        } catch (UpdateTrackerStorageException e){
-            log.error("Failed to find lastChanged from the update tracker",e);
-        }
-        if (lastRegisteredChange == null){
-            lastRegisteredChange = new Date(0);
-        }
-        return lastRegisteredChange;
-    }
 
-    private List<WorkLogUnit> getEvents(Date lastRegisteredChange) {
+
+    private List<WorkLogUnit> getEvents(Long lastRegisteredKey) {
         List<WorkLogUnit> events = new ArrayList<WorkLogUnit>();
         try {
-            log.debug("Starting query for events since '{}'", lastRegisteredChange);
-            events = workLogPoller.getFedoraEvents(lastRegisteredChange, limit);
-            log.info("Looking for events since '{}'. Found '{}", lastRegisteredChange, events.size());
+            log.debug("Starting query for events since '{}'", lastRegisteredKey);
+            events = workLogPoller.getFedoraEvents(lastRegisteredKey, limit);
+            log.info("Looking for events since '{}'. Found '{}", lastRegisteredKey, events.size());
         } catch (IOException e) {
             log.error("Failed to get Fedora events.", e);
         }
