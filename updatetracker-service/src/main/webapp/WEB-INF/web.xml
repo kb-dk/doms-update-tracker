@@ -34,9 +34,71 @@
 
     <listener>
         <listener-class>
-            dk.statsbiblioteket.doms.webservices.configuration.ConfigContextListener
+            dk.statsbiblioteket.sbutil.webservices.configuration.ConfigContextListener
         </listener-class>
     </listener>
+
+
+    <context-param>
+        <param-name>fedora.worklog.database.driver</param-name>
+        <param-value>org.postgresql.Driver</param-value>
+    </context-param>
+
+    <context-param>
+        <param-name>fedora.worklog.database.URL</param-name>
+        <param-value>jdbc:postgresql://localhost/domsFieldSearch</param-value>
+    </context-param>
+
+    <context-param>
+        <param-name>fedora.worklog.database.username</param-name>
+        <param-value>domsFieldSearch</param-value>
+    </context-param>
+
+    <context-param>
+        <param-name>fedora.worklog.database.password</param-name>
+        <param-value>domsFieldSearchPass</param-value>
+    </context-param>
+
+
+    <context-param>
+        <param-name>fedora.updatetracer.web.url</param-name>
+        <param-value>http://localhost:7880/fedora</param-value>
+    </context-param>
+
+    <context-param>
+        <param-name>fedora.updatetracer.web.username</param-name>
+        <param-value>fedoraAdmin</param-value>
+    </context-param>
+
+    <context-param>
+        <param-name>fedora.updatetracer.web.password</param-name>
+        <param-value>fedoraAdminPass</param-value>
+    </context-param>
+
+    <context-param>
+        <param-name>fedora.updatetracker.delay</param-name>
+        <param-value>1000</param-value>
+    </context-param>
+
+    <context-param>
+        <param-name>fedora.updatetracker.period</param-name>
+        <param-value>1000</param-value>
+    </context-param>
+
+    <context-param>
+        <param-name>fedora.updatetracker.limit</param-name>
+        <param-value>1000</param-value>
+    </context-param>
+
+    <context-param>
+        <param-name>fedora.updatetracker.hibernateConfigFile</param-name>
+        <param-value>WEB-INF/defaultHibernate.cfg.xml</param-value>
+    </context-param>
+    <context-param>
+        <param-name>fedora.updatetracker.progressFile</param-name>
+        <param-value>/tmp/updateTracker.progress</param-value>
+    </context-param>
+
 
     <listener>
         <listener-class>
@@ -47,7 +109,7 @@
     <filter>
         <display-name>AuthFilter</display-name>
         <filter-name>AuthFilter</filter-name>
-        <filter-class>dk.statsbiblioteket.doms.webservices.authentication.AuthFilter</filter-class>
+        <filter-class>dk.statsbiblioteket.sbutil.webservices.authentication.AuthFilter</filter-class>
         <init-param>
             <param-name>Realm name</param-name>
             <param-value>Update Tracker</param-value>
@@ -115,12 +177,18 @@
         </param-value>
     </context-param>
 
+    <servlet>
+        <servlet-name>UpdateTrackerPumper</servlet-name>
+        <servlet-class>dk.statsbiblioteket.doms.updatetracker.improved.webservice.UpdateTrackerTimerServlet
+        </servlet-class>
+        <load-on-startup>2</load-on-startup>
+    </servlet>
 
     <!--This servlet is used only to load on startup, and configure the logging framework.-->
     <servlet>
         <description>The servlet that is loaded on startup, and initializes the logging system</description>
         <servlet-name>Log4jInitialisation</servlet-name>
-        <servlet-class>dk.statsbiblioteket.doms.webservices.logging.Log4JInitServlet</servlet-class>
+        <servlet-class>dk.statsbiblioteket.sbutil.webservices.logging.Log4JInitServlet</servlet-class>
         <init-param>
             <description>Name of the context param that controls the location of the log4j config file</description>
             <param-name>

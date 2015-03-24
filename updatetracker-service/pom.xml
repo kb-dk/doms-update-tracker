@@ -69,6 +69,10 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
         </dependency>
+        <dependency>
+            <groupId>dk.statsbiblioteket.sbutil</groupId>
+            <artifactId>sbutil-webservices-log4j</artifactId>
+        </dependency>
 
 
         <dependency>
