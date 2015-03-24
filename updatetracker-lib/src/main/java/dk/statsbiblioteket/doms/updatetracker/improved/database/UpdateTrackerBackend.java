@@ -42,33 +42,33 @@ public class UpdateTrackerBackend {
     /**
      * Modify the persistent storage regarding a change.
      * @param pid     the pid of the object that was changed
-     * @param date    the date of the change
+     * @param timestamp    the timestamp of the change
      * @param collection
      * @param state   the state of the entries that should be updated
      * @param session
      */
-    public void modifyState(String pid, Date date, String collection, State state, Session session) throws
+    public void modifyState(String pid, Date timestamp, String collection, State state, Session session) throws
                                                                            UpdateTrackerStorageException,
                                                                            FedoraFailedException {
-        log.debug("Starting modifyState({},{},{})", pid, date, state);
+        log.debug("Starting modifyState({},{},{})", pid, timestamp, state);
 
         /*
         if new state is not Deleted
             If the object was not previously known in RECORDS
                 if the object is an Entry object # Check content models vs. content model cache
-                    Create row in RECORDS and OBJECTS denoting this Record, with the Inactive Date set
+                    Create row in RECORDS and OBJECTS denoting this Record, with the Inactive Timestamp set
                     if the new state is Active
-                        also set the Active Date
+                        also set the Active Timestamp
             else
                 For each row in RECORDS with entryPid = this pid
-                    set Inactive Date
+                    set Inactive Timestamp
                     if new state is Active
-                        set Active Date
+                        set Active Timestamp
          */
         if ( state != State.DELETED) {
             List<Record> allRecordsWithThisEntryPid = UpdateTrackerDAO.getAllRecordsWithThisEntryPid(pid, session);
             if (allRecordsWithThisEntryPid.isEmpty()){
-                List<String> entryAngles = fedora.getEntryAngles(pid, date);
+                List<String> entryAngles = fedora.getEntryAngles(pid, timestamp);
                 for (String entryAngle : entryAngles) {
                     log.debug("Pid {} is an entry for viewangle {}", pid, entryAngle);
                     Record newRecord = new Record(pid, entryAngle, collection);
@@ -76,18 +76,18 @@ public class UpdateTrackerBackend {
                         log.debug("Pid {} is not marked as an entry for viewAngle {}. Fixing", pid, entryAngle);
                         final DomsObject object = UpdateTrackerDAO.loadOrCreate(session, pid);
                         newRecord.getObjects().add(object);
-                        newRecord.setInactive(date);
+                        newRecord.setInactive(timestamp);
                         if (state == State.ACTIVE){
-                            newRecord.setActive(date);
+                            newRecord.setActive(timestamp);
                         }
                         session.saveOrUpdate(newRecord);
                     }
                 }
             } else {
                 for (Record recordWithThisEntryPid : allRecordsWithThisEntryPid) {
-                    recordWithThisEntryPid.setInactive(date);
+                    recordWithThisEntryPid.setInactive(timestamp);
                     if (state == State.ACTIVE) {
-                        recordWithThisEntryPid.setActive(date);
+                        recordWithThisEntryPid.setActive(timestamp);
                     }
                     session.saveOrUpdate(recordWithThisEntryPid);
                 }
@@ -101,8 +101,8 @@ public class UpdateTrackerBackend {
                 reconnectObjects(record.entryPid) # Recalculate the records
             Delete all rows with objectPid=this pid from OBJECTS # Remove reference to this object
             For each Record with entryPid = this pid # And mark is as deleted if it is an entry
-                set Deleted Date
-                unset Active and Inactive Date
+                set Deleted Timestamp
+                unset Active and Inactive Timestamp
          */
 
         else if (state == State.DELETED){
@@ -114,7 +114,7 @@ public class UpdateTrackerBackend {
 
 
             for (Record otherRecord : otherRecordsThanThisWhichThisObjectIsPart) {
-                reconnectObjectsInRecord(date, session, otherRecord);
+                reconnectObjectsInRecord(timestamp, session, otherRecord);
             }
             session.delete(thisObject);
 
@@ -122,7 +122,7 @@ public class UpdateTrackerBackend {
 
             for (Record record : recordsWhichThisObjectIsEntry) {
                 record.getObjects().clear();
-                record.setDeleted(date);
+                record.setDeleted(timestamp);
                 record.setInactive(null);
                 record.setActive(null);
                 session.saveOrUpdate(record);
@@ -149,8 +149,8 @@ public class UpdateTrackerBackend {
         return records;
     }
 
-    private void reconnectObjectsInRecord(Date date, Session session, Record otherRecord) throws FedoraFailedException {
-        ViewBundle bundle = fedora.calcViewBundle(otherRecord.getEntryPid(), otherRecord.getViewAngle(), date);
+    private void reconnectObjectsInRecord(Date timestamp, Session session, Record otherRecord) throws FedoraFailedException {
+        ViewBundle bundle = fedora.calcViewBundle(otherRecord.getEntryPid(), otherRecord.getViewAngle(), timestamp);
         otherRecord.getObjects().clear();
         for (String viewObject : bundle.getContained()) {
             log.debug("Marking object {} as part of record {},{},{}", viewObject, otherRecord.getEntryPid(), otherRecord.getViewAngle(), otherRecord.getCollection());
@@ -159,23 +159,23 @@ public class UpdateTrackerBackend {
         }
 
         if (otherRecord.getInactive().equals(otherRecord.getActive())){
-            otherRecord.setActive(date);
+            otherRecord.setActive(timestamp);
         }
-        otherRecord.setInactive(date);
+        otherRecord.setInactive(timestamp);
         session.saveOrUpdate(otherRecord);
     }
 
 
-    public void reconnectObjects(String pid, Date date, Session session) throws
+    public void reconnectObjects(String pid, Date timestamp, Session session) throws
                                                                  FedoraFailedException,
                                                                  UpdateTrackerStorageException {
         /*
         Get the view Information about this object (Which viewAngles is this object entry for)
         get the Collection information about this object (which collections is it in)
-        Create Records in RECORDS corresponding to all these view angles and collections (if they do not exist already) with the Inactive Date set
+        Create Records in RECORDS corresponding to all these view angles and collections (if they do not exist already) with the Inactive Timestamp set
         For each Record in RECORDS with this entry pid and not in this set of view angles or not in this set of collections
-            Set Deleted Date
-            unset Inactive and Active Date
+            Set Deleted Timestamp
+            unset Inactive and Active Timestamp
             remove all objects from OBJECTS linked to this Record
         for each Record this object is part of (query OBJECTS with objectPid = this pull)
             remove all Objects relating to this Record from OBJECTS
@@ -183,18 +183,18 @@ public class UpdateTrackerBackend {
             update OBJECTS
          */
 
-        log.debug("starting reconnectObjects({},{})",pid,date);
+        log.debug("starting reconnectObjects({},{})",pid,timestamp);
 
         //Create new Records
-        final Collection<String> entryViewAngles = fedora.getEntryAngles(pid, date);
-        final Collection<String> collections = fedora.getCollections(pid, date);
+        final Collection<String> entryViewAngles = fedora.getEntryAngles(pid, timestamp);
+        final Collection<String> collections = fedora.getCollections(pid, timestamp);
         for (String entryViewAngle : entryViewAngles) {
             for (String collection : collections) {
                 Record record = new Record(pid, entryViewAngle, collection);
                 if (UpdateTrackerDAO.recordNotExists(session, record)){
                     DomsObject object = UpdateTrackerDAO.loadOrCreate(session, pid);
                     record.getObjects().add(object);
-                    record.setInactive(date);
+                    record.setInactive(timestamp);
                     session.saveOrUpdate(record);
                 }
             }
@@ -207,7 +207,7 @@ public class UpdateTrackerBackend {
                                                                                                      collections);
 
         for (Record previousRecord : previousRecords) {
-            previousRecord.setDeleted(date);
+            previousRecord.setDeleted(timestamp);
             previousRecord.setInactive(null);
             previousRecord.setActive(null);
             previousRecord.getObjects().clear();
@@ -226,21 +226,21 @@ public class UpdateTrackerBackend {
         Set<Record> records = UpdateTrackerDAO.loadOrCreate(session, pid).getRecords();
         log.debug("Find all records {} containing {} ", records, pid);
         for (Record otherRecord : records) {
-            reconnectObjectsInRecord(date, session, otherRecord);
+            reconnectObjectsInRecord(timestamp, session, otherRecord);
         }
     }
 
-    public void updateDates(String pid, Date date, Session session) {
+    public void updateDates(String pid, Date timestamp, Session session) {
 
             final Query query
                     = session.createQuery("update Record e " +
                                           "set" +
-                                          " e.inactive=:date," +
-                                          " e.active=(case when e.active>=e.inactive then :date else e.active end) " +
+                                          " e.inactive=:timestamp," +
+                                          " e.active=(case when e.active>=e.inactive then :timestamp else e.active end) " +
                                           "where :pid member of e.objects " +
                                           "and (e.deleted is null or e.inactive>=e.deleted)");
             query.setParameter("pid", pid);
-            query.setParameter("date", date);
+            query.setParameter("timestamp", timestamp);
             query.executeUpdate();
     }
 
