@@ -1,14 +1,20 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
-import org.hibernate.annotations.*;
+import org.hibernate.annotations.Cascade;
 import org.hibernate.annotations.CascadeType;
 
-import javax.persistence.*;
+import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Id;
 import javax.persistence.Index;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToMany;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+import javax.persistence.Transient;
 import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.Date;
