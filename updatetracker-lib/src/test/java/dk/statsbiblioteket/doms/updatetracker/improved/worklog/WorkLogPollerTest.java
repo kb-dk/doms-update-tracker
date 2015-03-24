@@ -12,11 +12,14 @@ import java.util.Properties;
 
 import static org.junit.Assert.*;
 
+/**
+ * This is an forever test, used to see if the worklog can actually be replayed.
+ */
+@Ignore("This test is to manually test against a vagrant")
 public class WorkLogPollerTest {
 
     long ONEHOUR = 60*60*1000;
     @Test
-    @Ignore
     public void testGetFedoraEvents() throws Exception {
         Properties props = new Properties();
         props.load(Thread.currentThread().getContextClassLoader().getResourceAsStream("test.properties"));
