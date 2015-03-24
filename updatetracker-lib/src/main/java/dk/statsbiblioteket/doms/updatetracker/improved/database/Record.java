@@ -21,6 +21,8 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
+
+//TODO talk to KTC about figuring out which indexes would help these queries
 @NamedQueries({@NamedQuery(name = "ActiveAndDeleted",
                            query = "from Record e where (" +
                                        "(e.deleted is not null and e.deleted>=:since) or " +
