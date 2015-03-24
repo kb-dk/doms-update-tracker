@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.TimerTask;
@@ -36,59 +37,92 @@ public class WorkLogPollTask extends TimerTask {
 
     @Override
     public void run() {
+
         try {
-            //TODO DO NOT USE LASTMODIFIED, USE THE INCREMENTING KEY
-            Date lastRegisteredChange = updateTrackerPersistentStore.lastChanged();
-            if (lastRegisteredChange == null){
-                lastRegisteredChange = new Date(0);
-            }
-            log.info("Looking for events since '{}'",lastRegisteredChange);
-            List<WorkLogUnit> events = workLogPoller.getFedoraEvents(lastRegisteredChange, limit);
-            log.info("Found  '{}' events ", events.size());
+            Date lastRegisteredChange = getStartDate();
+
+            List<WorkLogUnit> events = getEvents(lastRegisteredChange);
 
             for (WorkLogUnit event : events) {
-                String pid = event.getPid();
-                Date date = event.getDate();
-                String param = event.getParam();
-                log.info("Registering the event '{}'",event);
-
-                if (event.getMethod().equals("ingest")) {
-                    updateTrackerPersistentStore.objectCreated(pid, date);
-                } else if (event.getMethod().equals("modifyObject")) {
-                    updateTrackerPersistentStore.objectStateChanged(pid, date, param);
-                } else if (event.getMethod().equals("purgeObject")) {
-                    updateTrackerPersistentStore.objectDeleted(pid, date);
-                } else if (event.getMethod().equals("addDatastream") ||
-                           event.getMethod().equals("modifyDatastreamByReference") ||
-                           event.getMethod().equals("modifyDatastreamByValue") ||
-                           event.getMethod().equals("purgeDatastream") ||
-                           event.getMethod().equals("setDatastreamState") ||
-                           event.getMethod().equals("setDatastreamVersionable")) {
-                    updateTrackerPersistentStore.datastreamChanged(pid, date, param);
-                } else if (event.getMethod().equals("addRelationship") ||
-                           event.getMethod().equals("purgeRelationship")) {
-                    updateTrackerPersistentStore.objectRelationsChanged(pid, date);
-                } else if (event.getMethod().equals("getObjectXML") || event.getMethod().equals("export") ||
-                           event.getMethod().equals("getDatastream") ||
-                           event.getMethod().equals("getDatastreams") ||
-                           event.getMethod().equals("getDatastreamHistory") ||
-                           event.getMethod().equals("putTempStream") ||
-                           event.getMethod().equals("getTempStream") ||
-                           event.getMethod().equals("compareDatastreamChecksum") ||
-                           event.getMethod().equals("getNextPID") || event.getMethod().equals("getRelationships") ||
-                           event.getMethod().equals("validate")) {// Nothing to do
-
-                } else {// TODO log this
-
-                }
+                handleEvent(event);
             }
-            log.info("No further events to work on");
+            if (!events.isEmpty()) {
+                log.info("No further events to work on");
+            }
+        } catch (Exception e){//Fault barrier
+            //If this method bombs out, the timer is stopped, and will not start until the webservice is reloaded
+            log.error("Failed to poll for worklog tasks",e);
+            //Log this and keep going. Only Errors get through now
+        }
+    }
+
+    private Date getStartDate() {
+        Date lastRegisteredChange = null;
+        try {
+            //TODO DO NOT USE LASTMODIFIED, USE THE INCREMENTING KEY
+            lastRegisteredChange = updateTrackerPersistentStore.lastChanged();
+        } catch (UpdateTrackerStorageException e){
+            log.error("Failed to find lastChanged from the update tracker",e);
+        }
+        if (lastRegisteredChange == null){
+            lastRegisteredChange = new Date(0);
+        }
+        return lastRegisteredChange;
+    }
+
+    private List<WorkLogUnit> getEvents(Date lastRegisteredChange) {
+        List<WorkLogUnit> events = new ArrayList<WorkLogUnit>();
+        try {
+            log.debug("Starting query for events since '{}'", lastRegisteredChange);
+            events = workLogPoller.getFedoraEvents(lastRegisteredChange, limit);
+            log.info("Looking for events since '{}'. Found '{}", lastRegisteredChange, events.size());
         } catch (IOException e) {
-            log.error("Failed to get Fedora events",e);
-        } catch (UpdateTrackerStorageException e) {
-            log.error("Failed to store events in update tracker", e);
-        } catch (FedoraFailedException e) {
-            log.error("Failed to communicate with fedora", e);
+            log.error("Failed to get Fedora events.", e);
+        }
+        return events;
+    }
+
+    private void handleEvent(WorkLogUnit event) {
+        try {
+            final String pid = event.getPid();
+            final Date date = event.getDate();
+            final String param = event.getParam();
+            final String method = event.getMethod();
+            log.debug("Registering the event '{}'", event);
+
+            if (method.equals("ingest")) {
+                updateTrackerPersistentStore.objectCreated(pid, date);
+            } else if (method.equals("modifyObject")) {
+                updateTrackerPersistentStore.objectStateChanged(pid, date, param);
+            } else if (method.equals("purgeObject")) {
+                updateTrackerPersistentStore.objectDeleted(pid, date);
+            } else if (method.equals("addDatastream") ||
+                       method.equals("modifyDatastreamByReference") ||
+                       method.equals("modifyDatastreamByValue") ||
+                       method.equals("purgeDatastream") ||
+                       method.equals("setDatastreamState") ||
+                       method.equals("setDatastreamVersionable")) {
+                updateTrackerPersistentStore.datastreamChanged(pid, date, param);
+            } else if (method.equals("addRelationship") || method.equals("purgeRelationship")) {
+                updateTrackerPersistentStore.objectRelationsChanged(pid, date);
+            } else if (method.equals("getObjectXML") || method.equals("export") ||
+                       method.equals("getDatastream") ||
+                       method.equals("getDatastreams") ||
+                       method.equals("getDatastreamHistory") ||
+                       method.equals("putTempStream") ||
+                       method.equals("getTempStream") ||
+                       method.equals("compareDatastreamChecksum") ||
+                       method.equals("getNextPID") || method.equals("getRelationships") ||
+                       method.equals("validate")) {// Nothing to do
+                log.debug("Got nonchanging event '{}' from worklog", event);
+            } else {
+                log.warn("Got unknown event '{}' from worklog", event);
+            }
+
+        }catch(UpdateTrackerStorageException e){
+            log.error("Failed to store events in update tracker. Failed on '" + event + "'", e);
+        }catch(FedoraFailedException e){
+            log.error("Failed to communicate with fedora. Failed on '" + event + "'", e);
         }
     }
 }
