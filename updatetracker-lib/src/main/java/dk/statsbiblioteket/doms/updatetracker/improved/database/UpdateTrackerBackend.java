@@ -250,11 +250,11 @@ public class UpdateTrackerBackend {
         if (state == null) {
             query = session.getNamedQuery("All");
         } else {
-            if (state.equals("A")) {
+            if (state.equals("A") || state.equalsIgnoreCase("published")) {
                 query = session.getNamedQuery("ActiveAndDeleted");
-            } else if (state.equals("I")) {
+            } else if (state.equals("I") || state.equalsIgnoreCase("inactive")) {
                 query = session.getNamedQuery("InactiveOrDeleted");
-            } else if (state.equals("D")) {
+            } else if (state.equals("D") || state.equalsIgnoreCase("deleted")) {
                 query = session.getNamedQuery("Deleted");
             } else {
                 query = session.getNamedQuery("All");
