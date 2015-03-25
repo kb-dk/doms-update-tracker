@@ -20,7 +20,6 @@
 
     <modules>
         <module>updatetracker-interface</module>
-        <module>updatetracker-service</module>
         <module>updatetracker-lib</module>
         <module>updatetracker-fcrepo-decorator</module>
     </modules>
