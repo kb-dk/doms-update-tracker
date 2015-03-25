@@ -73,14 +73,6 @@ public class UpdateTrackingSystem implements Closeable {
         }
     }
 
-    public synchronized static UpdateTrackingSystem getInstance(UpdateTrackingConfig updateTrackingConfig) {
-        if (instance == null) {
-            instance = new UpdateTrackingSystem(updateTrackingConfig);
-        }
-        return instance;
-
-    }
-
     @Override
     public void close()  {
         if (timer != null) {
