@@ -9,7 +9,7 @@ import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPer
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStore;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.EntryAngleCache;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
-import dk.statsbiblioteket.doms.updatetracker.improved.worklog.WorkLogPoller;
+import dk.statsbiblioteket.doms.updatetracker.improved.worklog.WorkLogPollDAO;
 import dk.statsbiblioteket.doms.updatetracker.improved.worklog.WorkLogPollTask;
 import dk.statsbiblioteket.sbutil.webservices.authentication.Credentials;
 
@@ -24,7 +24,7 @@ public class UpdateTrackingSystem implements Closeable {
 
 
     private  UpdateTrackerPersistentStore store;
-    private WorkLogPoller consumer;
+    private WorkLogPollDAO workLogPollDAO;
     private  Timer timer;
 
 
@@ -52,8 +52,8 @@ public class UpdateTrackingSystem implements Closeable {
                                                          updateTrackerBackend);
 
 
-            //initialise the jms connection to Fedora
-            consumer = new WorkLogPoller(updateTrackingConfig.getFedoraDatabaseDriver(), updateTrackingConfig.getFedoraDatabaseURL(),
+            //initialise the connection to the work log
+            workLogPollDAO = new WorkLogPollDAO(updateTrackingConfig.getFedoraDatabaseDriver(), updateTrackingConfig.getFedoraDatabaseURL(),
                                                 updateTrackingConfig.getFedoraDatabaseUsername(),
                                                 updateTrackingConfig.getFedoraDatabasePassword());
 
@@ -64,7 +64,8 @@ public class UpdateTrackingSystem implements Closeable {
             final int delay = updateTrackingConfig.getFedoraUpdatetrackerDelay();
             final int period = updateTrackingConfig.getFedoraUpdatetrackerPeriod();
             final int limit = updateTrackingConfig.getFedoraUpdatetrackerLimit();
-            timer.schedule(new WorkLogPollTask(consumer, store, limit, new File(updateTrackingConfig.getFedoraUpdatetrackerProgressFile())),
+        timer.schedule(new WorkLogPollTask(workLogPollDAO, store, limit,
+                                           new File(updateTrackingConfig.getFedoraUpdatetrackerProgressFile())),
                            delay,
                            period);
         } catch (Exception e){
@@ -86,8 +87,8 @@ public class UpdateTrackingSystem implements Closeable {
         if (timer != null) {
             timer.cancel();
         }
-        if (consumer != null) {
-            consumer.close();
+        if (workLogPollDAO != null) {
+            workLogPollDAO.close();
         }
         if (store != null) {
             store.close();

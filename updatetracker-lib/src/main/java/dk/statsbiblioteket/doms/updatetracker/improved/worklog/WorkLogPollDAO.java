@@ -20,7 +20,7 @@ import java.util.Properties;
 import java.util.TimeZone;
 
 
-public class WorkLogPoller implements Closeable {
+public class WorkLogPollDAO implements Closeable {
 
     private final String driver;
     private final String jdbcUrl;
@@ -28,14 +28,14 @@ public class WorkLogPoller implements Closeable {
     private final String password;
     public static final Calendar tzUTC = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
 
-    private Logger log = LoggerFactory.getLogger(WorkLogPoller.class);
+    private Logger log = LoggerFactory.getLogger(WorkLogPollDAO.class);
 
 
     /** The pool with data sources for the database connections. */
     private final ComboPooledDataSource connectionPool;
 
 
-    public WorkLogPoller(String driver, String jdbcUrl, String username, String password) {
+    public WorkLogPollDAO(String driver, String jdbcUrl, String username, String password) {
         this.driver = driver;
         this.jdbcUrl = jdbcUrl;
         this.username = username;
