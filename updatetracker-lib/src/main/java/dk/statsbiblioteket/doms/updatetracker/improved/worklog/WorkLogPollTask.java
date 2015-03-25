@@ -53,18 +53,28 @@ public class WorkLogPollTask extends TimerTask {
                 List<WorkLogUnit> events = getEvents(latestKey.get());
 
                 for (WorkLogUnit event : events) {
-                    handleEvent(event);
-                    latestKey.set(event.getKey());//update value
+                    try {
+                        handleEvent(event);
+                        latestKey.set(event.getKey());//update value
+                        stateDB.commit(); //commit transaction
+                    }catch(UpdateTrackerStorageException e){
+                        log.error("Failed to store events in update tracker. Failed on '" + event + "'", e);
+                        stateDB.rollback(); //undo the change to the latestKey
+                        break; //If we fail, break the loop, as we DO NOT WANT to miss an event
+                    }catch(FedoraFailedException e){
+                        log.error("Failed to communicate with fedora. Failed on '" + event + "'", e);
+                        stateDB.rollback(); //undo the change to the latestKey
+                        break; //If we fail, break the loop, as we DO NOT WANT to miss an event
+                    }
                 }
                 if (!events.isEmpty()) {
-                    log.info("No further events to work on");
+                    log.info("Finished working on event list");
                 }
-                stateDB.commit(); //commit transaction
             } finally {
                 stateDB.close();
             }
         } catch (Exception e){
-            //Fault barrier
+            //Fault barrier to avoid that this method bombs out
             //If this method bombs out, the timer is stopped, and will not start until the webservice is reloaded
             // So, we catch and log all exceptions, including runtime exceptions. Throwable and Errors will take the thing down hard, as they should
             log.error("Failed to poll for worklog tasks",e);
@@ -86,8 +96,7 @@ public class WorkLogPollTask extends TimerTask {
         return events;
     }
 
-    private void handleEvent(WorkLogUnit event) {
-        try {
+    private void handleEvent(WorkLogUnit event) throws UpdateTrackerStorageException, FedoraFailedException {
             final String pid = event.getPid();
             final Date date = event.getDate();
             final String param = event.getParam();
@@ -122,11 +131,5 @@ public class WorkLogPollTask extends TimerTask {
             } else {
                 log.warn("Got unknown event '{}' from worklog", event);
             }
-
-        }catch(UpdateTrackerStorageException e){
-            log.error("Failed to store events in update tracker. Failed on '" + event + "'", e);
-        }catch(FedoraFailedException e){
-            log.error("Failed to communicate with fedora. Failed on '" + event + "'", e);
-        }
     }
 }
