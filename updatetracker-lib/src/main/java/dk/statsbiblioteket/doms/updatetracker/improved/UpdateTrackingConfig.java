@@ -105,7 +105,7 @@ public class UpdateTrackingConfig {
         this.fedoraUpdatetrackerDelay = Integer.parseInt(properties.getProperty(FEDORA_UPDATETRACKER_DELAY,"1000"));
         this.fedoraUpdatetrackerPeriod = Integer.parseInt(properties.getProperty(FEDORA_UPDATETRACKER_PERIOD,"1000"));
         this.fedoraUpdatetrackerLimit = Integer.parseInt(properties.getProperty(FEDORA_UPDATETRACKER_LIMIT,"1000"));
-        this.fedoraUpdatetrackerProgressFile = properties.getProperty(FEDORA_UPDATETRACKER_PROGRESS_FILE,"/tmp/updateTracker.progress");
+        this.fedoraUpdatetrackerProgressFile = properties.getProperty(FEDORA_UPDATETRACKER_PROGRESS_FILE);
         this.updatetrackerHibernateConfig = new File(properties.getProperty(FEDORA_UPDATETRACKER_HIBERNATE_CONFIG_FILE));
     }
 
