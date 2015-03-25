@@ -57,21 +57,25 @@ public class UpdateTrackingSystem implements Closeable {
                                                 updateTrackingConfig.getFedoraDatabaseUsername(),
                                                 updateTrackingConfig.getFedoraDatabasePassword());
 
-            final boolean isDaemon = false;
-            timer = new Timer(isDaemon);
-            //The timer thread is NOT a daemon, so it should prevent shutdown until the timer task is completed.
-            //Tie it all together
-            final int delay = updateTrackingConfig.getFedoraUpdatetrackerDelay();
-            final int period = updateTrackingConfig.getFedoraUpdatetrackerPeriod();
-            final int limit = updateTrackingConfig.getFedoraUpdatetrackerLimit();
-        timer.schedule(new WorkLogPollTask(workLogPollDAO, store, limit,
-                                           new File(updateTrackingConfig.getFedoraUpdatetrackerProgressFile())),
-                           delay,
-                           period);
+            startWorkLogTimerTask(updateTrackingConfig);
         } catch (Exception e){
             close();
             throw new RuntimeException(e);
         }
+    }
+
+    private void startWorkLogTimerTask(UpdateTrackingConfig updateTrackingConfig) {
+        final boolean isDaemon = false;
+        timer = new Timer(isDaemon);
+        //The timer thread is NOT a daemon, so it should prevent shutdown until the timer task is completed.
+        //Tie it all together
+        final int delay = updateTrackingConfig.getFedoraUpdatetrackerDelay();
+        final int period = updateTrackingConfig.getFedoraUpdatetrackerPeriod();
+        final int limit = updateTrackingConfig.getFedoraUpdatetrackerLimit();
+        timer.schedule(new WorkLogPollTask(workLogPollDAO, store, limit,
+                                           new File(updateTrackingConfig.getFedoraUpdatetrackerProgressFile())),
+                       delay,
+                       period);
     }
 
     public synchronized static UpdateTrackingSystem getInstance(UpdateTrackingConfig updateTrackingConfig) {
