@@ -1,20 +1,28 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
-import org.hibernate.annotations.*;
+import org.hibernate.annotations.Cascade;
 import org.hibernate.annotations.CascadeType;
 
-import javax.persistence.*;
+import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Id;
 import javax.persistence.Index;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToMany;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+import javax.persistence.Transient;
 import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
+
+//TODO talk to KTC about figuring out which indexes would help these queries
 @NamedQueries({@NamedQuery(name = "ActiveAndDeleted",
                            query = "from Record e where (" +
                                        "(e.deleted is not null and e.deleted>=:since) or " +
@@ -30,7 +38,7 @@ import java.util.Set;
                @NamedQuery(name = "InactiveOrDeleted",
                            query = "from Record e where (" +
                                        "(e.deleted is not null and e.deleted>=:since) or " +
-                                       "(e.inactive is not null or e.inactive>=:since)" +
+                                       "(e.inactive is not null and e.inactive>=:since)" +
                                    ") and " +
                                    "e.viewAngle=:viewAngle " +
                                    "and e.collection=:collection " +

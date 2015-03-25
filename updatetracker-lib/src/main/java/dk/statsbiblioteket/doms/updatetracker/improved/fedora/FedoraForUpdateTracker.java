@@ -3,6 +3,7 @@ package dk.statsbiblioteket.doms.updatetracker.improved.fedora;
 import dk.statsbiblioteket.doms.central.connectors.BackendInvalidCredsException;
 import dk.statsbiblioteket.doms.central.connectors.BackendInvalidResourceException;
 import dk.statsbiblioteket.doms.central.connectors.BackendMethodFailedException;
+import dk.statsbiblioteket.doms.central.connectors.Connector;
 import dk.statsbiblioteket.doms.central.connectors.fedora.Fedora;
 import dk.statsbiblioteket.doms.central.connectors.fedora.FedoraRest;
 import dk.statsbiblioteket.doms.central.connectors.fedora.structures.FedoraRelation;
@@ -111,7 +112,7 @@ public class FedoraForUpdateTracker {
         CollectionUtils.collect(entryRelations, new Transformer<FedoraRelation, String>() {
             @Override
             public String transform(FedoraRelation relation) {
-                return relation.getObject();
+                return Connector.toPid(relation.getObject());
             }
         }, entryAngles);
         return entryAngles;
@@ -123,7 +124,7 @@ public class FedoraForUpdateTracker {
         CollectionUtils.collect(entryRelations, new Transformer<FedoraRelation, String>() {
             @Override
             public String transform(FedoraRelation relation) {
-                return relation.getSubject();
+                return Connector.toPid(relation.getSubject());
             }
         }, entryAngles);
         return entryAngles;
