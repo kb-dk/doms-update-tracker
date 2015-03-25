@@ -38,7 +38,7 @@ import java.util.Set;
                @NamedQuery(name = "InactiveOrDeleted",
                            query = "from Record e where (" +
                                        "(e.deleted is not null and e.deleted>=:since) or " +
-                                       "(e.inactive is not null or e.inactive>=:since)" +
+                                       "(e.inactive is not null and e.inactive>=:since)" +
                                    ") and " +
                                    "e.viewAngle=:viewAngle " +
                                    "and e.collection=:collection " +
