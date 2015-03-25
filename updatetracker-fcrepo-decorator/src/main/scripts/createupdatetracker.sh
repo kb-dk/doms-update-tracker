@@ -12,23 +12,9 @@ if [[ -e updatetrackerdata ]]; then mv updatetrackerdata updatetrackerdata.$(dat
 #   <info:fedora/uuid:ad4796af-4b75-4691-a784-ffe8e2833936/DC>	"2014-12-19T17:42:22.25Z"^^<http://www.w3.org/2001/XMLSchema#dateTime>
 #   <info:fedora/uuid:bec3f8e5-b632-449f-b4dc-8a307ded2bd2/RELS-EXT>	"2014-12-26T16:21:47.837Z"^^<http://www.w3.org/2001/XMLSchema#dateTime>
 #   <info:fedora/uuid:b07d26be-022f-480a-aff4-480f32df401a>	"2015-03-02T00:28:57.77Z"^^<http://www.w3.org/2001/XMLSchema#dateTime>
-i=0
-cat alltimestamps | while read object timestamp; do
-    # Extract object name
-    object=${object##<info:fedora/}
-    object=${object%%>}
-    # Skip if this is a datastream, not an object
-    if [[ "$object" == */* ]]; then continue; fi
-    # Extract timestamp
-    timestamp=${timestamp##\"}
-    timestamp=${timestamp%%\"^^<http://www.w3.org/2001/XMLSchema#dateTime>}
-    #timestamp=$(date -d "${timestamp/T/ }" +%s%3N)
-    # Add to update tracker log
-    echo -e ${object}\\t${timestamp}\\t"ingest" >> updatetrackerdata
-    # Report progress
-    i=$((i+1))
-    if [[ $((i%100000)) == 0 ]]; then date; echo "Handled $i timestamps"; fi
-done
+sed -e '/<info:fedora\/[^/]*>/!d;s/^<info:fedora\///;s%>\t"%\t%;s%"^^<http://www.w3.org/2001/XMLSchema#dateTime>$%\tingest%' alltimestamps >> updatetrackerdata
+#timestamp=$(date -d "${timestamp/T/ }" +%s%3N)
+
 # Ingest into updatetracker log database table. Assumes table already exists.
 date; echo "Ingesting all triples into database"
 cat updatetrackerdata | psql avisdoms -c "\copy \"updateTrackerLogs\" (pid, happened, method) from stdin"
