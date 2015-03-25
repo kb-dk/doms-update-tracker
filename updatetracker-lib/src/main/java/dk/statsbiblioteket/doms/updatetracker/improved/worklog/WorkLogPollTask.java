@@ -63,8 +63,10 @@ public class WorkLogPollTask extends TimerTask {
             } finally {
                 stateDB.close();
             }
-        } catch (Exception e){//Fault barrier
+        } catch (Exception e){
+            //Fault barrier
             //If this method bombs out, the timer is stopped, and will not start until the webservice is reloaded
+            // So, we catch and log all exceptions, including runtime exceptions. Throwable and Errors will take the thing down hard, as they should
             log.error("Failed to poll for worklog tasks",e);
             //Log this and keep going. Only Errors get through now
         }
