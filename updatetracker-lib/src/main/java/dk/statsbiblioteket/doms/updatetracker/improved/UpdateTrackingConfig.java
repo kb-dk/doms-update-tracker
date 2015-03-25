@@ -110,25 +110,6 @@ public class UpdateTrackingConfig {
     }
 
 
-    public UpdateTrackingConfig(String fedoraWebUrl, String fedoraWebUsername, String fedoraWebPassword,
-                                String fedoraDatabaseDriver, String fedoraDatabaseURL, String fedoraDatabaseUsername,
-                                String fedoraDatabasePassword, int fedoraUpdatetrackerDelay, int fedoraUpdatetrackerPeriod,
-                                int fedoraUpdatetrackerLimit, File updatetrackerHibernateConfig,
-                                String fedoraUpdatetrackerProgressFile) {
-        this.fedoraWebUrl = fedoraWebUrl;
-        this.fedoraWebUsername = fedoraWebUsername;
-        this.fedoraWebPassword = fedoraWebPassword;
-        this.fedoraDatabaseDriver = fedoraDatabaseDriver;
-        this.fedoraDatabaseURL = fedoraDatabaseURL;
-        this.fedoraDatabaseUsername = fedoraDatabaseUsername;
-        this.fedoraDatabasePassword = fedoraDatabasePassword;
-        this.fedoraUpdatetrackerDelay = fedoraUpdatetrackerDelay;
-        this.fedoraUpdatetrackerPeriod = fedoraUpdatetrackerPeriod;
-        this.fedoraUpdatetrackerLimit = fedoraUpdatetrackerLimit;
-        this.updatetrackerHibernateConfig = updatetrackerHibernateConfig;
-        this.fedoraUpdatetrackerProgressFile = fedoraUpdatetrackerProgressFile;
-    }
-
     public String getFedoraWebUrl() {
         return fedoraWebUrl;
     }
