@@ -109,7 +109,7 @@
             <dependency>
                 <groupId>dk.statsbiblioteket.sbutil</groupId>
                 <artifactId>sbutil-webservices-log4j</artifactId>
-                <version>0.5.28</version>
+                <version>0.5.29</version>
             </dependency>
 
 
