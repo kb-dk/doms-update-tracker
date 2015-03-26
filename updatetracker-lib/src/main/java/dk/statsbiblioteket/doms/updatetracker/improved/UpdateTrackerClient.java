@@ -97,15 +97,36 @@ public class UpdateTrackerClient implements UpdateTrackerWebservice {
         final long deleted = real(thing.getDeleted()).getTime();
         final long inactive = real(thing.getInactive()).getTime();
         if (state.equals("A")) {
-            thang.setLastChangedTime(Math.max(active,deleted));
+            if (active > deleted){
+                thang.setLastChangedTime(active);
+                thang.setState("A");
+            } else {
+                thang.setLastChangedTime(deleted);
+                thang.setState("D");
+            }
         } else if (state.equals("I")) {
-            thang.setLastChangedTime(Math.max(inactive,deleted));
+            if (inactive > deleted) {
+                thang.setLastChangedTime(inactive);
+                thang.setState("I");
+            } else {
+                thang.setLastChangedTime(deleted);
+                thang.setState("D");
+            }
         } else if (state.equals("D")) {
             thang.setLastChangedTime(deleted);
+            thang.setState("D");
         } else {
-            thang.setLastChangedTime(Math.max(active, Math.max(inactive, deleted)));
+            if (active >= inactive && active > deleted){
+                thang.setLastChangedTime(active);
+                thang.setState("A");
+            } else if (inactive > active && inactive > deleted){
+                thang.setLastChangedTime(inactive);
+                thang.setState("I");
+            } else if (deleted >= active && deleted >= inactive){
+                thang.setLastChangedTime(deleted);
+                thang.setState("D");
+            }
         }
-        thang.setState(thing.getState().getName());
         thang.setPid(thing.getEntryPid());
         return thang;
     }
