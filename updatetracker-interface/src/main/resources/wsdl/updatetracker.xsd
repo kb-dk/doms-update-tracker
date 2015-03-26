@@ -85,16 +85,17 @@
 
     <xs:complexType name="pidDatePidPidList">
         <xs:sequence>
-            <xs:element name="result" type="tns:pidDatePidPid" maxOccurs="unbounded" minOccurs="0"/>
+            <xs:element name="result" type="tns:recordDescription" maxOccurs="unbounded" minOccurs="0"/>
         </xs:sequence>
     </xs:complexType>
 
-    <xs:complexType name="pidDatePidPid">
+    <xs:complexType name="recordDescription">
         <xs:sequence>
             <xs:element name="pid" type="xs:string"/>
             <xs:element name="lastChangedTime" type="xs:long"/>
             <xs:element name="collectionPid" type="xs:string"/>
             <xs:element name="entryCMPid" type="xs:string"/>
+            <xs:element name="state" type="xs:string"/>
         </xs:sequence>
     </xs:complexType>
 
