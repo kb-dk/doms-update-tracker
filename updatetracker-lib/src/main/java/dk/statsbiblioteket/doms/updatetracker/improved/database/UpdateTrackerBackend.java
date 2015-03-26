@@ -251,7 +251,7 @@ public class UpdateTrackerBackend {
             query = session.getNamedQuery("All");
         } else {
             try {
-                switch (State.valueOf(state)){
+                switch (State.fromName(state)){
                     case ACTIVE:
                         query = session.getNamedQuery("ActiveAndDeleted");
                         break;
