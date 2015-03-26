@@ -92,42 +92,50 @@ public class UpdateTrackerClient implements UpdateTrackerWebservice {
 
     private RecordDescription convert(Record thing, String state) {
         RecordDescription thang = new RecordDescription();
+        thang.setPid(thing.getEntryPid());
+        thang.setCollectionPid(thing.getCollection());
+        //TODO
 
         final long active = real(thing.getActive()).getTime();
         final long deleted = real(thing.getDeleted()).getTime();
         final long inactive = real(thing.getInactive()).getTime();
-        if (state.equals("A")) {
-            if (active > deleted){
+        try {
+            switch (Record.State.valueOf(state)) {
+                case ACTIVE:
+                    if (active > deleted) {
+                        thang.setLastChangedTime(active);
+                        thang.setState("A");
+                    } else {
+                        thang.setLastChangedTime(deleted);
+                        thang.setState("D");
+                    }
+                    break;
+                case INACTIVE:
+                    if (inactive > deleted) {
+                        thang.setLastChangedTime(inactive);
+                        thang.setState("I");
+                    } else {
+                        thang.setLastChangedTime(deleted);
+                        thang.setState("D");
+                    }
+                    break;
+                case DELETED:
+                    thang.setLastChangedTime(deleted);
+                    thang.setState("D");
+                    break;
+            }
+        } catch (IllegalArgumentException e) { //If you specified something else
+            if (active >= inactive && active > deleted) {
                 thang.setLastChangedTime(active);
                 thang.setState("A");
-            } else {
-                thang.setLastChangedTime(deleted);
-                thang.setState("D");
-            }
-        } else if (state.equals("I")) {
-            if (inactive > deleted) {
+            } else if (inactive > active && inactive > deleted) {
                 thang.setLastChangedTime(inactive);
                 thang.setState("I");
-            } else {
-                thang.setLastChangedTime(deleted);
-                thang.setState("D");
-            }
-        } else if (state.equals("D")) {
-            thang.setLastChangedTime(deleted);
-            thang.setState("D");
-        } else {
-            if (active >= inactive && active > deleted){
-                thang.setLastChangedTime(active);
-                thang.setState("A");
-            } else if (inactive > active && inactive > deleted){
-                thang.setLastChangedTime(inactive);
-                thang.setState("I");
-            } else if (deleted >= active && deleted >= inactive){
+            } else if (deleted >= active && deleted >= inactive) {
                 thang.setLastChangedTime(deleted);
                 thang.setState("D");
             }
         }
-        thang.setPid(thing.getEntryPid());
         return thang;
     }
 
