@@ -52,13 +52,23 @@
             </plugin>
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <configuration combine.self="append">
-                    <systemPropertyVariables>
-                        <org.jboss.logging.provider>slf4j</org.jboss.logging.provider>
-                    </systemPropertyVariables>
-                    <environmentVariables>
-                        <org.jboss.logging.provider>slf4j</org.jboss.logging.provider>
-                    </environmentVariables>
+                <version>2.18</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <org.jboss.logging.provider>log4j</org.jboss.logging.provider>
+                            </systemPropertyVariables>
+                            <environmentVariables>
+                                <org.jboss.logging.provider>log4j</org.jboss.logging.provider>
+                            </environmentVariables>
+                        </configuration>
+                    </execution>
+                </executions>
+                <configuration>
                 </configuration>
             </plugin>
 
@@ -82,6 +92,12 @@
             <artifactId>c3p0</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.7.7</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
         </dependency>
@@ -104,16 +120,6 @@
             <artifactId>hibernate-entitymanager</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>

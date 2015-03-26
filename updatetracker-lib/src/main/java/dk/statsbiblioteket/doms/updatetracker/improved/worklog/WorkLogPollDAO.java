@@ -20,6 +20,10 @@ import java.util.Properties;
 import java.util.TimeZone;
 
 
+/**
+ * The DAO represents the worklog database, with all the methods nessesary for the poller
+ * @see dk.statsbiblioteket.doms.updatetracker.improved.worklog.WorkLogPollTask
+ */
 public class WorkLogPollDAO implements Closeable {
 
     private final String driver;
@@ -43,7 +47,6 @@ public class WorkLogPollDAO implements Closeable {
 
         this.connectionPool = new ComboPooledDataSource();
 
-        silenceC3P0Logger();
         initialiseConnectionPool();
     }
 
@@ -65,16 +68,6 @@ public class WorkLogPollDAO implements Closeable {
         }
     }
 
-
-    /**
-     * Hack to kill com.mchange.v2 log spamming.
-     */
-    private void silenceC3P0Logger() {
-        Properties p = new Properties(System.getProperties());
-        p.put("com.mchange.v2.log.MLog", "com.mchange.v2.log.FallbackMLog");
-        p.put("com.mchange.v2.log.FallbackMLog.DEFAULT_CUTOFF_LEVEL", "OFF"); // or any other
-        System.setProperties(p);
-    }
 
     /**
      * Creates and connects to the database.
@@ -100,6 +93,14 @@ public class WorkLogPollDAO implements Closeable {
         }
     }
 
+    /**
+     * Get the list of worklog events from the worklog database, starting after the lastRegisteredKey.
+     * The key is an autoincrementing long, so start from 0 if you want to start at the beginning
+     * @param lastRegisteredKey the highest key not to include
+     * @param limit the max amount of worklog units to retrieve
+     * @return a list of worklog units, at most limit long
+     * @throws IOException on any database communication problems
+     */
     public List<WorkLogUnit> getFedoraEvents(Long lastRegisteredKey, int limit) throws IOException {
 
         ArrayList<WorkLogUnit> result = new ArrayList<WorkLogUnit>(limit);
