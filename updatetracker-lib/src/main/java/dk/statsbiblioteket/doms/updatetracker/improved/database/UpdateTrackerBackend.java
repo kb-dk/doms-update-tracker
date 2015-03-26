@@ -29,6 +29,12 @@ import java.util.Set;
  *
  */
 public class UpdateTrackerBackend {
+    protected static final String ACTIVE_SHORT = "A";
+    protected static final String ACTIVE_LONG = "published";
+    protected static final String INACTIVE_SHORT = "I";
+    protected static final String INACTIVE_LONG = "inactive";
+    protected static final String DELETED_SHORT = "D";
+    protected static final String DELETED_LONG = "deleted";
     private FedoraForUpdateTracker fedora;
     private Logger log = LoggerFactory.getLogger(UpdateTrackerBackend.class);
 
@@ -250,11 +256,11 @@ public class UpdateTrackerBackend {
         if (state == null) {
             query = session.getNamedQuery("All");
         } else {
-            if (state.equals("A") || state.equalsIgnoreCase("published")) {
+            if (state.equals(ACTIVE_SHORT) || state.equalsIgnoreCase(ACTIVE_LONG)) {
                 query = session.getNamedQuery("ActiveAndDeleted");
-            } else if (state.equals("I") || state.equalsIgnoreCase("inactive")) {
+            } else if (state.equals(INACTIVE_SHORT) || state.equalsIgnoreCase(INACTIVE_LONG)) {
                 query = session.getNamedQuery("InactiveOrDeleted");
-            } else if (state.equals("D") || state.equalsIgnoreCase("deleted")) {
+            } else if (state.equals(DELETED_SHORT) || state.equalsIgnoreCase(DELETED_LONG)) {
                 query = session.getNamedQuery("Deleted");
             } else {
                 query = session.getNamedQuery("All");
