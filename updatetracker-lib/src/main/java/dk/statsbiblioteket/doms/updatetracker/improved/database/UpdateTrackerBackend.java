@@ -245,13 +245,16 @@ public class UpdateTrackerBackend {
     }
 
     public List<Record> lookup(Date since, String viewAngle, int offset, int limit, String state, String collection,
-                                StatelessSession session) {
+                               StatelessSession session) {
         Query query;
         if (state == null) {
             query = session.getNamedQuery("All");
         } else {
-            try {
-                switch (State.fromName(state)){
+            final State fromName = State.fromName(state);
+            if (fromName == null){
+                query = session.getNamedQuery("All");
+            } else {
+                switch (fromName) {
                     case ACTIVE:
                         query = session.getNamedQuery("ActiveAndDeleted");
                         break;
@@ -265,8 +268,6 @@ public class UpdateTrackerBackend {
                         query = session.getNamedQuery("All");
                         break;
                 }
-            } catch (IllegalArgumentException e){ //If you specified something else
-                query = session.getNamedQuery("All");
             }
         }
 
