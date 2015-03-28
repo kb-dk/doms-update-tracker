@@ -100,11 +100,23 @@ public class FedoraForUpdateTracker {
             List<FedoraRelation> entryRelations = fedoraRest.getNamedRelations(contentmodel, ENTRY_RELATION, date.getTime());
 
             entryAngles = getObject(entryRelations);
+            entryAngles = scrubViewAngles(entryAngles);
 
             cmCache.setEntryViewAngles(contentmodel,entryAngles);
         }
         return entryAngles;
    }
+
+    private Set<String> scrubViewAngles(Set<String> entryAngles) {
+        Set<String> scrubbedEntryAngles = new HashSet<String>();
+        CollectionUtils.collect(entryAngles, new Transformer<String, String>() {
+            @Override
+            public String transform(String string) {
+                return string.replaceAll("^\\\"", "").replaceAll("\\\"$", "");
+            }
+        }, scrubbedEntryAngles);
+        return scrubbedEntryAngles;
+    }
 
     private Set<String> getObject(List<FedoraRelation> entryRelations) {
         Set<String> entryAngles;
