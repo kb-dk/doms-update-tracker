@@ -50,23 +50,29 @@ public class WorkLogPollTask extends TimerTask {
             DB stateDB = DBMaker.newFileDB(progressDBFile).closeOnJvmShutdown().make();
             try {
                 Atomic.Long latestKey = stateDB.getAtomicLong("worklog.latestKey");//Start transaction
+                Long latestKeyInTransaction = latestKey.get();
 
-                List<WorkLogUnit> events = getEvents(latestKey.get());
+                List<WorkLogUnit> events = getEvents(latestKeyInTransaction);
 
-                for (WorkLogUnit event : events) {
-                    try {
-                        handleEvent(event);
-                        latestKey.set(event.getKey());//update value
-                        stateDB.commit(); //commit transaction
-                    }catch(UpdateTrackerStorageException e){
-                        log.error("Failed to store events in update tracker. Failed on '" + event + "'", e);
-                        stateDB.rollback(); //undo the change to the latestKey
-                        break; //If we fail, break the loop, as we DO NOT WANT to miss an event
-                    }catch(FedoraFailedException e){
-                        log.error("Failed to communicate with fedora. Failed on '" + event + "'", e);
-                        stateDB.rollback(); //undo the change to the latestKey
-                        break; //If we fail, break the loop, as we DO NOT WANT to miss an event
+
+                try {
+                    for (WorkLogUnit event : events) {
+                        try {
+                            handleEvent(event);
+                        } catch (UpdateTrackerStorageException e) {
+                            log.error("Failed to store events in update tracker. Failed on '" + event + "'", e);
+                            break; //If we fail, break the loop, as we DO NOT WANT to miss an event
+                        } catch (FedoraFailedException e) {
+                            log.error("Failed to communicate with fedora. Failed on '" + event + "'", e);
+                            break; //If we fail, break the loop, as we DO NOT WANT to miss an event
+                        }
+                        //This only happens if the handleEvent does not fail
+                        latestKeyInTransaction = event.getKey();
                     }
+                } finally {
+                    //persist the latest key when we finished the loop, event if we failed
+                    latestKey.set(latestKeyInTransaction);
+                    stateDB.commit(); //commit transaction
                 }
                 if (!events.isEmpty()) {
                     log.info("Finished working on event list");
