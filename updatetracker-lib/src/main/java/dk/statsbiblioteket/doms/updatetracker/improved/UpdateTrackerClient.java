@@ -94,8 +94,6 @@ public class UpdateTrackerClient implements UpdateTrackerWebservice {
         RecordDescription thang = new RecordDescription();
         thang.setPid(thing.getEntryPid());
         thang.setCollectionPid(thing.getCollection());
-        //TODO
-
         final long active = real(thing.getActive()).getTime();
         final long deleted = real(thing.getDeleted()).getTime();
         final long inactive = real(thing.getInactive()).getTime();
