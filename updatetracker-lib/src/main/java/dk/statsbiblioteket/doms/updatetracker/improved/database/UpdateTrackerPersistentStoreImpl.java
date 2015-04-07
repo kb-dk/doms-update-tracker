@@ -79,8 +79,8 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             for (String collection : collections) {
                 State ingestState = fedora.getState(pid,timestamp);
                 backend.modifyState(pid, timestamp, collection, ingestState, session);
-                backend.reconnectObjects(pid, timestamp, session);
             }
+            backend.reconnectObjects(pid, timestamp, session, collections);
             backend.updateDates(pid, timestamp, session);
 
             transaction.commit();
@@ -181,11 +181,13 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                     if (fedora.isCurrentlyContentModel(pid, timestamp)) {
                         fedora.invalidateContentModel(pid);
                         for (String object : fedora.getObjectsOfThisContentModel(pid)) {
-                            backend.reconnectObjects(object, timestamp, session);
+                            Set<String> collections = fedora.getCollections(object, timestamp);
+                            backend.reconnectObjects(object, timestamp, session, collections);
                             backend.updateDates(object, timestamp, session);
                         }
                     } else if (dsid.equals("RELS-EXT")) {
-                        backend.reconnectObjects(pid, timestamp, session);
+                        Set<String> collections = fedora.getCollections(pid, timestamp);
+                        backend.reconnectObjects(pid, timestamp, session, collections);
                     }
                 }
             }

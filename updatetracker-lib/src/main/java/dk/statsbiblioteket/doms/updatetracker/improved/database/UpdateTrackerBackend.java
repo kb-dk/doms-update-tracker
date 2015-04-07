@@ -166,7 +166,7 @@ public class UpdateTrackerBackend {
     }
 
 
-    public void reconnectObjects(String pid, Date timestamp, Session session) throws
+    public void reconnectObjects(String pid, Date timestamp, Session session, Collection<String> collections) throws
                                                                  FedoraFailedException,
                                                                  UpdateTrackerStorageException {
         /*
@@ -187,7 +187,6 @@ public class UpdateTrackerBackend {
 
         //Create new Records
         final Collection<String> entryViewAngles = fedora.getEntryAngles(pid, timestamp);
-        final Collection<String> collections = fedora.getCollections(pid, timestamp);
         for (String entryViewAngle : entryViewAngles) {
             for (String collection : collections) {
                 Record record = new Record(pid, entryViewAngle, collection);
