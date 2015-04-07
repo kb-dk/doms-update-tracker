@@ -76,8 +76,8 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         log.debug("ObjectCreated({},{}) Starting",pid,timestamp);
         try {
             Set<String> collections = fedora.getCollections(pid, timestamp);
+            State ingestState = fedora.getState(pid, timestamp);
             for (String collection : collections) {
-                State ingestState = fedora.getState(pid,timestamp);
                 backend.modifyState(pid, timestamp, collection, ingestState, session);
             }
             backend.reconnectObjects(pid, timestamp, session, collections);
