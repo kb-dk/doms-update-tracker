@@ -225,10 +225,14 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     public void objectRelationsChanged(String pid, Date timestamp) throws
                                                               UpdateTrackerStorageException,
                                                               FedoraFailedException {
-        if (!pid.contains("/")) {
-            datastreamChanged(pid, timestamp, "RELS-EXT");
-        } else {
+        if (pid.contains("/")) {
             //This means that the pid is really a datastream ID, i.e. that the relationsship is in RELS-INT
+            final String[] split = pid.split("/");
+            final String realPid = split[0];
+            final String datastream = split[1];
+            datastreamChanged(realPid, timestamp, "RELS-INT");
+        } else {
+            datastreamChanged(pid, timestamp, "RELS-EXT");
         }
     }
 
