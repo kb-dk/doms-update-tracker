@@ -2,6 +2,7 @@ package dk.statsbiblioteket.doms.updatetracker.improved.worklog;
 
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 import com.mchange.v2.c3p0.DataSources;
+import dk.statsbiblioteket.doms.central.connectors.Connector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,7 +120,7 @@ public class WorkLogPollDAO implements Closeable {
                     ResultSet resultSet = statement.getResultSet();
                     while (resultSet.next()) {
                         Long key = resultSet.getLong("key");
-                        String pid = resultSet.getString("pid");
+                        String pid = Connector.toPid(resultSet.getString("pid"));
                         String method = resultSet.getString("method");
                         String param = resultSet.getString("param");
                         Timestamp timestamp = resultSet.getTimestamp("happened",tzUTC);

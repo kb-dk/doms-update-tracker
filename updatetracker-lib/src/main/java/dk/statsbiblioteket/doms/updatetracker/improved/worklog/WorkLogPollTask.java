@@ -98,7 +98,7 @@ public class WorkLogPollTask extends TimerTask {
     }
 
     private void handleEvent(WorkLogUnit event) throws UpdateTrackerStorageException, FedoraFailedException {
-            final String pid = Connector.toPid(event.getPid());
+            final String pid = event.getPid();
             final Date date = event.getDate();
             final String param = event.getParam();
             final String method = event.getMethod();
