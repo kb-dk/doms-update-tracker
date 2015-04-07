@@ -75,6 +75,31 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
         }
     }
 
+    public static String toUri(String pid) {
+        if (!pid.startsWith("info:fedora/")) {
+            return "info:fedora/" + pid;
+        } else {
+            return pid;
+        }
+    }
+
+    public static String toPid(String uri) {
+        uri = clean(uri);
+        if (uri.startsWith("info:fedora/")) {
+            return uri.substring("info:fedora/".length());
+        }
+        return uri;
+    }
+
+    public static String clean(String uri) {
+        if (uri.startsWith("<")) {
+            uri = uri.substring(1);
+        }
+        if (uri.endsWith(">")) {
+            uri = uri.substring(0, uri.length() - 1);
+        }
+        return uri;
+    }
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws
@@ -90,7 +115,7 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
         try {
             Context context = (Context) args[0];
             now = Server.getCurrentDate(context);
-            pid = args[1].toString();
+            pid = toPid(args[1].toString());
             param = null;
             if (args.length > 2 && args[2] != null) {
                 param = args[2].toString();
