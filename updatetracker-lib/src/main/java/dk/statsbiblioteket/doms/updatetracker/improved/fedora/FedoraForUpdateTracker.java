@@ -97,10 +97,13 @@ public class FedoraForUpdateTracker {
                                                            JAXBException {
         Set<String> entryAngles = cmCache.getCachedEntryAngles(contentmodel);
         if (entryAngles == null) {
-            List<FedoraRelation> entryRelations = fedoraRest.getNamedRelations(contentmodel, ENTRY_RELATION, date.getTime());
+            try {
+                List<FedoraRelation> entryRelations = fedoraRest.getNamedRelations(contentmodel, ENTRY_RELATION, date.getTime());
 
-            entryAngles = getObject(entryRelations);
-
+                entryAngles = getObject(entryRelations);
+            } catch (BackendInvalidResourceException e) {
+                entryAngles = new HashSet<String>();
+            }
             cmCache.setEntryViewAngles(contentmodel,entryAngles);
         }
         return entryAngles;

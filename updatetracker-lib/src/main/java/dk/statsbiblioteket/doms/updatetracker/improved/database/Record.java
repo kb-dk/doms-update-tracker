@@ -16,7 +16,6 @@ import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.persistence.Transient;
 import java.io.Serializable;
-import java.sql.Timestamp;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
@@ -76,20 +75,29 @@ import java.util.Set;
 public class Record implements Serializable {
 
     public enum State {
-        ACTIVE("A"), INACTIVE("I"),DELETED("D");
-        private final String name;
+        ACTIVE("A","Published"), INACTIVE("I","Inactive"),DELETED("D","Deleted");
+        private final String shortName;
+        private final String longName;
 
-        State(String name) {
-            this.name = name;
+        State(String shortName, String longName) {
+            this.shortName = shortName;
+            this.longName = longName;
         }
 
-        public String getName() {
-            return name;
+        public String getShortName() {
+            return shortName;
+        }
+
+        public String getLongName() {
+            return longName;
         }
 
         public static State fromName(String name){
             for (State state : values()) {
-                if (state.getName().equals(name)){
+                if (state.getShortName().equals(name)){
+                    return state;
+                }
+                if (state.getLongName().equalsIgnoreCase(name)){
                     return state;
                 }
             }
@@ -98,7 +106,7 @@ public class Record implements Serializable {
 
         @Override
         public String toString() {
-            return name;
+            return longName;
         }
     }
 

@@ -4,9 +4,8 @@ import dk.statsbiblioteket.doms.updatetracker.improved.database.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerStorageException;
 import dk.statsbiblioteket.doms.updatetracker.webservice.InvalidCredentialsException;
 import dk.statsbiblioteket.doms.updatetracker.webservice.MethodFailedException;
-import dk.statsbiblioteket.doms.updatetracker.webservice.PidDatePidPid;
+import dk.statsbiblioteket.doms.updatetracker.webservice.RecordDescription;
 import dk.statsbiblioteket.doms.updatetracker.webservice.UpdateTrackerWebservice;
-import dk.statsbiblioteket.sbutil.webservices.configuration.ConfigCollection;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -36,11 +35,11 @@ public class UpdateTrackerClient implements UpdateTrackerWebservice {
      * @param state         ...TODO doc
      *
      * @return returns java.util.List<dk.statsbiblioteket.doms.updatetracker
-     * .webservice.PidDatePidPid>
+     * .webservice.RecordDescription>
      * @throws dk.statsbiblioteket.doms.updatetracker.webservice.MethodFailedException
      * @throws dk.statsbiblioteket.doms.updatetracker.webservice.InvalidCredentialsException
      */
-    public List<PidDatePidPid> listObjectsChangedSince(String collectionPid, String viewAngle, long beginTime,
+    public List<RecordDescription> listObjectsChangedSince(String collectionPid, String viewAngle, long beginTime,
                                                        String state, Integer offset, Integer limit) throws
                                                                                                     InvalidCredentialsException,
                                                                                                     MethodFailedException {
@@ -83,30 +82,58 @@ public class UpdateTrackerClient implements UpdateTrackerWebservice {
     }
 
 
-    private List<PidDatePidPid> convert(List<Record> entries, String state) {
-        List<PidDatePidPid> list2 = new ArrayList<PidDatePidPid>(entries.size());
+    private List<RecordDescription> convert(List<Record> entries, String state) {
+        List<RecordDescription> list2 = new ArrayList<RecordDescription>(entries.size());
         for (Record record : entries) {
             list2.add(convert(record, state));
         }
         return list2;
     }
 
-    private PidDatePidPid convert(Record thing, String state) {
-        PidDatePidPid thang = new PidDatePidPid();
-
+    private RecordDescription convert(Record thing, String state) {
+        RecordDescription thang = new RecordDescription();
+        thang.setPid(thing.getEntryPid());
+        thang.setCollectionPid(thing.getCollection());
         final long active = real(thing.getActive()).getTime();
         final long deleted = real(thing.getDeleted()).getTime();
         final long inactive = real(thing.getInactive()).getTime();
-        if (state.equals("A")) {
-            thang.setLastChangedTime(active);
-        } else if (state.equals("I")) {
-            thang.setLastChangedTime(inactive);
-        } else if (state.equals("D")) {
-            thang.setLastChangedTime(deleted);
-        } else {
-            thang.setLastChangedTime(Math.max(active, Math.max(inactive, deleted)));
+        try {
+            switch (Record.State.valueOf(state)) {
+                case ACTIVE:
+                    if (active > deleted) {
+                        thang.setLastChangedTime(active);
+                        thang.setState("A");
+                    } else {
+                        thang.setLastChangedTime(deleted);
+                        thang.setState("D");
+                    }
+                    break;
+                case INACTIVE:
+                    if (inactive > deleted) {
+                        thang.setLastChangedTime(inactive);
+                        thang.setState("I");
+                    } else {
+                        thang.setLastChangedTime(deleted);
+                        thang.setState("D");
+                    }
+                    break;
+                case DELETED:
+                    thang.setLastChangedTime(deleted);
+                    thang.setState("D");
+                    break;
+            }
+        } catch (IllegalArgumentException e) { //If you specified something else
+            if (active >= inactive && active > deleted) {
+                thang.setLastChangedTime(active);
+                thang.setState("A");
+            } else if (inactive > active && inactive > deleted) {
+                thang.setLastChangedTime(inactive);
+                thang.setState("I");
+            } else if (deleted >= active && deleted >= inactive) {
+                thang.setLastChangedTime(deleted);
+                thang.setState("D");
+            }
         }
-        thang.setPid(thing.getEntryPid());
         return thang;
     }
 

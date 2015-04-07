@@ -245,19 +245,29 @@ public class UpdateTrackerBackend {
     }
 
     public List<Record> lookup(Date since, String viewAngle, int offset, int limit, String state, String collection,
-                                StatelessSession session) {
+                               StatelessSession session) {
         Query query;
         if (state == null) {
             query = session.getNamedQuery("All");
         } else {
-            if (state.equals("A") || state.equalsIgnoreCase("published")) {
-                query = session.getNamedQuery("ActiveAndDeleted");
-            } else if (state.equals("I") || state.equalsIgnoreCase("inactive")) {
-                query = session.getNamedQuery("InactiveOrDeleted");
-            } else if (state.equals("D") || state.equalsIgnoreCase("deleted")) {
-                query = session.getNamedQuery("Deleted");
-            } else {
+            final State fromName = State.fromName(state);
+            if (fromName == null){
                 query = session.getNamedQuery("All");
+            } else {
+                switch (fromName) {
+                    case ACTIVE:
+                        query = session.getNamedQuery("ActiveAndDeleted");
+                        break;
+                    case INACTIVE:
+                        query = session.getNamedQuery("InactiveOrDeleted");
+                        break;
+                    case DELETED:
+                        query = session.getNamedQuery("Deleted");
+                        break;
+                    default:
+                        query = session.getNamedQuery("All");
+                        break;
+                }
             }
         }
 
