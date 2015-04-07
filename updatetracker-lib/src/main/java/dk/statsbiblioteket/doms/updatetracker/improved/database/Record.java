@@ -106,7 +106,7 @@ public class Record implements Serializable {
 
         @Override
         public String toString() {
-            return shortName;
+            return longName;
         }
     }
 
