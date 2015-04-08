@@ -66,7 +66,7 @@ public class UpdateTrackingSystem implements Closeable {
 
     private void startWorkLogTimerTask(UpdateTrackingConfig updateTrackingConfig) {
         final boolean isDaemon = false;
-        timer = new Timer(isDaemon);
+        timer = new Timer("UpdateTracker-worklog-poller",isDaemon);
         //The timer thread is NOT a daemon, so it should prevent shutdown until the timer task is completed.
         //Tie it all together
         final int delay = updateTrackingConfig.getFedoraUpdatetrackerDelay();
