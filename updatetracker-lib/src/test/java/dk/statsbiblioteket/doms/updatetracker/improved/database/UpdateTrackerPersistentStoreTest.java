@@ -75,6 +75,66 @@ public class UpdateTrackerPersistentStoreTest {
         //setUp();
     }
 
+    @Test
+    public void testIdempotense() throws Exception {
+        init();
+        Date test1Create = new Date(0);
+        addEntry("doms:test1");
+        db.objectCreated("doms:test1", test1Create);
+
+        List<Record> list;
+
+        final Date test1Published = new Date();
+        db.objectStateChanged("doms:test1", test1Published, "A");
+
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        assertEquals(test1Published.getTime(), list.get(0).getActive().getTime());
+
+        //After publish, the object still exist as Inactive
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "I", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        //And with the published timestamp, even
+        assertEquals(test1Published.getTime(), list.get(0).getInactive().getTime());
+
+        final Date test1Deleted = new Date();
+        db.objectStateChanged("doms:test1", test1Deleted, "D");
+
+        //After delete, the object is no longer published
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", 1, list.size());
+        assertEquals(list.get(0).getState(), Record.State.DELETED);
+
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        assertEquals(test1Deleted.getTime(), list.get(0).getDeleted().getTime());
+
+        db.objectCreated("doms:test1", test1Create);
+
+        db.objectStateChanged("doms:test1", test1Published, "A");
+
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        assertEquals(test1Published.getTime(), list.get(0).getActive().getTime());
+
+        //After publish, the object still exist as Inactive
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "I", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        //And with the published timestamp, even
+        assertEquals(test1Published.getTime(), list.get(0).getInactive().getTime());
+
+        db.objectStateChanged("doms:test1", test1Deleted, "D");
+
+        //After delete, the object is no longer published
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", 1, list.size());
+        assertEquals(list.get(0).getState(), Record.State.DELETED);
+
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        assertEquals(test1Deleted.getTime(), list.get(0).getDeleted().getTime());
+    }
+
     private void addEntry(String pid, String... contained) throws FedoraFailedException {
         final String viewAngle = "SummaVisible";
         when(fedora.getEntryAngles(eq(pid), any(Date.class))).thenReturn(Arrays.asList(viewAngle));
