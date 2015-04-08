@@ -23,7 +23,6 @@ public class WorkLogPollTask extends TimerTask {
     private final WorkLogPollDAO workLogPollDAO;
     private final UpdateTrackerPersistentStore updateTrackerPersistentStore;
     private int limit;
-    private final File progressDBFile;
 
     /**
      * @param workLogPollDAO
@@ -31,12 +30,10 @@ public class WorkLogPollTask extends TimerTask {
      * @param limit                        the amount of work units to retrieve in each invocation
      */
     public WorkLogPollTask(WorkLogPollDAO workLogPollDAO, UpdateTrackerPersistentStore updateTrackerPersistentStore,
-                           int limit, File progressDBFile) {
+                           int limit) {
         this.workLogPollDAO = workLogPollDAO;
         this.updateTrackerPersistentStore = updateTrackerPersistentStore;
         this.limit = limit;
-
-        this.progressDBFile = progressDBFile;
     }
 
     @Override
