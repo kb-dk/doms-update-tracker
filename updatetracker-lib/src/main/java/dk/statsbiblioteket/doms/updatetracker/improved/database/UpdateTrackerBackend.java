@@ -28,6 +28,7 @@ import java.util.Set;
  * @see dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStoreImpl
  *
  */
+//TODO test if these operations are idempotent. Can we replay the same set of operations for the same result?
 public class UpdateTrackerBackend {
     private FedoraForUpdateTracker fedora;
     private Logger log = LoggerFactory.getLogger(UpdateTrackerBackend.class);
@@ -231,6 +232,7 @@ public class UpdateTrackerBackend {
 
     public void updateDates(String pid, Date timestamp, Session session) {
 
+        //TODO this query is expensive, figure out why
             final Query query
                     = session.createQuery("update Record e " +
                                           "set" +
