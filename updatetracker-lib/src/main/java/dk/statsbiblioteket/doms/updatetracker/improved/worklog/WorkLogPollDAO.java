@@ -39,7 +39,6 @@ public class WorkLogPollDAO implements Closeable {
     /** The pool with data sources for the database connections. */
     private final ComboPooledDataSource connectionPool;
 
-
     public WorkLogPollDAO(String driver, String jdbcUrl, String username, String password) {
         this.driver = driver;
         this.jdbcUrl = jdbcUrl;
@@ -49,6 +48,8 @@ public class WorkLogPollDAO implements Closeable {
         this.connectionPool = new ComboPooledDataSource();
 
         initialiseConnectionPool();
+
+        ensureLatestKey();
     }
 
     /**
@@ -138,5 +139,51 @@ public class WorkLogPollDAO implements Closeable {
         }
     }
 
+    private void ensureLatestKey() {
+        try {
+            getLatestKey();
+        } catch (IOException e) {
+            try {
+                Connection conn = getConnection();
+                try {
+                    conn.prepareStatement("CREATE TABLE latestKey (key BIGINT)").execute();
+                    conn.prepareStatement("INSERT INTO latestKey (key) VALUES (0)");
+                } finally {
+                    conn.close();
+                }
+                getLatestKey();
+            } catch (Exception e1) {
+                throw new IllegalStateException(e1);
+            }
+        }
+    }
 
+    public Long getLatestKey() throws IOException {
+        Connection conn = getConnection();
+        try {
+            try {
+                ResultSet resultSet = conn.prepareStatement("SELECT key FROM latestKey").executeQuery();
+                return resultSet.getLong(1);
+            } finally {
+                conn.close();
+            }
+        } catch (SQLException e) {
+            throw new IOException(e);
+        }
+    }
+
+    public void setLatestKey(Long latestKey) throws IOException {
+        Connection conn = getConnection();
+        try {
+            try {
+                PreparedStatement preparedStatement = conn.prepareStatement("UPDATE latestKey SET key=? WHERE true");
+                preparedStatement.setLong(1, latestKey);
+                preparedStatement.execute();
+            } finally {
+                conn.close();
+            }
+        } catch (SQLException e) {
+            throw new IOException(e);
+        }
+    }
 }

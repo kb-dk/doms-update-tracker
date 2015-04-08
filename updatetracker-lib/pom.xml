@@ -101,12 +101,6 @@
             <artifactId>postgresql</artifactId>
         </dependency>
 
-        <dependency> <!--For the worklog poller persistence-->
-            <groupId>org.mapdb</groupId>
-            <artifactId>mapdb</artifactId>
-            <version>1.0.7</version>
-        </dependency>
-
 
 
         <dependency>
