@@ -1,12 +1,8 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.worklog;
 
-import dk.statsbiblioteket.doms.central.connectors.Connector;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStore;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerStorageException;
-import org.mapdb.Atomic;
-import org.mapdb.DB;
-import org.mapdb.DBMaker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +23,6 @@ public class WorkLogPollTask extends TimerTask {
     private final WorkLogPollDAO workLogPollDAO;
     private final UpdateTrackerPersistentStore updateTrackerPersistentStore;
     private int limit;
-    private final File progressDBFile;
 
     /**
      * @param workLogPollDAO
@@ -35,44 +30,37 @@ public class WorkLogPollTask extends TimerTask {
      * @param limit                        the amount of work units to retrieve in each invocation
      */
     public WorkLogPollTask(WorkLogPollDAO workLogPollDAO, UpdateTrackerPersistentStore updateTrackerPersistentStore,
-                           int limit, File progressDBFile) {
+                           int limit) {
         this.workLogPollDAO = workLogPollDAO;
         this.updateTrackerPersistentStore = updateTrackerPersistentStore;
         this.limit = limit;
-
-        this.progressDBFile = progressDBFile;
     }
 
     @Override
     public void run() {
 
         try {
-            DB stateDB = DBMaker.newFileDB(progressDBFile).closeOnJvmShutdown().make();
-            try {
-                Atomic.Long latestKey = stateDB.getAtomicLong("worklog.latestKey");//Start transaction
+            Long latestKey = workLogPollDAO.getLatestKey();
 
-                List<WorkLogUnit> events = getEvents(latestKey.get());
+            List<WorkLogUnit> events = getEvents(latestKey);
 
-                for (WorkLogUnit event : events) {
-                    try {
-                        handleEvent(event);
-                        latestKey.set(event.getKey());//update value
-                        stateDB.commit(); //commit transaction
-                    }catch(UpdateTrackerStorageException e){
-                        log.error("Failed to store events in update tracker. Failed on '" + event + "'", e);
-                        stateDB.rollback(); //undo the change to the latestKey
-                        break; //If we fail, break the loop, as we DO NOT WANT to miss an event
-                    }catch(FedoraFailedException e){
-                        log.error("Failed to communicate with fedora. Failed on '" + event + "'", e);
-                        stateDB.rollback(); //undo the change to the latestKey
-                        break; //If we fail, break the loop, as we DO NOT WANT to miss an event
-                    }
+            for (WorkLogUnit event : events) {
+                try {
+                    handleEvent(event);
+                    workLogPollDAO.setLatestKey(event.getKey());
+                } catch(IOException e){
+                    log.error("Failed to update latestKey in database. Failed on '" + event + "'", e);
+                    break; //If we fail, break the loop, as we DO NOT WANT to miss an event
+                } catch(UpdateTrackerStorageException e){
+                    log.error("Failed to store events in update tracker. Failed on '" + event + "'", e);
+                    break; //If we fail, break the loop, as we DO NOT WANT to miss an event
+                } catch(FedoraFailedException e){
+                    log.error("Failed to communicate with fedora. Failed on '" + event + "'", e);
+                    break; //If we fail, break the loop, as we DO NOT WANT to miss an event
                 }
-                if (!events.isEmpty()) {
-                    log.info("Finished working on event list");
-                }
-            } finally {
-                stateDB.close();
+            }
+            if (!events.isEmpty()) {
+                log.info("Finished working on event list");
             }
         } catch (Exception e){
             //Fault barrier to avoid that this method bombs out

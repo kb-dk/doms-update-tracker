@@ -22,7 +22,7 @@ SET default_with_oids = false;
 CREATE TABLE updatetrackerlogs (
     key bigint NOT NULL,
     pid character varying(64) NOT NULL,
-    happened timestamp without time zone NOT NULL,
+    happened timestamp with time zone NOT NULL,
     method character varying(64) NOT NULL,
     param character varying(64)
 );
