@@ -48,6 +48,9 @@ public class WorkLogPollTask extends TimerTask {
                 try {
                     handleEvent(event);
                     workLogPollDAO.setLatestKey(event.getKey());
+                } catch(IOException e){
+                    log.error("Failed to update latestKey in database. Failed on '" + event + "'", e);
+                    break; //If we fail, break the loop, as we DO NOT WANT to miss an event
                 } catch(UpdateTrackerStorageException e){
                     log.error("Failed to store events in update tracker. Failed on '" + event + "'", e);
                     break; //If we fail, break the loop, as we DO NOT WANT to miss an event

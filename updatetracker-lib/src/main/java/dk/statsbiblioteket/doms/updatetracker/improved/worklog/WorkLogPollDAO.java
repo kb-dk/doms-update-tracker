@@ -147,7 +147,7 @@ public class WorkLogPollDAO implements Closeable {
                 Connection conn = getConnection();
                 try {
                     conn.prepareStatement("CREATE TABLE latestKey (key BIGINT)").execute();
-                    conn.prepareStatement("INSERT INTO latestKey (key) VALUES (0)");
+                    conn.prepareStatement("INSERT INTO latestKey (key) VALUES (0)").execute();
                 } finally {
                     conn.close();
                 }
@@ -159,8 +159,8 @@ public class WorkLogPollDAO implements Closeable {
     }
 
     public Long getLatestKey() throws IOException {
-        Connection conn = getConnection();
         try {
+            Connection conn = getConnection();
             try {
                 ResultSet resultSet = conn.prepareStatement("SELECT key FROM latestKey").executeQuery();
                 return resultSet.getLong(1);
@@ -173,8 +173,8 @@ public class WorkLogPollDAO implements Closeable {
     }
 
     public void setLatestKey(Long latestKey) throws IOException {
-        Connection conn = getConnection();
         try {
+            Connection conn = getConnection();
             try {
                 PreparedStatement preparedStatement = conn.prepareStatement("UPDATE latestKey SET key=? WHERE true");
                 preparedStatement.setLong(1, latestKey);
