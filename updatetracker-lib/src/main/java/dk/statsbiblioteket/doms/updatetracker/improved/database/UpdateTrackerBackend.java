@@ -278,7 +278,8 @@ public class UpdateTrackerBackend {
              .setMaxResults(limit);
         query.setTimestamp("since", since)
              .setString("collection", collection)
-             .setString("viewAngle", viewAngle);
+             .setString("viewAngle", viewAngle)
+             .setLong("limit",limit);
 
         return UpdateTrackerDAO.listRecords(query);
     }
