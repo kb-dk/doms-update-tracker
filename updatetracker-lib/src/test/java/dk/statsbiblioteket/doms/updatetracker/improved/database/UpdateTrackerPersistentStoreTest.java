@@ -76,9 +76,12 @@ public class UpdateTrackerPersistentStoreTest {
     }
 
     @Test
-    public void testIdempotense() throws Exception {
+    public void testIdempotency() throws Exception {
+
+        //This test tries to ingest and publish and delete an object. Then it does it again, with the same timestamps
+        //and the same asserts, to see if the system ends up in the same state
         init();
-        Date test1Create = new Date(0);
+        Date test1Create = new Date(1);
         addEntry("doms:test1");
         db.objectCreated("doms:test1", test1Create);
 
@@ -89,13 +92,13 @@ public class UpdateTrackerPersistentStoreTest {
 
         list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
         assertEquals("Wrong number of objects", list.size(), 1);
-        assertEquals(test1Published.getTime(), list.get(0).getActive().getTime());
+        assertEquals("Object not Active at the right timestamp",test1Published.getTime(), list.get(0).getActive().getTime());
 
         //After publish, the object still exist as Inactive
         list = db.lookup(test1Create, "SummaVisible", 0, 100, "I", "doms:Root_Collection");
         assertEquals("Wrong number of objects", list.size(), 1);
         //And with the published timestamp, even
-        assertEquals(test1Published.getTime(), list.get(0).getInactive().getTime());
+        assertEquals("Object not changed at published timestamp",test1Published.getTime(), list.get(0).getInactive().getTime());
 
         final Date test1Deleted = new Date();
         db.objectStateChanged("doms:test1", test1Deleted, "D");
@@ -103,36 +106,43 @@ public class UpdateTrackerPersistentStoreTest {
         //After delete, the object is no longer published
         list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
         assertEquals("Wrong number of objects", 1, list.size());
-        assertEquals(list.get(0).getState(), Record.State.DELETED);
+        assertEquals("Object not deleted",list.get(0).getState(), Record.State.DELETED);
 
         list = db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection");
         assertEquals("Wrong number of objects", list.size(), 1);
-        assertEquals(test1Deleted.getTime(), list.get(0).getDeleted().getTime());
+        assertEquals("Object not marked as deleted at the right time",test1Deleted.getTime(), list.get(0).getDeleted().getTime());
+
+        //This was the first pass, now do it again
 
         db.objectCreated("doms:test1", test1Create);
-
         db.objectStateChanged("doms:test1", test1Published, "A");
 
         list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
         assertEquals("Wrong number of objects", list.size(), 1);
-        assertEquals(test1Published.getTime(), list.get(0).getActive().getTime());
+        assertEquals("Object not Active at the right timestamp",
+                     test1Published.getTime(),
+                     list.get(0).getActive().getTime());
 
         //After publish, the object still exist as Inactive
         list = db.lookup(test1Create, "SummaVisible", 0, 100, "I", "doms:Root_Collection");
         assertEquals("Wrong number of objects", list.size(), 1);
         //And with the published timestamp, even
-        assertEquals(test1Published.getTime(), list.get(0).getInactive().getTime());
+        assertEquals("Object not changed at published timestamp",
+                     test1Published.getTime(),
+                     list.get(0).getInactive().getTime());
 
         db.objectStateChanged("doms:test1", test1Deleted, "D");
 
         //After delete, the object is no longer published
         list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
         assertEquals("Wrong number of objects", 1, list.size());
-        assertEquals(list.get(0).getState(), Record.State.DELETED);
+        assertEquals("Object not deleted", list.get(0).getState(), Record.State.DELETED);
 
         list = db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection");
         assertEquals("Wrong number of objects", list.size(), 1);
-        assertEquals(test1Deleted.getTime(), list.get(0).getDeleted().getTime());
+        assertEquals("Object not marked as deleted at the right time",
+                     test1Deleted.getTime(),
+                     list.get(0).getDeleted().getTime());
     }
 
     private void addEntry(String pid, String... contained) throws FedoraFailedException {
@@ -304,7 +314,7 @@ public class UpdateTrackerPersistentStoreTest {
     @Test
     public void testObjectPublished() throws Exception {
         init();
-        Date test1Create = new Date(0);
+        Date test1Create = new Date(1);
         addEntry("doms:test1");
         db.objectCreated("doms:test1", test1Create);
 
@@ -328,7 +338,7 @@ public class UpdateTrackerPersistentStoreTest {
     @Test
     public void testObjectPublishedAndUnpublished() throws Exception {
         init();
-        Date test1Create = new Date(0);
+        Date test1Create = new Date(1);
         addEntry("doms:test1");
         db.objectCreated("doms:test1", test1Create);
 
@@ -364,7 +374,7 @@ public class UpdateTrackerPersistentStoreTest {
     @Test
     public void testObjectPublishedAndDeleted() throws Exception {
         init();
-        Date test1Create = new Date(0);
+        Date test1Create = new Date(1);
         addEntry("doms:test1");
         db.objectCreated("doms:test1", test1Create);
 
@@ -401,7 +411,7 @@ public class UpdateTrackerPersistentStoreTest {
     @Test
     public void testObjectRelationsChangedBasic() throws Exception {
         init();
-        Date frozen = new Date(0);
+        Date frozen = new Date(1);
         addEntry("doms:test1");
         db.objectCreated("doms:test1", frozen);
         db.objectCreated("doms:test2", frozen);
@@ -440,7 +450,7 @@ public class UpdateTrackerPersistentStoreTest {
     @Test
     public void testObjectRelationsChangedDeep() throws Exception {
         init();
-        Date ingest1 = new Date(0);
+        Date ingest1 = new Date(1);
         Date ingest2 = new Date(10);
         Date ingest3 = new Date(20);
         db.objectCreated("doms:test1", ingest1);
@@ -473,7 +483,7 @@ public class UpdateTrackerPersistentStoreTest {
     @Test
     public void testObjectRelationsChangedPublished() throws Exception {
         init();
-        Date ingest1 = new Date(0);
+        Date ingest1 = new Date(1);
         Date ingest2 = new Date(10);
         Date ingest3 = new Date(20);
         db.objectCreated("doms:test1", ingest1);
@@ -526,7 +536,7 @@ public class UpdateTrackerPersistentStoreTest {
     @Test
     public void testObjectRelationsChangedDeepMultiple() throws Exception {
         init();
-        Date ingest1 = new Date(0);
+        Date ingest1 = new Date(1);
         Date ingest2 = new Date(10);
         Date ingest3 = new Date(20);
         db.objectCreated("doms:test1", ingest1);

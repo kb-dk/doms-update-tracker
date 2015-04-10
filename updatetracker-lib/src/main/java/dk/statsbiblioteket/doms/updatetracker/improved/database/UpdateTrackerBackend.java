@@ -232,6 +232,44 @@ public class UpdateTrackerBackend {
 
     public void updateDates(String pid, Date timestamp, Session session) {
 
+        /*
+        explain     update
+        PUBLIC.RECORDS
+    set
+        inactive='1970-01-01Z',
+        active=case
+            when active>=inactive then '1970-01-01Z'
+            else active
+        end
+    where
+        (
+            'uuid:xxx' in (
+                select
+                    objects1_.objects_OBJECTPID
+                from
+                    PUBLIC.MEMBERSHIPS objects1_
+                where
+                    PUBLIC.RECORDS.VIEWANGLE=objects1_.records_VIEWANGLE
+                    and PUBLIC.RECORDS.ENTRYPID=objects1_.records_ENTRYPID
+                    and PUBLIC.RECORDS.COLLECTION=objects1_.records_COLLECTION
+            )
+        )
+        and (
+            deleted is null
+            or inactive>=deleted
+        )
+;
+                                                                                      QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Update on records  (cost=0.00..166526.76 rows=19214 width=107)
+   ->  Seq Scan on records  (cost=0.00..166526.76 rows=19214 width=107)
+         Filter: (((deleted IS NULL) OR (inactive >= deleted)) AND (SubPlan 1))
+         SubPlan 1
+           ->  Index Only Scan using memberships_pkey on memberships objects1_  (cost=0.00..8.52 rows=1 width=41)
+                 Index Cond: ((records_viewangle = (records.viewangle)::text) AND (records_entrypid = (records.entrypid)::text) AND (records_collection = (records.collection)::text))
+(6 rows)
+
+         */
         //TODO this query is expensive, figure out why
             final Query query
                     = session.createQuery("update Record e " +
