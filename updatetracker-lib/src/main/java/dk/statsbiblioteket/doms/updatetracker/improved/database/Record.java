@@ -168,22 +168,22 @@ import java.util.Set;
                                       name = "updateDates",
                                       query =
                                         "UPDATE RECORDS as r " +
-                                        "SET INACTIVE=:timestamp, " +
-                                            "ACTIVE=( " +
+                                        "SET r.INACTIVE=:timestamp, " +
+                                            "r.ACTIVE=( " +
                                                 "CASE " +
-                                                    "WHEN ACTIVE>=r.INACTIVE " +
+                                                    "WHEN r.ACTIVE>=r.INACTIVE " +
                                                     "THEN :timestamp " +
-                                                    "ELSE ACTIVE " +
+                                                    "ELSE r.ACTIVE " +
                                                 "END " +
                                             ") " +
                                         "WHERE " +
-                                            "(ENTRYPID,VIEWANGLE,COLLECTION) in " +
+                                            "(r.ENTRYPID,r.VIEWANGLE,r.COLLECTION) in " +
                                                 "(" +
-                                                    "SELECT RECORDS_ENTRYPID,RECORDS_VIEWANGLE,RECORDS_COLLECTION " +
-                                                    "FROM MEMBERSHIPS " +
-                                                    "WHERE OBJECTS_OBJECTPID = :pid " +
+                                                    "SELECT m.RECORDS_ENTRYPID,m.RECORDS_VIEWANGLE,m.RECORDS_COLLECTION " +
+                                                    "FROM MEMBERSHIPS m " +
+                                                    "WHERE m.OBJECTS_OBJECTPID = :pid " +
                                                 ") " +
-                                            "AND (DELETED is null or r.INACTIVE >= r.DELETED);"
+                                            "AND (r.DELETED is null or r.INACTIVE >= r.DELETED);"
 
 
                             ),
