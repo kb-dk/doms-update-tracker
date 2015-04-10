@@ -17,5 +17,5 @@ sed -e '/<info:fedora\/[^/]*>/!d;s/^<info:fedora\///;s%>\t"%\t%;s%"^^<http://www
 
 # Ingest into updatetracker log database table. Assumes table already exists.
 date; echo "Ingesting all triples into database"
-cat updatetrackerdata | psql avisdoms -c "\copy \"updateTrackerLogs\" (pid, happened, method) from stdin"
+cat updatetrackerdata | psql domsFieldSearch -c "\copy \"updateTrackerLogs\" (pid, happened, method) from stdin"
 date; echo "All done."

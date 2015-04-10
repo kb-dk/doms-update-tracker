@@ -3,6 +3,8 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
+import dk.statsbiblioteket.util.Pair;
+import dk.statsbiblioteket.util.caching.TimeSensitiveCache;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.Predicate;
 import org.hibernate.Query;
@@ -15,6 +17,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 
@@ -33,10 +36,10 @@ public class UpdateTrackerBackend {
     private FedoraForUpdateTracker fedora;
     private Logger log = LoggerFactory.getLogger(UpdateTrackerBackend.class);
 
+    private final Map<Pair<Record,Date>,ViewBundle> viewBundleCache;
 
-    public UpdateTrackerBackend(FedoraForUpdateTracker fedora) {
-
-
+    public UpdateTrackerBackend(FedoraForUpdateTracker fedora, Long viewBundleCacheTime) {
+        viewBundleCache = new TimeSensitiveCache<Pair<Record,Date>, ViewBundle>(viewBundleCacheTime, true);
         this.fedora = fedora;
     }
 
@@ -151,7 +154,7 @@ public class UpdateTrackerBackend {
     }
 
     private void reconnectObjectsInRecord(Date timestamp, Session session, Record otherRecord) throws FedoraFailedException {
-        ViewBundle bundle = fedora.calcViewBundle(otherRecord.getEntryPid(), otherRecord.getViewAngle(), timestamp);
+        ViewBundle bundle = getViewBundle(timestamp, otherRecord);
         otherRecord.getObjects().clear();
         for (String viewObject : bundle.getContained()) {
             log.debug("Marking object {} as part of record {},{},{}", viewObject, otherRecord.getEntryPid(), otherRecord.getViewAngle(), otherRecord.getCollection());
@@ -164,6 +167,16 @@ public class UpdateTrackerBackend {
         }
         otherRecord.setInactive(timestamp);
         session.saveOrUpdate(otherRecord);
+    }
+
+    private ViewBundle getViewBundle(Date timestamp, Record otherRecord) throws FedoraFailedException {
+        final Pair<Record, Date> key = new Pair<Record, Date>(otherRecord, timestamp);
+        ViewBundle bundle = viewBundleCache.get(key);
+        if (bundle == null){
+            bundle = fedora.calcViewBundle(otherRecord.getEntryPid(), otherRecord.getViewAngle(), timestamp);
+            viewBundleCache.put(key,bundle);
+        }
+        return bundle;
     }
 
 
@@ -232,6 +245,44 @@ public class UpdateTrackerBackend {
 
     public void updateDates(String pid, Date timestamp, Session session) {
 
+        /*
+        explain     update
+        PUBLIC.RECORDS
+    set
+        inactive='1970-01-01Z',
+        active=case
+            when active>=inactive then '1970-01-01Z'
+            else active
+        end
+    where
+        (
+            'uuid:xxx' in (
+                select
+                    objects1_.objects_OBJECTPID
+                from
+                    PUBLIC.MEMBERSHIPS objects1_
+                where
+                    PUBLIC.RECORDS.VIEWANGLE=objects1_.records_VIEWANGLE
+                    and PUBLIC.RECORDS.ENTRYPID=objects1_.records_ENTRYPID
+                    and PUBLIC.RECORDS.COLLECTION=objects1_.records_COLLECTION
+            )
+        )
+        and (
+            deleted is null
+            or inactive>=deleted
+        )
+;
+                                                                                      QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Update on records  (cost=0.00..166526.76 rows=19214 width=107)
+   ->  Seq Scan on records  (cost=0.00..166526.76 rows=19214 width=107)
+         Filter: (((deleted IS NULL) OR (inactive >= deleted)) AND (SubPlan 1))
+         SubPlan 1
+           ->  Index Only Scan using memberships_pkey on memberships objects1_  (cost=0.00..8.52 rows=1 width=41)
+                 Index Cond: ((records_viewangle = (records.viewangle)::text) AND (records_entrypid = (records.entrypid)::text) AND (records_collection = (records.collection)::text))
+(6 rows)
+
+         */
         //TODO this query is expensive, figure out why
             final Query query
                     = session.createQuery("update Record e " +
