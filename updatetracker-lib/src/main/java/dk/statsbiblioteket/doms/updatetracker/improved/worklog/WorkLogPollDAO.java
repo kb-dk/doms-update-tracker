@@ -163,6 +163,7 @@ public class WorkLogPollDAO implements Closeable {
             Connection conn = getConnection();
             try {
                 ResultSet resultSet = conn.prepareStatement("SELECT key FROM latestKey").executeQuery();
+                resultSet.next();
                 return resultSet.getLong(1);
             } finally {
                 conn.close();
