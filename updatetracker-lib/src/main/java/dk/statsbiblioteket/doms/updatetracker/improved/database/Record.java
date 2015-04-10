@@ -11,6 +11,8 @@ import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.NamedNativeQueries;
 import javax.persistence.NamedNativeQuery;
+import javax.persistence.NamedQueries;
+import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -163,10 +165,32 @@ import java.util.Set;
                                                 "THEN r.ACTIVE " +
                                              "END, " +
                                             "r.ENTRYPID " +
-                                        "LIMIT :limit")
+                                        "LIMIT :limit"),
+                            @NamedNativeQuery(
+                                      name = "updateDates",
+                                      query =
+                                        "UPDATE RECORDS as r " +
+                                        "SET INACTIVE=:timestamp, " +
+                                            "ACTIVE=( " +
+                                                "CASE " +
+                                                    "WHEN ACTIVE>=r.INACTIVE " +
+                                                    "THEN :timestamp " +
+                                                    "ELSE ACTIVE " +
+                                                "END " +
+                                            ") " +
+                                        "WHERE " +
+                                            "(ENTRYPID,VIEWANGLE,COLLECTION) in " +
+                                                "(" +
+                                                    "SELECT RECORDS_ENTRYPID,RECORDS_VIEWANGLE,RECORDS_COLLECTION " +
+                                                    "FROM MEMBERSHIPS " +
+                                                    "WHERE OBJECTS_OBJECTPID = :pid " +
+                                                ") " +
+                                            "AND (DELETED is null or r.INACTIVE >= r.DELETED);"
 
 
+                            ),
 })
+
 
 /**
  * This is the RECORDS table in the persistent storage. The RECORDS table lists the records that can be found in DOMS.
