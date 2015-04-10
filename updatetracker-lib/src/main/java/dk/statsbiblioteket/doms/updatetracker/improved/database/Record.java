@@ -11,8 +11,6 @@ import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.NamedNativeQueries;
 import javax.persistence.NamedNativeQuery;
-import javax.persistence.NamedQueries;
-import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -196,8 +194,10 @@ import java.util.Set;
  * This is the RECORDS table in the persistent storage. The RECORDS table lists the records that can be found in DOMS.
  */
 @Entity
-@Table(name = "RECORDS", indexes = {@Index(name = "INACTIVE_IDX",columnList = "inactive"),
-                                    @Index(name = "ENTRYPID_IDX", columnList = "ENTRYPID")})
+@Table(name = "RECORDS", indexes = {@Index(name = "INACTIVE_IDX",columnList = "VIEWANGLE, COLLECTION, INACTIVE "),
+                                    @Index(name = "ACTIVE_IDX", columnList = "VIEWANGLE, COLLECTION, ACTIVE"),
+                                    @Index(name = "DELETED_IDX", columnList = "VIEWANGLE, COLLECTION, DELETED"),
+                                    @Index(name = "ID_IDX", columnList = "ENTRYPID")})
 public class Record implements Serializable {
 
     public enum State {
@@ -238,28 +238,28 @@ public class Record implements Serializable {
 
     /** The pid of the object */
     @Id
-    @Column(name = "ENTRYPID",length = 64)
+    @Column(name = "ENTRYPID",length = 64, nullable = false)
     private String entryPid;
 
     /** The viewangle the object is an entry for */
     @Id
-    @Column(name = "VIEWANGLE",length = 64)
+    @Column(name = "VIEWANGLE",length = 64, nullable = false)
     private String viewAngle;
 
     @Id
-    @Column(name = "COLLECTION",length = 64)
+    @Column(name = "COLLECTION",length = 64, nullable = false)
     private String collection;
 
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "active",columnDefinition = "timestamp with time zone")
+    @Column(name = "active",columnDefinition = "timestamp with time zone", nullable = true)
     private Date active = null;
 
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(name="inactive",columnDefinition = "timestamp with time zone")
+    @Column(name="inactive",columnDefinition = "timestamp with time zone", nullable = true)
     private Date inactive = null;
 
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(name="deleted",columnDefinition = "timestamp with time zone")
+    @Column(name="deleted",columnDefinition = "timestamp with time zone", nullable = true)
     private Date deleted = null;
 
     @ManyToMany
