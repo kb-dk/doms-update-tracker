@@ -194,10 +194,10 @@ import java.util.Set;
  * This is the RECORDS table in the persistent storage. The RECORDS table lists the records that can be found in DOMS.
  */
 @Entity
-@Table(name = "RECORDS", indexes = {@Index(name = "INACTIVE_IDX",columnList = "VIEWANGLE, COLLECTION, INACTIVE "),
-                                    @Index(name = "ACTIVE_IDX", columnList = "VIEWANGLE, COLLECTION, ACTIVE"),
-                                    @Index(name = "DELETED_IDX", columnList = "VIEWANGLE, COLLECTION, DELETED"),
-                                    @Index(name = "ID_IDX", columnList = "ENTRYPID")})
+@Table(name = "RECORDS", indexes = {@Index(name = "HIB_INACTIVE_IDX",columnList = "INACTIVE, VIEWANGLE, COLLECTION"),
+                                    @Index(name = "HIB_ACTIVE_IDX", columnList = "ACTIVE, VIEWANGLE, COLLECTION"),
+                                    @Index(name = "HIB_DELETED_IDX", columnList = "DELETED, VIEWANGLE, COLLECTION"),
+                                    @Index(name = "HIB_ID_IDX", columnList = "ENTRYPID")})
 public class Record implements Serializable {
 
     public enum State {
