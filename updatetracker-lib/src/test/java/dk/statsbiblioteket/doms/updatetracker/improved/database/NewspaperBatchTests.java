@@ -46,7 +46,7 @@ public class NewspaperBatchTests {
 
     @Before
     public void setUp() throws Exception {
-        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock);
+        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L);
         db = new UpdateTrackerPersistentStoreImpl(configFile,fcmock, updateTrackerBackend);
     }
 

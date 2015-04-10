@@ -38,8 +38,8 @@ public class UpdateTrackerBackend {
 
     private final Map<Pair<Record,Date>,ViewBundle> viewBundleCache;
 
-    public UpdateTrackerBackend(FedoraForUpdateTracker fedora) {
-        viewBundleCache = new TimeSensitiveCache<Pair<Record,Date>, ViewBundle>(10000, true);
+    public UpdateTrackerBackend(FedoraForUpdateTracker fedora, Long viewBundleCacheTime) {
+        viewBundleCache = new TimeSensitiveCache<Pair<Record,Date>, ViewBundle>(viewBundleCacheTime, true);
         this.fedora = fedora;
     }
 

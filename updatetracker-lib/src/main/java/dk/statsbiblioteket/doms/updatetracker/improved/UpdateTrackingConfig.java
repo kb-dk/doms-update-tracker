@@ -59,6 +59,11 @@ public class UpdateTrackingConfig {
      */
     protected static final String FEDORA_UPDATETRACKER_HIBERNATE_CONFIG_FILE
             = "fedora.updatetracker.hibernateConfigFile";
+    /**
+     * The time a view bundle should remain cached. This is solely a memory issue, as the cache keys involve the view bundle timestamp
+     */
+    private static final java.lang.String FEDORA_UPDATETRACKER_VIEWBUNDLE_CACHETIME
+            = "fedora.updatetracker.viewbundleCacheTime";
     private final String fedoraWebUrl;
     private final String fedoraWebUsername;
     private final String fedoraWebPassword;
@@ -73,6 +78,7 @@ public class UpdateTrackingConfig {
     private final int fedoraUpdatetrackerLimit;
     private final File updatetrackerHibernateConfig;
     private final String fedoraUpdatetrackerProgressFile;
+    private final Long viewBundleCacheTime;
 
 
     /**
@@ -107,6 +113,7 @@ public class UpdateTrackingConfig {
         this.fedoraUpdatetrackerLimit = Integer.parseInt(properties.getProperty(FEDORA_UPDATETRACKER_LIMIT,"1000"));
         this.fedoraUpdatetrackerProgressFile = properties.getProperty(FEDORA_UPDATETRACKER_PROGRESS_FILE);
         this.updatetrackerHibernateConfig = new File(properties.getProperty(FEDORA_UPDATETRACKER_HIBERNATE_CONFIG_FILE));
+        this.viewBundleCacheTime = Long.parseLong(properties.getProperty(FEDORA_UPDATETRACKER_VIEWBUNDLE_CACHETIME,"10000"));
     }
 
 
@@ -156,5 +163,9 @@ public class UpdateTrackingConfig {
 
     public String getFedoraUpdatetrackerProgressFile() {
         return fedoraUpdatetrackerProgressFile;
+    }
+
+    public Long getViewBundleCacheTime() {
+        return viewBundleCacheTime;
     }
 }

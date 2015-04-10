@@ -46,7 +46,7 @@ public class UpdateTrackerPersistentStoreTest {
         when(fedora.getCollections(anyString(), any(Date.class))).thenReturn(asSet(collection));
         //No entry objects or view stuff until initialised
         when(fedora.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptyList());
-        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fedora);
+        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fedora,10000L);
         db = new UpdateTrackerPersistentStoreImpl(configFile, fedora, updateTrackerBackend);
     }
 
