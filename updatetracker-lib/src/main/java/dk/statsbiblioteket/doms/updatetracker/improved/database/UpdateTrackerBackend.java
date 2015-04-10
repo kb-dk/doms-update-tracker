@@ -325,8 +325,7 @@ public class UpdateTrackerBackend {
 
 
         query.setReadOnly(true);
-        query.setFirstResult(offset)
-             .setMaxResults(limit);
+        query.setFirstResult(offset);
         query.setTimestamp("since", since)
              .setString("collection", collection)
              .setString("viewAngle", viewAngle)
