@@ -34,6 +34,7 @@ import java.util.Set;
                                                 "WHERE DELETED >= :since " +
                                                     "AND VIEWANGLE = :viewAngle " +
                                                     "AND COLLECTION = :collection " +
+                                                "ORDER BY DELETED " +
                                                 "LIMIT :limit " +
                                             ") UNION ( " +
                                                 "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
@@ -41,6 +42,7 @@ import java.util.Set;
                                                 "WHERE ACTIVE >= :since " +
                                                     "AND VIEWANGLE = :viewAngle " +
                                                     "AND COLLECTION = :collection " +
+                                                "ORDER BY ACTIVE " +
                                                 "LIMIT :limit " +
                                             ") " +
                                         ") AS r " +
@@ -54,7 +56,7 @@ import java.util.Set;
                                                 "THEN r.ACTIVE " +
                                              "END, " +
                                             "r.ENTRYPID " +
-                                        "LIMIT :limit"),
+                                        "LIMIT :limit "),
                             @NamedNativeQuery(
                                       resultClass = Record.class,
                                       name = "InactiveOrDeleted",
@@ -67,6 +69,7 @@ import java.util.Set;
                                                 "WHERE DELETED >= :since " +
                                                     "AND VIEWANGLE = :viewAngle " +
                                                     "AND COLLECTION = :collection " +
+                                                "ORDER BY DELETED " +
                                                 "LIMIT :limit " +
                                             ") UNION (" +
                                                 "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
@@ -74,7 +77,8 @@ import java.util.Set;
                                                 "WHERE INACTIVE >= :since " +
                                                     "AND VIEWANGLE = :viewAngle " +
                                                     "AND COLLECTION = :collection " +
-                                                "LIMIT :limit" +
+                                                "ORDER BY INACTIVE " +
+                                                "LIMIT :limit " +
                                             ") " +
                                         ") AS r " +
                                         "ORDER BY " +
@@ -87,7 +91,7 @@ import java.util.Set;
                                                 "THEN r.INACTIVE " +
                                              "END, " +
                                             "r.ENTRYPID " +
-                                        "LIMIT :limit"),
+                                        "LIMIT :limit "),
                             @NamedNativeQuery(
                                       resultClass = Record.class,
                                       name = "Deleted",
@@ -100,6 +104,7 @@ import java.util.Set;
                                                 "WHERE DELETED >= :since " +
                                                     "AND VIEWANGLE = :viewAngle " +
                                                     "AND COLLECTION = :collection " +
+                                                "ORDER BY DELETED " +
                                                 "LIMIT :limit " +
                                             ") " +
                                         ") AS r " +
@@ -109,7 +114,7 @@ import java.util.Set;
                                                 "THEN r.DELETED " +
                                              "END, " +
                                             "r.ENTRYPID " +
-                                        "LIMIT :limit"),
+                                        "LIMIT :limit "),
                             @NamedNativeQuery(
                                       resultClass = Record.class,
                                       name = "All",
@@ -122,6 +127,7 @@ import java.util.Set;
                                                 "WHERE DELETED >= :since " +
                                                     "AND VIEWANGLE = :viewAngle " +
                                                     "AND COLLECTION = :collection " +
+                                                "ORDER BY DELETED " +
                                                 "LIMIT :limit " +
                                             ") UNION ( " +
                                                 "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
@@ -129,6 +135,7 @@ import java.util.Set;
                                                 "WHERE ACTIVE >= :since " +
                                                     "AND VIEWANGLE = :viewAngle " +
                                                     "AND COLLECTION = :collection " +
+                                                "ORDER BY ACTIVE " +
                                                 "LIMIT :limit " +
                                             ") UNION (" +
                                                 "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
@@ -136,7 +143,8 @@ import java.util.Set;
                                                 "WHERE INACTIVE >= :since " +
                                                     "AND VIEWANGLE = :viewAngle " +
                                                     "AND COLLECTION = :collection " +
-                                                "LIMIT :limit" +
+                                                "ORDER BY INACTIVE " +
+                                                "LIMIT :limit " +
                                             ") " +
                                         ") AS r " +
                                         "ORDER BY " +
