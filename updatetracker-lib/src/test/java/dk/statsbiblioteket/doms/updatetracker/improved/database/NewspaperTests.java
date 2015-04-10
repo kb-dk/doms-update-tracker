@@ -41,7 +41,7 @@ public class NewspaperTests {
                                     .toURI());
 
         fcmock = mock(FedoraForUpdateTracker.class);
-        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock);
+        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L);
         db = new UpdateTrackerPersistentStoreImpl(configFile, fcmock, updateTrackerBackend);
         tearDown();
         db = new UpdateTrackerPersistentStoreImpl(configFile, fcmock, updateTrackerBackend);

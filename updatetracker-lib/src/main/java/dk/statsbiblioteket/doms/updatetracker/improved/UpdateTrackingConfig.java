@@ -51,10 +51,19 @@ public class UpdateTrackingConfig {
      */
     protected static final String FEDORA_UPDATETRACKER_LIMIT = "fedora.updatetracker.limit";
     /**
+     * Address of the file to store progress information, i.e. the worklog latest key
+     */
+    protected static final String FEDORA_UPDATETRACKER_PROGRESS_FILE = "fedora.updatetracker.progressFile";
+    /**
      * The hibernate config file for the update tracker database
      */
     protected static final String FEDORA_UPDATETRACKER_HIBERNATE_CONFIG_FILE
             = "fedora.updatetracker.hibernateConfigFile";
+    /**
+     * The time a view bundle should remain cached. This is solely a memory issue, as the cache keys involve the view bundle timestamp
+     */
+    private static final java.lang.String FEDORA_UPDATETRACKER_VIEWBUNDLE_CACHETIME
+            = "fedora.updatetracker.viewbundleCacheTime";
     private final String fedoraWebUrl;
     private final String fedoraWebUsername;
     private final String fedoraWebPassword;
@@ -68,6 +77,7 @@ public class UpdateTrackingConfig {
     private final int fedoraUpdatetrackerPeriod;
     private final int fedoraUpdatetrackerLimit;
     private final File updatetrackerHibernateConfig;
+    private final long viewBundleCacheTime;
 
 
     /**
@@ -96,10 +106,11 @@ public class UpdateTrackingConfig {
         this.fedoraDatabaseURL = properties.getProperty(FEDORA_WORKLOG_DATABASE_URL);
         this.fedoraDatabaseUsername = properties.getProperty(FEDORA_WORKLOG_DATABASE_USERNAME);
         this.fedoraDatabasePassword = properties.getProperty(FEDORA_WORKLOG_DATABASE_PASSWORD);
-        this.fedoraUpdatetrackerDelay = Integer.parseInt(properties.getProperty(FEDORA_UPDATETRACKER_DELAY,"1000"));
+        this.fedoraUpdatetrackerDelay = Integer.parseInt(properties.getProperty(FEDORA_UPDATETRACKER_DELAY, "1000"));
         this.fedoraUpdatetrackerPeriod = Integer.parseInt(properties.getProperty(FEDORA_UPDATETRACKER_PERIOD,"1000"));
         this.fedoraUpdatetrackerLimit = Integer.parseInt(properties.getProperty(FEDORA_UPDATETRACKER_LIMIT,"1000"));
         this.updatetrackerHibernateConfig = new File(properties.getProperty(FEDORA_UPDATETRACKER_HIBERNATE_CONFIG_FILE));
+        this.viewBundleCacheTime = Long.parseLong(properties.getProperty(FEDORA_UPDATETRACKER_VIEWBUNDLE_CACHETIME,"10000"));
     }
 
 
@@ -145,5 +156,9 @@ public class UpdateTrackingConfig {
 
     public File getUpdatetrackerHibernateConfig() {
         return updatetrackerHibernateConfig;
+    }
+
+    public Long getViewBundleCacheTime() {
+        return viewBundleCacheTime;
     }
 }
