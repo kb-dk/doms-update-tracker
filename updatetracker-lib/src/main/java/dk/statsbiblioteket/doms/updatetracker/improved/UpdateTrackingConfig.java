@@ -64,6 +64,11 @@ public class UpdateTrackingConfig {
      */
     private static final java.lang.String FEDORA_UPDATETRACKER_VIEWBUNDLE_CACHETIME
             = "fedora.updatetracker.viewbundleCacheTime";
+    /**
+     * The hibernate mappings file for the update tracker database. It is this file that defines the indexes we use
+     */
+    private static final java.lang.String FEDORA_UPDATETRACKER_HIBERNATE_MAPPINGS_FILE
+            = "fedora.updatetracker.hibernateConfigFile";
     private final String fedoraWebUrl;
     private final String fedoraWebUsername;
     private final String fedoraWebPassword;
@@ -78,6 +83,7 @@ public class UpdateTrackingConfig {
     private final int fedoraUpdatetrackerLimit;
     private final File updatetrackerHibernateConfig;
     private final long viewBundleCacheTime;
+    private File updatetrackerHibernateMappings;
 
 
     /**
@@ -110,6 +116,8 @@ public class UpdateTrackingConfig {
         this.fedoraUpdatetrackerPeriod = Integer.parseInt(properties.getProperty(FEDORA_UPDATETRACKER_PERIOD,"1000"));
         this.fedoraUpdatetrackerLimit = Integer.parseInt(properties.getProperty(FEDORA_UPDATETRACKER_LIMIT,"1000"));
         this.updatetrackerHibernateConfig = new File(properties.getProperty(FEDORA_UPDATETRACKER_HIBERNATE_CONFIG_FILE));
+        this.updatetrackerHibernateMappings = new File(properties
+                                                             .getProperty(FEDORA_UPDATETRACKER_HIBERNATE_MAPPINGS_FILE));
         this.viewBundleCacheTime = Long.parseLong(properties.getProperty(FEDORA_UPDATETRACKER_VIEWBUNDLE_CACHETIME,"10000"));
     }
 
@@ -160,5 +168,9 @@ public class UpdateTrackingConfig {
 
     public Long getViewBundleCacheTime() {
         return viewBundleCacheTime;
+    }
+
+    public File getUpdatetrackerHibernateMappings() {
+        return updatetrackerHibernateMappings;
     }
 }

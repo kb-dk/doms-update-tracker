@@ -30,21 +30,22 @@ public class NewspaperTests {
 
     Date beginning = new Date(1);
     protected static final String COLLECTION = "doms:Root_Collection";
-    private File configFile;
 
 
     @Before
     public void setUp() throws Exception {
-        configFile = new File(Thread.currentThread()
-                                    .getContextClassLoader()
-                                    .getResource("hibernate.cfg.xml")
-                                    .toURI());
+        File configFile = new File(Thread.currentThread()
+                                         .getContextClassLoader()
+                                         .getResource("hibernate.cfg.xml")
+                                         .toURI());
+        File mappings = new File(Thread.currentThread().getContextClassLoader().getResource("updateTrapperMappings.xml")
+                                       .toURI());
 
         fcmock = mock(FedoraForUpdateTracker.class);
         final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L);
-        db = new UpdateTrackerPersistentStoreImpl(configFile, fcmock, updateTrackerBackend);
+        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings,fcmock, updateTrackerBackend);
         tearDown();
-        db = new UpdateTrackerPersistentStoreImpl(configFile, fcmock, updateTrackerBackend);
+        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings, fcmock, updateTrackerBackend);
 
         //Collections for everybody
         when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(asSet(COLLECTION));

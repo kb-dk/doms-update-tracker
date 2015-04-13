@@ -6,7 +6,6 @@ import org.hibernate.annotations.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
-import javax.persistence.Index;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.NamedNativeQueries;
@@ -20,7 +19,6 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
-//TODO talk to KTC about figuring out which indexes would help these queries
 @NamedNativeQueries({
                             @NamedNativeQuery(
                                       resultClass = Record.class,
@@ -194,10 +192,7 @@ import java.util.Set;
  * This is the RECORDS table in the persistent storage. The RECORDS table lists the records that can be found in DOMS.
  */
 @Entity
-@Table(name = "RECORDS", indexes = {@Index(name = "HIB_INACTIVE_IDX",columnList = "INACTIVE, VIEWANGLE, COLLECTION"),
-                                    @Index(name = "HIB_ACTIVE_IDX", columnList = "ACTIVE, VIEWANGLE, COLLECTION"),
-                                    @Index(name = "HIB_DELETED_IDX", columnList = "DELETED, VIEWANGLE, COLLECTION"),
-                                    @Index(name = "HIB_ID_IDX", columnList = "ENTRYPID")})
+@Table(name = "RECORDS")
 public class Record implements Serializable {
 
     public enum State {

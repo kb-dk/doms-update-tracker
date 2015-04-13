@@ -43,15 +43,17 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     private UpdateTrackerBackend backend;
 
 
-    public UpdateTrackerPersistentStoreImpl(File configFile, FedoraForUpdateTracker fedora,
+    public UpdateTrackerPersistentStoreImpl(File configFile, File hibernateMappings, FedoraForUpdateTracker fedora,
                                             UpdateTrackerBackend backend) {
         this.fedora = fedora;
         this.backend = backend;
         // A SessionFactory is set up once for an application
-        sessionFactory = new Configuration().addAnnotatedClass(DomsObject.class)
-                                            .addAnnotatedClass(Record.class)
-                                            .configure(configFile)
-                                            .buildSessionFactory();
+        final Configuration configuration = new Configuration()
+                                                .configure(configFile);
+        if (hibernateMappings != null) {
+            configuration.addFile(hibernateMappings);
+        }
+        sessionFactory = configuration.buildSessionFactory();
 
     }
 
