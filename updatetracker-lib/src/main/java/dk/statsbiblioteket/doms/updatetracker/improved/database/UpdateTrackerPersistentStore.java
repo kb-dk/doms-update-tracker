@@ -17,7 +17,8 @@ public interface UpdateTrackerPersistentStore extends Closeable {
      *
      *  @param pid
      * @param date
-     * @param key the key from the work log table, that defined this operation.
+     * @param key the key from the work log table, that defined this operation. This key will be persisted in the
+     *            database as the latest work log key handled.
      */
     void objectCreated(String pid, Date date, long key) throws UpdateTrackerStorageException, FedoraFailedException;
 
@@ -26,7 +27,8 @@ public interface UpdateTrackerPersistentStore extends Closeable {
      *
      *  @param pid  the pid of the object
      * @param date the date of the change
-     * @param key the key from the work log table, that defined this operation.
+     * @param key the key from the work log table, that defined this operation. This key will be persisted in the
+     *            database as the latest work log key handled.
      */
     void objectDeleted(String pid, Date date, long key) throws UpdateTrackerStorageException, FedoraFailedException;
 
@@ -37,7 +39,8 @@ public interface UpdateTrackerPersistentStore extends Closeable {
      *  @param pid
      * @param date
      * @param dsid
-     * @param key the key from the work log table, that defined this operation.
+     * @param key the key from the work log table, that defined this operation. This key will be persisted in the
+     *            database as the latest work log key handled.
      */
     void datastreamChanged(String pid, Date date, String dsid, long key) throws
                                                                UpdateTrackerStorageException,
@@ -49,7 +52,8 @@ public interface UpdateTrackerPersistentStore extends Closeable {
      *
      *  @param pid
      * @param date
-     * @param key the key from the work log table, that defined this operation.
+     * @param key the key from the work log table, that defined this operation. This key will be persisted in the
+     *            database as the latest work log key handled.
      */
     void objectRelationsChanged(String pid, Date date, long key) throws UpdateTrackerStorageException, FedoraFailedException;
 
@@ -58,7 +62,8 @@ public interface UpdateTrackerPersistentStore extends Closeable {
      * @param pid
      * @param date
      * @param newstate
-     * @param key the key from the work log table, that defined this operation.
+     * @param key the key from the work log table, that defined this operation. This key will be persisted in the
+     *            database as the latest work log key handled.
      * @throws UpdateTrackerStorageException
      * @throws FedoraFailedException
      */
