@@ -5,6 +5,7 @@ import org.hibernate.annotations.CascadeType;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
@@ -15,6 +16,7 @@ import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.persistence.Transient;
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
@@ -265,6 +267,24 @@ public class Record implements Serializable {
     public Record() {
     }
 
+    public void addObject(DomsObject object) {
+        objects.add(object);
+        object.getRecords_().add(this);
+    }
+
+    public void clearObjects() {
+        for (DomsObject object : objects) {
+            object.getRecords_().remove(this);
+        }
+        objects.clear();
+    }
+
+
+    public Set<DomsObject> getObjects() {
+        return Collections.unmodifiableSet(objects);
+    }
+
+
     public Record(String entryPid, String viewAngle, String collection) {
         this.entryPid = entryPid;
         this.viewAngle = viewAngle;
@@ -423,11 +443,4 @@ public class Record implements Serializable {
         this.deleted = deleted;
     }
 
-    public Set<DomsObject> getObjects() {
-        return objects;
-    }
-
-    public void setObjects(Set<DomsObject> objects) {
-        this.objects = objects;
-    }
 }

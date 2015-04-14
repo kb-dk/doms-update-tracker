@@ -1,10 +1,14 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.NaturalId;
+import org.hibernate.annotations.Cascade;
 
-import javax.persistence.*;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.ManyToMany;
+import javax.persistence.Table;
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -50,11 +54,11 @@ public class DomsObject implements Serializable {
     }
 
     public Set<Record> getRecords() {
-        return records;
+        return Collections.unmodifiableSet(new HashSet<Record>(records));
     }
 
-    public void setRecords(Set<Record> records) {
-        this.records = records;
+    protected Set<Record> getRecords_() {
+        return records;
     }
 
     @Override
