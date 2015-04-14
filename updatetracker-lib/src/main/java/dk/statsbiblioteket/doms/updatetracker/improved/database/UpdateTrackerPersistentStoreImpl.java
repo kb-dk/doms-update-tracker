@@ -73,7 +73,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      */
     @Override
     public void objectCreated(String pid, Date timestamp) throws UpdateTrackerStorageException, FedoraFailedException {
-        Session session = sessionFactory.getCurrentSession();
+        Session session = getSession();
         Transaction transaction = session.beginTransaction();
         log.debug("ObjectCreated({},{}) Starting",pid,timestamp);
         try {
@@ -97,6 +97,12 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                                                     "' at date='" + timestamp.getTime() + "'", e);
         }
 
+    }
+
+    private Session getSession() {
+        Session session = sessionFactory.getCurrentSession();
+        //session.setFlushMode(FlushMode.ALWAYS);
+        return session;
     }
 
     /**
@@ -125,7 +131,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      */
     @Override
     public void objectDeleted(String pid, Date timestamp) throws UpdateTrackerStorageException, FedoraFailedException {
-        Session session = sessionFactory.getCurrentSession();
+        Session session = getSession();
         Transaction transaction = session.beginTransaction();
         log.debug("ObjectDeleted({},{}) Starting", pid, timestamp);
         try {
@@ -174,7 +180,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     public void datastreamChanged(String pid, Date timestamp, String dsid) throws
                                                                       UpdateTrackerStorageException,
                                                                       FedoraFailedException {
-        Session session = sessionFactory.getCurrentSession();
+        Session session = getSession();
         Transaction transaction = session.beginTransaction();
         log.debug("DatastreamChanged({},{},{}) Starting", pid, timestamp,dsid);
         try {
@@ -260,7 +266,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                                                                            UpdateTrackerStorageException,
                                                                            FedoraFailedException {
 
-        Session session = sessionFactory.getCurrentSession();
+        Session session = getSession();
         Transaction transaction = session.beginTransaction();
         log.debug("objectStateChanged({},{},{}) Starting", pid, timestamp,newstate);
         try {
