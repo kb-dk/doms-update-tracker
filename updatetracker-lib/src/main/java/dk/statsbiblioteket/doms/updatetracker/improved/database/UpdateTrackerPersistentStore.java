@@ -15,28 +15,31 @@ public interface UpdateTrackerPersistentStore extends Closeable {
     /**
      * Invoke to register a new object, that has been created
      *
-     * @param pid
+     *  @param pid
      * @param date
+     * @param key the key from the work log table, that defined this operation.
      */
-    void objectCreated(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException;
+    void objectCreated(String pid, Date date, long key) throws UpdateTrackerStorageException, FedoraFailedException;
 
     /**
      * Object was changed to the deleted state. Mark any "Deleted" entries to reflect this
      *
-     * @param pid  the pid of the object
+     *  @param pid  the pid of the object
      * @param date the date of the change
+     * @param key the key from the work log table, that defined this operation.
      */
-    void objectDeleted(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException;
+    void objectDeleted(String pid, Date date, long key) throws UpdateTrackerStorageException, FedoraFailedException;
 
 
     /**
      * Object was changed, but remains in the inProgress state
      *
-     * @param pid
+     *  @param pid
      * @param date
      * @param dsid
+     * @param key the key from the work log table, that defined this operation.
      */
-    void datastreamChanged(String pid, Date date, String dsid) throws
+    void datastreamChanged(String pid, Date date, String dsid, long key) throws
                                                                UpdateTrackerStorageException,
                                                                FedoraFailedException;
 
@@ -44,20 +47,22 @@ public interface UpdateTrackerPersistentStore extends Closeable {
     /**
      * Objects have changes in the relations, so we will have to update the structure of the views
      *
-     * @param pid
+     *  @param pid
      * @param date
+     * @param key the key from the work log table, that defined this operation.
      */
-    void objectRelationsChanged(String pid, Date date) throws UpdateTrackerStorageException, FedoraFailedException;
+    void objectRelationsChanged(String pid, Date date, long key) throws UpdateTrackerStorageException, FedoraFailedException;
 
     /**
      * The object have (potentially) changed state
      * @param pid
      * @param date
      * @param newstate
+     * @param key the key from the work log table, that defined this operation.
      * @throws UpdateTrackerStorageException
      * @throws FedoraFailedException
      */
-    void objectStateChanged(String pid, Date date, String newstate) throws
+    void objectStateChanged(String pid, Date date, String newstate, long key) throws
                                                                     UpdateTrackerStorageException,
                                                                     FedoraFailedException;
 
@@ -88,4 +93,10 @@ public interface UpdateTrackerPersistentStore extends Closeable {
 
         @Override
     void close();
+
+    /**
+     * Get the latest key processed from the work log table.
+     * @return The latest key processed from the work log table.
+     */
+    long getLatestKey();
 }

@@ -28,6 +28,7 @@
 
         <mapping class="dk.statsbiblioteket.doms.updatetracker.improved.database.Record"/>
         <mapping class="dk.statsbiblioteket.doms.updatetracker.improved.database.DomsObject"/>
+        <mapping class="dk.statsbiblioteket.doms.updatetracker.improved.database.LatestKey"/>
     </session-factory>
 </hibernate-configuration>
 

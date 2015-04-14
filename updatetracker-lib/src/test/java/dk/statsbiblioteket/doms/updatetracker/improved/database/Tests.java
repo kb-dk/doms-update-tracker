@@ -207,11 +207,11 @@ public class Tests {
                                String page1, String image1) throws
                                                                                                             UpdateTrackerStorageException,
                                                                                                             FedoraFailedException {
-        db.objectStateChanged(roundTrip, new Date(), ACTIVE);
-        db.objectStateChanged(film, new Date(), ACTIVE);
-        db.objectStateChanged(edition, new Date(), ACTIVE);
-        db.objectStateChanged(page1, new Date(), ACTIVE);
-        db.objectStateChanged(image1, new Date(), ACTIVE);
+        db.objectStateChanged(roundTrip, new Date(), ACTIVE, 1);
+        db.objectStateChanged(film, new Date(), ACTIVE, 1);
+        db.objectStateChanged(edition, new Date(), ACTIVE, 1);
+        db.objectStateChanged(page1, new Date(), ACTIVE, 1);
+        db.objectStateChanged(image1, new Date(), ACTIVE, 1);
     }
 
     /**
@@ -229,13 +229,13 @@ public class Tests {
      */
     static Date batchEnriched_Labeled(UpdateTrackerPersistentStore db, String batch, String roundTrip, String film,
                                       String edition, String page1, String image1) throws UpdateTrackerStorageException, FedoraFailedException {
-        db.objectStateChanged(batch, new Date(), INACTIVE);
+        db.objectStateChanged(batch, new Date(), INACTIVE, 1);
         final Date roundTripLabels = new Date();
-        db.objectStateChanged(roundTrip, roundTripLabels, INACTIVE);
-        db.objectStateChanged(film, new Date(), INACTIVE);
-        db.objectStateChanged(edition, new Date(), INACTIVE);
-        db.objectStateChanged(page1, new Date(), INACTIVE);
-        db.objectStateChanged(image1, new Date(), INACTIVE);
+        db.objectStateChanged(roundTrip, roundTripLabels, INACTIVE, 1);
+        db.objectStateChanged(film, new Date(), INACTIVE, 1);
+        db.objectStateChanged(edition, new Date(), INACTIVE, 1);
+        db.objectStateChanged(page1, new Date(), INACTIVE, 1);
+        db.objectStateChanged(image1, new Date(), INACTIVE, 1);
         return roundTripLabels;
     }
 
@@ -251,9 +251,9 @@ public class Tests {
     static Date batchHistogrammed(UpdateTrackerPersistentStore db, String roundTrip, String image1) throws
                                                                     UpdateTrackerStorageException,
                                                                     FedoraFailedException {
-        db.datastreamChanged(image1, new Date(), HISTOGRAM);
+        db.datastreamChanged(image1, new Date(), HISTOGRAM, 1);
         final Date histograEvents = new Date();
-        db.datastreamChanged(roundTrip, histograEvents, EVENTS);
+        db.datastreamChanged(roundTrip, histograEvents, EVENTS, 1);
         return histograEvents;
     }
 
@@ -269,9 +269,9 @@ public class Tests {
     static Date batchJpylyzed(UpdateTrackerPersistentStore db, String roundTrip, String image1) throws
                                                                 UpdateTrackerStorageException,
                                                                 FedoraFailedException {
-        db.datastreamChanged(image1, new Date(), JPYLYZER);
+        db.datastreamChanged(image1, new Date(), JPYLYZER, 1);
         final Date jpylyzerEvents = new Date();
-        db.datastreamChanged(roundTrip, jpylyzerEvents, EVENTS);
+        db.datastreamChanged(roundTrip, jpylyzerEvents, EVENTS, 1);
         return jpylyzerEvents;
     }
 
@@ -287,10 +287,10 @@ public class Tests {
     static Date batchBitRepoIngested(UpdateTrackerPersistentStore db, String roundTrip, String image1) throws
                                                                        UpdateTrackerStorageException,
                                                                        FedoraFailedException {
-        db.datastreamChanged(image1, new Date(), CONTENT);
-        db.datastreamChanged(image1, new Date(), RELS_INT);
+        db.datastreamChanged(image1, new Date(), CONTENT, 1);
+        db.datastreamChanged(image1, new Date(), RELS_INT, 1);
         final Date bitRepoEvents = new Date();
-        db.datastreamChanged(roundTrip, bitRepoEvents, EVENTS);
+        db.datastreamChanged(roundTrip, bitRepoEvents, EVENTS, 1);
         return bitRepoEvents;
     }
 
@@ -310,21 +310,21 @@ public class Tests {
                               String page1, String image1) throws
                                                                                                            UpdateTrackerStorageException,
                                                                                                            FedoraFailedException {
-        db.objectCreated(film, new Date());
-        db.datastreamChanged(film, new Date(), FILM);
-        db.objectCreated(edition, new Date());
-        db.datastreamChanged(edition, new Date(), EDITION);
-        db.objectCreated(page1, new Date());
-        db.datastreamChanged(page1, new Date(), MODS);
-        db.datastreamChanged(page1, new Date(), MIX);
-        db.datastreamChanged(page1, new Date(), ALTO);
-        db.objectCreated(image1, new Date());
-        db.objectRelationsChanged(page1, new Date());
-        db.objectRelationsChanged(edition, new Date());
-        db.objectRelationsChanged(film, new Date());
-        db.objectRelationsChanged(roundTrip, new Date());
+        db.objectCreated(film, new Date(), 1);
+        db.datastreamChanged(film, new Date(), FILM, 1);
+        db.objectCreated(edition, new Date(), 1);
+        db.datastreamChanged(edition, new Date(), EDITION, 1);
+        db.objectCreated(page1, new Date(), 1);
+        db.datastreamChanged(page1, new Date(), MODS, 1);
+        db.datastreamChanged(page1, new Date(), MIX, 1);
+        db.datastreamChanged(page1, new Date(), ALTO, 1);
+        db.objectCreated(image1, new Date(), 1);
+        db.objectRelationsChanged(page1, new Date(), 1);
+        db.objectRelationsChanged(edition, new Date(), 1);
+        db.objectRelationsChanged(film, new Date(), 1);
+        db.objectRelationsChanged(roundTrip, new Date(), 1);
         final Date domsIngestEvents = new Date();
-        db.datastreamChanged(roundTrip, domsIngestEvents, EVENTS);
+        db.datastreamChanged(roundTrip, domsIngestEvents, EVENTS, 1);
         return domsIngestEvents;
     }
 
@@ -340,11 +340,11 @@ public class Tests {
     static Date batchTriggered(UpdateTrackerPersistentStore db, String batch, String roundTrip) throws
                                                                 UpdateTrackerStorageException,
                                                                 FedoraFailedException {
-        db.objectCreated(batch, new Date());
-        db.objectCreated(roundTrip, new Date());
-        db.objectRelationsChanged(batch, new Date());
+        db.objectCreated(batch, new Date(), 1);
+        db.objectCreated(roundTrip, new Date(), 1);
+        db.objectRelationsChanged(batch, new Date(), 1);
         final Date triggerEvents = new Date();
-        db.datastreamChanged(roundTrip, triggerEvents, EVENTS);
+        db.datastreamChanged(roundTrip, triggerEvents, EVENTS, 1);
         return triggerEvents;
     }
 
@@ -441,18 +441,18 @@ public class Tests {
                                                                                       FedoraFailedException {
         //edition maintainer
         //unpublish edition
-        db.objectStateChanged(edition, new Date(), INACTIVE);
+        db.objectStateChanged(edition, new Date(), INACTIVE, 1);
 
         //add/remove relation
         final Date editionLinkedToNewspaper = new Date();
         Tests.linkEditionToNewspaper(fcmock, page1, editionLinkedToNewspaper, edition, newspaper);
-        db.objectRelationsChanged(edition, editionLinkedToNewspaper);
+        db.objectRelationsChanged(edition, editionLinkedToNewspaper, 1);
 
         //publish edition
-        db.objectStateChanged(edition, new Date(), ACTIVE);
+        db.objectStateChanged(edition, new Date(), ACTIVE, 1);
         // add event to edition
         final Date maintainerDone = new Date();
-        db.datastreamChanged(edition, maintainerDone, EDITION);
+        db.datastreamChanged(edition, maintainerDone, EDITION, 1);
         return maintainerDone;
     }
 
@@ -470,9 +470,9 @@ public class Tests {
                                                                            UpdateTrackerStorageException,
                                                                            FedoraFailedException {
         final Date editionPublished = new Date();
-        db.objectStateChanged(edition, editionPublished, ACTIVE);
-        db.objectStateChanged(page1, new Date(), ACTIVE);
-        db.objectStateChanged(image1, new Date(), ACTIVE);
+        db.objectStateChanged(edition, editionPublished, ACTIVE, 1);
+        db.objectStateChanged(page1, new Date(), ACTIVE, 1);
+        db.objectStateChanged(image1, new Date(), ACTIVE, 1);
         return editionPublished;
     }
 
@@ -491,17 +491,17 @@ public class Tests {
                                             String image1, FedoraForUpdateTracker fcmock) throws
                                                                                           UpdateTrackerStorageException,
                                                                                           FedoraFailedException {
-        db.datastreamChanged(page1, new Date(), MODS);
-        db.datastreamChanged(page1, new Date(), MIX);
-        db.datastreamChanged(page1, new Date(), ALTO);
+        db.datastreamChanged(page1, new Date(), MODS, 1);
+        db.datastreamChanged(page1, new Date(), MIX, 1);
+        db.datastreamChanged(page1, new Date(), ALTO, 1);
         final Date pageContentModel = new Date();
         setContentModelPage(page1, pageContentModel, image1, edition, fcmock);
-        db.objectRelationsChanged(page1, pageContentModel);
+        db.objectRelationsChanged(page1, pageContentModel, 1);
 
-        db.datastreamChanged(edition, new Date(), EDITION);
+        db.datastreamChanged(edition, new Date(), EDITION, 1);
         final Date editionContentModel = new Date();
         setContentModelEditionAndItem(edition, editionContentModel, page1, image1, fcmock);
-        db.objectRelationsChanged(edition, editionContentModel);
+        db.objectRelationsChanged(edition, editionContentModel, 1);
         return editionContentModel;
     }
 
@@ -517,15 +517,15 @@ public class Tests {
     static void ingestEdition(UpdateTrackerPersistentStore db, String edition, String page1, String image1) throws
                                                                           UpdateTrackerStorageException,
                                                                           FedoraFailedException {
-        db.objectCreated(edition, new Date());
-        db.datastreamChanged(edition, new Date(), EDITION);
-        db.objectCreated(page1, new Date());
-        db.datastreamChanged(page1, new Date(), MODS);
-        db.datastreamChanged(page1, new Date(), MIX);
-        db.datastreamChanged(page1, new Date(), ALTO);
-        db.objectCreated(image1, new Date());
-        db.objectRelationsChanged(page1, new Date());
-        db.objectRelationsChanged(edition, new Date());
+        db.objectCreated(edition, new Date(), 1);
+        db.datastreamChanged(edition, new Date(), EDITION, 1);
+        db.objectCreated(page1, new Date(), 1);
+        db.datastreamChanged(page1, new Date(), MODS, 1);
+        db.datastreamChanged(page1, new Date(), MIX, 1);
+        db.datastreamChanged(page1, new Date(), ALTO, 1);
+        db.objectCreated(image1, new Date(), 1);
+        db.objectRelationsChanged(page1, new Date(), 1);
+        db.objectRelationsChanged(edition, new Date(), 1);
     }
 
     /**
@@ -540,7 +540,7 @@ public class Tests {
     static Date createNewspaperObject(UpdateTrackerPersistentStore db, String newspaper, FedoraForUpdateTracker fcmock) throws FedoraFailedException, UpdateTrackerStorageException {
         final Date newspaperCreated = new Date();
         setContentModelNewspaper(newspaper,newspaperCreated, fcmock);
-        db.objectCreated(newspaper, newspaperCreated);
+        db.objectCreated(newspaper, newspaperCreated, 1);
         return newspaperCreated;
     }
 }
