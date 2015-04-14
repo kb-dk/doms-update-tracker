@@ -168,19 +168,19 @@ import java.util.Set;
                                       name = "updateDates",
                                       query =
                                         "UPDATE RECORDS as r " +
-                                        "SET r.INACTIVE=:timestamp, " +
-                                            "r.ACTIVE=( " +
+                                        "SET INACTIVE=:timestamp, " +
+                                            "ACTIVE=( " +
                                                 "CASE " +
-                                                    "WHEN r.ACTIVE>=r.INACTIVE " +
+                                                    "WHEN ACTIVE>=INACTIVE " +
                                                     "THEN :timestamp " +
-                                                    "ELSE r.ACTIVE " +
+                                                    "ELSE ACTIVE " +
                                                 "END " +
                                             ") " +
                                         "WHERE " +
                                             "(r.ENTRYPID,r.VIEWANGLE,r.COLLECTION) in " +
                                                 "(" +
                                                     "SELECT m.RECORDS_ENTRYPID,m.RECORDS_VIEWANGLE,m.RECORDS_COLLECTION " +
-                                                    "FROM MEMBERSHIPS m " +
+                                                    "FROM MEMBERSHIPS as m " +
                                                     "WHERE m.OBJECTS_OBJECTPID = :pid " +
                                                 ") " +
                                             "AND (r.DELETED is null or r.INACTIVE >= r.DELETED);"
