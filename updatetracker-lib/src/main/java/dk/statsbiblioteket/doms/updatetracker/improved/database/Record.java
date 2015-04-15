@@ -272,6 +272,9 @@ public class Record implements Serializable {
         object.getRecords_().add(this);
     }
 
+    /**
+     * This methods clears the object and removes the references from the records
+     */
     public void clearObjects() {
         for (DomsObject object : objects) {
             object.getRecords_().remove(this);

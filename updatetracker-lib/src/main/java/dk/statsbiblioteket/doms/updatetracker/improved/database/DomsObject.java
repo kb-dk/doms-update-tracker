@@ -57,6 +57,7 @@ public class DomsObject implements Serializable {
         return Collections.unmodifiableSet(new HashSet<Record>(records));
     }
 
+    //TODO this name sucks
     protected Set<Record> getRecords_() {
         return records;
     }
