@@ -188,7 +188,11 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                 if ((dsid.equals("VIEW") || dsid.equals("RELS-EXT"))) {
                     if (fedora.isCurrentlyContentModel(pid, timestamp)) {
                         fedora.invalidateContentModel(pid);
-                        for (String object : fedora.getObjectsOfThisContentModel(pid)) {
+                        int i = 0;
+                        //TODO this set can be HUGE
+                        final Set<String> objectsOfThisContentModel = fedora.getObjectsOfThisContentModel(pid);
+                        for (String object : objectsOfThisContentModel) {
+                            log.debug("Working on object {}, number {} of the {} objects of content model {}",object,i++,objectsOfThisContentModel.size(),pid);
                             Set<String> collections = fedora.getCollections(object, timestamp);
                             backend.reconnectObjects(object, timestamp, session, collections);
                             backend.updateDates(object, timestamp, session);
@@ -268,7 +272,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
 
         Session session = getSession();
         Transaction transaction = session.beginTransaction();
-        log.debug("objectStateChanged({},{},{}) Starting", pid, timestamp,newstate);
+        log.debug("objectStateChanged({},{},{}) Starting", pid, timestamp, newstate);
         try {
             Set<String> collections = fedora.getCollections(pid, timestamp);
             for (String collection : collections) {
