@@ -45,7 +45,7 @@ public class WorkLogPollTask extends TimerTask {
 
             for (WorkLogUnit event : events) {
                 try {
-                    handleEvent(event, latestKey);
+                    handleEvent(event, event.getKey());
                 } catch(UpdateTrackerStorageException e){
                     log.error("Failed to store events in update tracker. Failed on '" + event + "'", e);
                     break; //If we fail, break the loop, as we DO NOT WANT to miss an event
