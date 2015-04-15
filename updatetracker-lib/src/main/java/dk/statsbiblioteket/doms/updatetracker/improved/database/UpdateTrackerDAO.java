@@ -50,16 +50,8 @@ public class UpdateTrackerDAO {
         return listRecords(criteria);
     }
 
-    static DomsObject loadOrCreate(Session session, String pid) {
-        Object persistent = session.get(DomsObject.class, pid);
-        if (persistent == null){
-            session.save(new DomsObject(pid));
-        }
-        return (DomsObject) session.load(DomsObject.class, pid);
-    }
-
     static List<Record> getRecordsForPid(Session session, String pid){
-        return  listRecords(session.createQuery("from Record r,DomsObject d where d.objectPid=:pid and r.id=d.recordKey"));
+        return  listRecords(session.createQuery("from Record r where :pid member of r.objects").setString("pid",pid));
     }
 
     @SuppressWarnings("unchecked")

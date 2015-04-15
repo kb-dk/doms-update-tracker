@@ -27,7 +27,6 @@
         <property name="hibernate.format_sql">true</property>
 
         <mapping class="dk.statsbiblioteket.doms.updatetracker.improved.database.Record"/>
-        <mapping class="dk.statsbiblioteket.doms.updatetracker.improved.database.DomsObject"/>
     </session-factory>
 </hibernate-configuration>
 

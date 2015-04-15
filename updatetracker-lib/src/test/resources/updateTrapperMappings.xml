@@ -5,9 +5,15 @@
 
 <hibernate-mapping>
     <database-object>
-        <create>create index objects_idx on PUBLIC.MEMBERSHIPS (OBJECTS_OBJECTPID)</create>
-        <drop>drop index objects_idx if exists</drop>
+        <create>create index memberships_objects_idx on PUBLIC.MEMBERSHIPS (OBJECTS)</create>
+        <drop>drop index membership_objects_idx if exists</drop>
     </database-object>
+
+    <database-object>
+        <create>create index membership_records_idx on PUBLIC.MEMBERSHIPS (RECORD_VIEWANGLE,RECORD_ENTRYPID,RECORD_COLLECTION)</create>
+        <drop>drop index membership_records_idx if exists</drop>
+    </database-object>
+
 
     <database-object>
         <create>create index entrypid_idx on PUBLIC.RECORDS (ENTRYPID)</create>

@@ -78,8 +78,7 @@ public class UpdateTrackerBackend {
                     Record newRecord = new Record(pid, entryAngle, collection);
                     if (UpdateTrackerDAO.recordNotExists(session, newRecord)) {
                         log.debug("Pid {} is not marked as an entry for viewAngle {}. Fixing", pid, entryAngle);
-                        final DomsObject object = UpdateTrackerDAO.loadOrCreate(session, pid);
-                        newRecord.addObject(object);
+                        newRecord.getObjects().add(pid);
                         newRecord.setInactive(timestamp);
                         if (state == State.ACTIVE){
                             newRecord.setActive(timestamp);
@@ -112,9 +111,9 @@ public class UpdateTrackerBackend {
         else if (state == State.DELETED){
             log.debug("Switching on states for pid {}, got the Deleted branch", pid);
 
-            //TODO This code duplicates code in recalc view
-            DomsObject thisObject = UpdateTrackerDAO.loadOrCreate(session, pid);
-            Set<Record> otherRecordsThanThisWhichThisObjectIsPart = removeThis(pid, thisObject);
+            final Collection<Record> records = UpdateTrackerDAO.getRecordsForPid(session, pid);
+
+            Set<Record> otherRecordsThanThisWhichThisObjectIsPart = removeThis(pid, records);
 
 
             for (Record otherRecord : otherRecordsThanThisWhichThisObjectIsPart) {
@@ -122,12 +121,11 @@ public class UpdateTrackerBackend {
                     reconnectObjectsInRecord(timestamp, session, otherRecord);
                 }
             }
-            session.delete(thisObject);
 
-            Set<Record> recordsWhichThisObjectIsEntry = removeOthers(pid, thisObject);
+            Set<Record> recordsWhichThisObjectIsEntry = removeOthers(pid, records);
 
             for (Record record : recordsWhichThisObjectIsEntry) {
-                record.clearObjects();
+                record.getObjects().clear();
                 record.setDeleted(timestamp);
                 record.setInactive(null);
                 record.setActive(null);
@@ -137,31 +135,30 @@ public class UpdateTrackerBackend {
 
     }
 
-    private Set<Record> removeOthers(final String pid, DomsObject thisObject) {
-        final Set<Record> records = new HashSet<Record>(thisObject.getRecords());
-        CollectionUtils.filter(records, new Predicate<Record>() {
+    private Set<Record> removeOthers(final String pid, Collection<Record> records) {
+        final Set<Record> coll = new HashSet<Record>(records);
+        CollectionUtils.filter(coll, new Predicate<Record>() {
             @Override
             public boolean evaluate(Record object) { return object.getEntryPid().equals(pid); }
         });
-        return records;
+        return coll;
     }
 
-    private Set<Record> removeThis(final String pid, DomsObject thisObject) {
-        final Set<Record> records = new HashSet<Record>(thisObject.getRecords());
-        CollectionUtils.filter(records, new Predicate<Record>() {
+    private Set<Record> removeThis(final String pid, Collection<Record> records) {
+        final Set<Record> coll = new HashSet<Record>(records);
+        CollectionUtils.filter(coll, new Predicate<Record>() {
             @Override
             public boolean evaluate(Record object) { return !object.getEntryPid().equals(pid); }
         });
-        return records;
+        return coll;
     }
 
     private void reconnectObjectsInRecord(Date timestamp, Session session, Record otherRecord) throws FedoraFailedException {
         ViewBundle bundle = getViewBundle(timestamp, otherRecord);
-        otherRecord.clearObjects();
+        otherRecord.getObjects().clear();
         for (String viewObject : bundle.getContained()) {
             log.debug("Marking object {} as part of record {},{},{}", viewObject, otherRecord.getEntryPid(), otherRecord.getViewAngle(), otherRecord.getCollection());
-            final DomsObject object = UpdateTrackerDAO.loadOrCreate(session, viewObject);
-            otherRecord.addObject(object);
+            otherRecord.getObjects().add(viewObject);
         }
 
         if (otherRecord.getInactive() != null &&
@@ -209,8 +206,7 @@ public class UpdateTrackerBackend {
             for (String collection : collections) {
                 Record record = new Record(pid, entryViewAngle, collection);
                 if (UpdateTrackerDAO.recordNotExists(session, record)){
-                    DomsObject object = UpdateTrackerDAO.loadOrCreate(session, pid);
-                    record.addObject(object);
+                    record.getObjects().add(pid);
                     record.setInactive(timestamp);
                     session.saveOrUpdate(record);
                 }
@@ -227,7 +223,7 @@ public class UpdateTrackerBackend {
             previousRecord.setDeleted(timestamp);
             previousRecord.setInactive(null);
             previousRecord.setActive(null);
-            previousRecord.clearObjects();
+            previousRecord.getObjects().clear();
             session.saveOrUpdate(previousRecord);
         }
 
@@ -240,7 +236,7 @@ public class UpdateTrackerBackend {
 
          */
 
-        Set<Record> records = new HashSet<Record>(UpdateTrackerDAO.loadOrCreate(session, pid).getRecords());
+        Set<Record> records = new HashSet<Record>(UpdateTrackerDAO.getRecordsForPid(session,pid));
         log.debug("Find all records {} containing {} ", records, pid);
         for (Record otherRecord : records) {
             if (otherRecord.getState() != State.DELETED) {

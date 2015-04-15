@@ -1,23 +1,17 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
-import org.hibernate.annotations.Cascade;
-import org.hibernate.annotations.CascadeType;
-
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.Id;
-import javax.persistence.JoinTable;
-import javax.persistence.ManyToMany;
 import javax.persistence.NamedNativeQueries;
 import javax.persistence.NamedNativeQuery;
-import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.persistence.Transient;
 import java.io.Serializable;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
@@ -180,9 +174,9 @@ import java.util.Set;
                                         "WHERE " +
                                             "(r.ENTRYPID,r.VIEWANGLE,r.COLLECTION) in " +
                                                 "(" +
-                                                    "SELECT m.RECORDS_ENTRYPID,m.RECORDS_VIEWANGLE,m.RECORDS_COLLECTION " +
+                                                    "SELECT m.RECORD_ENTRYPID,m.RECORD_VIEWANGLE,m.RECORD_COLLECTION " +
                                                     "FROM MEMBERSHIPS as m " +
-                                                    "WHERE m.OBJECTS_OBJECTPID = :pid " +
+                                                    "WHERE m.OBJECTS = :pid " +
                                                 ") " +
                                             "AND (r.DELETED is null or r.INACTIVE >= r.DELETED);"
 
@@ -234,8 +228,21 @@ public class Record implements Serializable {
         }
     }
 
+    /** The pid of the object */
     @Id
-    private RecordKey recordKey;
+    @Column(name = "ENTRYPID", length = 64, nullable = false)
+    private String entryPid;
+
+    /** The viewangle the object is an entry for */
+    @Id
+    @Column(name = "VIEWANGLE", length = 64, nullable = false)
+    private String viewAngle;
+
+    @Id
+    @Column(name = "COLLECTION", length = 64, nullable = false)
+    private String collection;
+
+
 
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "active",columnDefinition = "timestamp with time zone", nullable = true)
@@ -249,52 +256,44 @@ public class Record implements Serializable {
     @Column(name="deleted",columnDefinition = "timestamp with time zone", nullable = true)
     private Date deleted = null;
 
-    @OneToMany
-    @Cascade({CascadeType.REFRESH,CascadeType.REPLICATE,CascadeType.SAVE_UPDATE,CascadeType.PERSIST,CascadeType.MERGE})
-    private Set<DomsObject> objects = new HashSet<DomsObject>();
+    @ElementCollection
+    @CollectionTable(name = "memberships")
+    @Column(name = "objects", length = 64)
+    private Set<String> objects = new HashSet<String>();
 
     public Record() {
     }
 
-    public void addObject(DomsObject object) {
-        objects.add(object);
-        object.getRecords_().add(this);
-    }
-
-    public void clearObjects() {
-        for (DomsObject object : objects) {
-            object.getRecords_().remove(this);
-        }
-        objects.clear();
-    }
-
-
-    public Set<DomsObject> getObjects() {
-        return Collections.unmodifiableSet(objects);
-    }
-
-
     public Record(String entryPid, String viewAngle, String collection) {
-        this.recordKey = new RecordKey(entryPid,viewAngle,collection);
+        this.entryPid = entryPid;
+        this.viewAngle = viewAngle;
+        this.collection = collection;
     }
 
     public Record(String viewAngle, String entryPid, String collection, Date active, Date deleted, Date inactive) {
-        this.recordKey = new RecordKey(entryPid, viewAngle, collection);
+        this.entryPid = entryPid;
+        this.viewAngle = viewAngle;
+        this.collection = collection;
         this.active = active;
         this.inactive = inactive;
         this.deleted = deleted;
     }
 
+
     public String getEntryPid() {
-        return recordKey.getEntryPid();
+        return entryPid;
     }
 
     public String getViewAngle() {
-        return recordKey.getViewAngle();
+        return viewAngle;
     }
 
     public String getCollection() {
-        return recordKey.getCollection();
+        return collection;
+    }
+
+    public Set<String> getObjects() {
+        return objects;
     }
 
     @Transient
@@ -342,7 +341,25 @@ public class Record implements Serializable {
 
         Record record = (Record) o;
 
-        if (!recordKey.equals(record.recordKey)) {
+        if (active != null ? !active.equals(record.active) : record.active != null) {
+            return false;
+        }
+        if (!collection.equals(record.collection)) {
+            return false;
+        }
+        if (deleted != null ? !deleted.equals(record.deleted) : record.deleted != null) {
+            return false;
+        }
+        if (!entryPid.equals(record.entryPid)) {
+            return false;
+        }
+        if (inactive != null ? !inactive.equals(record.inactive) : record.inactive != null) {
+            return false;
+        }
+        if (objects != null ? !objects.equals(record.objects) : record.objects != null) {
+            return false;
+        }
+        if (!viewAngle.equals(record.viewAngle)) {
             return false;
         }
 
@@ -351,7 +368,14 @@ public class Record implements Serializable {
 
     @Override
     public int hashCode() {
-        return recordKey.hashCode();
+        int result = entryPid.hashCode();
+        result = 31 * result + viewAngle.hashCode();
+        result = 31 * result + collection.hashCode();
+        result = 31 * result + (active != null ? active.hashCode() : 0);
+        result = 31 * result + (inactive != null ? inactive.hashCode() : 0);
+        result = 31 * result + (deleted != null ? deleted.hashCode() : 0);
+        result = 31 * result + (objects != null ? objects.hashCode() : 0);
+        return result;
     }
 
     public Date getActive() {
@@ -378,4 +402,16 @@ public class Record implements Serializable {
         this.deleted = deleted;
     }
 
+    @Override
+    public String toString() {
+        return "Record{" +
+               "entryPid='" + entryPid + '\'' +
+               ", viewAngle='" + viewAngle + '\'' +
+               ", collection='" + collection + '\'' +
+               ", active=" + active +
+               ", inactive=" + inactive +
+               ", deleted=" + deleted +
+               ", objects=" + objects +
+               '}';
+    }
 }
