@@ -68,7 +68,7 @@ public class UpdateTrackingConfig {
      * The hibernate mappings file for the update tracker database. It is this file that defines the indexes we use
      */
     private static final java.lang.String FEDORA_UPDATETRACKER_HIBERNATE_MAPPINGS_FILE
-            = "fedora.updatetracker.hibernateConfigFile";
+            = "fedora.updatetracker.hibernateMappingsFile";
     private final String fedoraWebUrl;
     private final String fedoraWebUsername;
     private final String fedoraWebPassword;
