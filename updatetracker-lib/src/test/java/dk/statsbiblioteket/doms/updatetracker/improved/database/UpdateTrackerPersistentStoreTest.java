@@ -29,14 +29,16 @@ public class UpdateTrackerPersistentStoreTest {
     private final String collection = "doms:Root_Collection";
     UpdateTrackerPersistentStore db;
     FedoraForUpdateTracker fedora;
-    private File configFile;
 
     @Before
     public void setUp() throws Exception {
-        configFile = new File(Thread.currentThread()
-                                    .getContextClassLoader()
-                                    .getResource("hibernate.cfg.xml")
-                                    .toURI());
+        File configFile = new File(Thread.currentThread()
+                                         .getContextClassLoader()
+                                         .getResource("hibernate.cfg.xml")
+                                         .toURI());
+        File mappings = new File(Thread.currentThread().getContextClassLoader().getResource("updateTrapperMappings.xml")
+                                       .toURI());
+
 
         fedora = mock(FedoraForUpdateTracker.class);
         //Collections for everybody
@@ -44,7 +46,7 @@ public class UpdateTrackerPersistentStoreTest {
         //No entry objects or view stuff until initialised
         when(fedora.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptyList());
         final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fedora,10000L);
-        db = new UpdateTrackerPersistentStoreImpl(configFile, fedora, updateTrackerBackend);
+        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings, fedora, updateTrackerBackend);
     }
 
 
@@ -95,7 +97,9 @@ public class UpdateTrackerPersistentStoreTest {
         list = db.lookup(test1Create, "SummaVisible", 0, 100, "I", "doms:Root_Collection");
         assertEquals("Wrong number of objects", list.size(), 1);
         //And with the published timestamp, even
-        assertEquals("Object not changed at published timestamp",test1Published.getTime(), list.get(0).getInactive().getTime());
+        assertEquals("Object not changed at published timestamp",
+                     test1Published.getTime(),
+                     list.get(0).getInactive().getTime());
 
         final Date test1Deleted = new Date();
         db.objectStateChanged("doms:test1", test1Deleted, "D", 1);

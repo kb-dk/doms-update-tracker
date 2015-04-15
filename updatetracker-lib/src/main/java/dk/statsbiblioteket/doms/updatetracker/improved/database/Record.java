@@ -5,73 +5,196 @@ import org.hibernate.annotations.CascadeType;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.Id;
-import javax.persistence.Index;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
-import javax.persistence.NamedQueries;
-import javax.persistence.NamedQuery;
+import javax.persistence.NamedNativeQueries;
+import javax.persistence.NamedNativeQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.persistence.Transient;
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
+@NamedNativeQueries({
+                            @NamedNativeQuery(
+                                      resultClass = Record.class,
+                                      name = "ActiveAndDeleted",
+                                      query =
+                                        "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                        "FROM ( " +
+                                            "(" +
+                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                                "FROM RECORDS " +
+                                                "WHERE DELETED >= :since " +
+                                                    "AND VIEWANGLE = :viewAngle " +
+                                                    "AND COLLECTION = :collection " +
+                                                "ORDER BY DELETED " +
+                                                "LIMIT :limit " +
+                                            ") UNION ( " +
+                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                                "FROM RECORDS " +
+                                                "WHERE ACTIVE >= :since " +
+                                                    "AND VIEWANGLE = :viewAngle " +
+                                                    "AND COLLECTION = :collection " +
+                                                "ORDER BY ACTIVE " +
+                                                "LIMIT :limit " +
+                                            ") " +
+                                        ") AS r " +
+                                        "ORDER BY " +
+                                            "CASE " +
+                                                "WHEN (r.DELETED IS NOT NULL) " +
+                                                    "AND (r.ACTIVE IS NULL OR r.DELETED>=r.ACTIVE) " +
+                                                "THEN r.DELETED " +
+                                                "WHEN (r.ACTIVE IS NOT NULL) " +
+                                                    "AND (r.DELETED IS NULL OR r.ACTIVE>=r.DELETED) " +
+                                                "THEN r.ACTIVE " +
+                                             "END, " +
+                                            "r.ENTRYPID " +
+                                        "LIMIT :limit "),
+                            @NamedNativeQuery(
+                                      resultClass = Record.class,
+                                      name = "InactiveOrDeleted",
+                                      query =
+                                        "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                        "FROM ( " +
+                                            "(" +
+                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                                "FROM RECORDS " +
+                                                "WHERE DELETED >= :since " +
+                                                    "AND VIEWANGLE = :viewAngle " +
+                                                    "AND COLLECTION = :collection " +
+                                                "ORDER BY DELETED " +
+                                                "LIMIT :limit " +
+                                            ") UNION (" +
+                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                                "FROM RECORDS " +
+                                                "WHERE INACTIVE >= :since " +
+                                                    "AND VIEWANGLE = :viewAngle " +
+                                                    "AND COLLECTION = :collection " +
+                                                "ORDER BY INACTIVE " +
+                                                "LIMIT :limit " +
+                                            ") " +
+                                        ") AS r " +
+                                        "ORDER BY " +
+                                            "CASE " +
+                                                "WHEN (r.DELETED IS NOT NULL) " +
+                                                    "AND (r.INACTIVE IS NULL OR r.DELETED>=r.INACTIVE) " +
+                                                "THEN r.DELETED " +
+                                                "WHEN (r.INACTIVE IS NOT NULL) " +
+                                                    "AND (r.DELETED IS NULL OR r.INACTIVE>=r.DELETED) " +
+                                                "THEN r.INACTIVE " +
+                                             "END, " +
+                                            "r.ENTRYPID " +
+                                        "LIMIT :limit "),
+                            @NamedNativeQuery(
+                                      resultClass = Record.class,
+                                      name = "Deleted",
+                                      query =
+                                        "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                        "FROM ( " +
+                                            "(" +
+                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                                "FROM RECORDS " +
+                                                "WHERE DELETED >= :since " +
+                                                    "AND VIEWANGLE = :viewAngle " +
+                                                    "AND COLLECTION = :collection " +
+                                                "ORDER BY DELETED " +
+                                                "LIMIT :limit " +
+                                            ") " +
+                                        ") AS r " +
+                                        "ORDER BY " +
+                                            "CASE " +
+                                                "WHEN (r.DELETED IS NOT NULL) " +
+                                                "THEN r.DELETED " +
+                                             "END, " +
+                                            "r.ENTRYPID " +
+                                        "LIMIT :limit "),
+                            @NamedNativeQuery(
+                                      resultClass = Record.class,
+                                      name = "All",
+                                      query =
+                                        "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                        "FROM ( " +
+                                            "(" +
+                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                                "FROM RECORDS " +
+                                                "WHERE DELETED >= :since " +
+                                                    "AND VIEWANGLE = :viewAngle " +
+                                                    "AND COLLECTION = :collection " +
+                                                "ORDER BY DELETED " +
+                                                "LIMIT :limit " +
+                                            ") UNION ( " +
+                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                                "FROM RECORDS " +
+                                                "WHERE ACTIVE >= :since " +
+                                                    "AND VIEWANGLE = :viewAngle " +
+                                                    "AND COLLECTION = :collection " +
+                                                "ORDER BY ACTIVE " +
+                                                "LIMIT :limit " +
+                                            ") UNION (" +
+                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                                "FROM RECORDS " +
+                                                "WHERE INACTIVE >= :since " +
+                                                    "AND VIEWANGLE = :viewAngle " +
+                                                    "AND COLLECTION = :collection " +
+                                                "ORDER BY INACTIVE " +
+                                                "LIMIT :limit " +
+                                            ") " +
+                                        ") AS r " +
+                                        "ORDER BY " +
+                                            "CASE " +
+                                                "WHEN (r.DELETED IS NOT NULL) " +
+                                                    "AND (r.ACTIVE IS NULL OR r.DELETED>=r.ACTIVE) " +
+                                                    "AND (r.INACTIVE IS NULL OR r.DELETED>=r.INACTIVE) " +
+                                                "THEN r.DELETED " +
+                                                "WHEN (r.INACTIVE IS NOT NULL) " +
+                                                    "AND (r.ACTIVE IS NULL OR r.INACTIVE>=r.ACTIVE) " +
+                                                    "AND (r.DELETED IS NULL OR r.INACTIVE>=r.DELETED) " +
+                                                "THEN r.INACTIVE " +
+                                                "WHEN (r.ACTIVE IS NOT NULL) " +
+                                                    "AND (r.INACTIVE IS NULL OR r.ACTIVE>=r.INACTIVE) " +
+                                                    "AND (r.DELETED IS NULL OR r.ACTIVE>=r.DELETED) " +
+                                                "THEN r.ACTIVE " +
+                                             "END, " +
+                                            "r.ENTRYPID " +
+                                        "LIMIT :limit"),
+                            @NamedNativeQuery(
+                                      name = "updateDates",
+                                      query =
+                                        "UPDATE RECORDS as r " +
+                                        "SET INACTIVE=:timestamp, " +
+                                            "ACTIVE=( " +
+                                                "CASE " +
+                                                    "WHEN ACTIVE>=INACTIVE " +
+                                                    "THEN :timestamp " +
+                                                    "ELSE ACTIVE " +
+                                                "END " +
+                                            ") " +
+                                        "WHERE " +
+                                            "(r.ENTRYPID,r.VIEWANGLE,r.COLLECTION) in " +
+                                                "(" +
+                                                    "SELECT m.RECORDS_ENTRYPID,m.RECORDS_VIEWANGLE,m.RECORDS_COLLECTION " +
+                                                    "FROM MEMBERSHIPS as m " +
+                                                    "WHERE m.OBJECTS_OBJECTPID = :pid " +
+                                                ") " +
+                                            "AND (r.DELETED is null or r.INACTIVE >= r.DELETED);"
 
-//TODO talk to KTC about figuring out which indexes would help these queries
-@NamedQueries({@NamedQuery(name = "ActiveAndDeleted",
-                           query = "from Record e where (" +
-                                       "(e.deleted is not null and e.deleted>=:since) or " +
-                                       "(e.active is not null and e.active>=:since) " +
-                                   ") and " +
-                                   "e.viewAngle=:viewAngle and " +
-                                   "e.collection=:collection " +
-                                   "order by case " +
-                                          "when e.deleted is not null and (e.active is null or e.deleted>=e.active) then e.deleted " +
-                                          "when e.active is not null and (e.deleted is null or e.active>=e.deleted) then e.active " +
-                                          " end, e.entryPid"),
 
-               @NamedQuery(name = "InactiveOrDeleted",
-                           query = "from Record e where (" +
-                                       "(e.deleted is not null and e.deleted>=:since) or " +
-                                       "(e.inactive is not null and e.inactive>=:since)" +
-                                   ") and " +
-                                   "e.viewAngle=:viewAngle " +
-                                   "and e.collection=:collection " +
-                                   "order by case " +
-                                          "when e.deleted is not null and (e.inactive is null or e.deleted>=e.inactive) then e.deleted " +
-                                          "when e.inactive is not null and (e.deleted is null or e.inactive>=e.deleted) then e.inactive" +
-                                          " end, e.entryPid"),
+                            ),
+})
 
-               @NamedQuery(name = "Deleted",
-                           query = "from Record e where (e.deleted is not null and e.deleted>=:since) and e.viewAngle=:viewAngle and e.collection=:collection order by e.deleted asc "),
-
-               @NamedQuery(name = "All",
-                           query = "from Record e where " +
-                                   "(" +
-                                       "(e.deleted is not null and e.deleted>=:since) or " +
-                                       "(e.active is not null and e.active>=:since) or " +
-                                       "(e.inactive is not null and e.inactive>=:since)" +
-                                   ") and " +
-                                   "e.viewAngle=:viewAngle and " +
-                                   "e.collection=:collection " +
-                                   "order by case " +
-                                          "when e.deleted is not null and (e.active is null or e.deleted>=e.active) and (e.inactive is null or e.deleted>=e.inactive) then e.deleted " +
-                                          "when e.active is not null and (e.deleted is null or e.active>=e.deleted) and (e.inactive is null or e.active>=e.inactive) then e.active " +
-                                          "when e.inactive is not null and (e.deleted is null or e.inactive>=e.deleted) and ( e.active is null or e.inactive>=e.active) then e.inactive " +
-                                          " end, e.entryPid")}
-
-)
 
 /**
  * This is the RECORDS table in the persistent storage. The RECORDS table lists the records that can be found in DOMS.
  */
 @Entity
-@Table(name = "RECORDS", indexes = {@Index(name = "INACTIVE_IDX",columnList = "inactive"),
-                                    @Index(name = "ENTRYPID_IDX", columnList = "ENTRYPID")})
+@Table(name = "RECORDS")
 public class Record implements Serializable {
 
     public enum State {
@@ -112,28 +235,28 @@ public class Record implements Serializable {
 
     /** The pid of the object */
     @Id
-    @Column(name = "ENTRYPID",length = 64)
+    @Column(name = "ENTRYPID",length = 64, nullable = false)
     private String entryPid;
 
     /** The viewangle the object is an entry for */
     @Id
-    @Column(name = "VIEWANGLE",length = 64)
+    @Column(name = "VIEWANGLE",length = 64, nullable = false)
     private String viewAngle;
 
     @Id
-    @Column(name = "COLLECTION",length = 64)
+    @Column(name = "COLLECTION",length = 64, nullable = false)
     private String collection;
 
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "active",columnDefinition = "timestamp with time zone")
+    @Column(name = "active",columnDefinition = "timestamp with time zone", nullable = true)
     private Date active = null;
 
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(name="inactive",columnDefinition = "timestamp with time zone")
+    @Column(name="inactive",columnDefinition = "timestamp with time zone", nullable = true)
     private Date inactive = null;
 
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(name="deleted",columnDefinition = "timestamp with time zone")
+    @Column(name="deleted",columnDefinition = "timestamp with time zone", nullable = true)
     private Date deleted = null;
 
     @ManyToMany
@@ -144,12 +267,41 @@ public class Record implements Serializable {
     public Record() {
     }
 
+    public void addObject(DomsObject object) {
+        objects.add(object);
+        object.getRecords_().add(this);
+    }
+
+    /**
+     * This methods clears the object and removes the references from the records
+     */
+    public void clearObjects() {
+        for (DomsObject object : objects) {
+            object.getRecords_().remove(this);
+        }
+        objects.clear();
+    }
+
+
+    public Set<DomsObject> getObjects() {
+        return Collections.unmodifiableSet(objects);
+    }
+
+
     public Record(String entryPid, String viewAngle, String collection) {
         this.entryPid = entryPid;
         this.viewAngle = viewAngle;
         this.collection = collection;
     }
 
+    public Record(String viewAngle, String entryPid, String collection, Date active, Date deleted, Date inactive) {
+        this.entryPid = entryPid;
+        this.viewAngle = viewAngle;
+        this.collection = collection;
+        this.active = active;
+        this.inactive = inactive;
+        this.deleted = deleted;
+    }
 
     public String getEntryPid() {
         return entryPid;
@@ -294,11 +446,4 @@ public class Record implements Serializable {
         this.deleted = deleted;
     }
 
-    public Set<DomsObject> getObjects() {
-        return objects;
-    }
-
-    public void setObjects(Set<DomsObject> objects) {
-        this.objects = objects;
-    }
 }

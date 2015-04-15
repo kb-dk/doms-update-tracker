@@ -33,20 +33,21 @@ import static org.mockito.Mockito.when;
 
 public class NewspaperBatchTests {
 
-    private final File configFile;
     UpdateTrackerPersistentStore db;
     FedoraForUpdateTracker fcmock;
 
-    public NewspaperBatchTests() throws URISyntaxException {
-        fcmock = mock(FedoraForUpdateTracker.class);
-        configFile = new File(Thread.currentThread().getContextClassLoader().getResource("hibernate.cfg.xml").toURI());
-    }
 
 
     @Before
     public void setUp() throws Exception {
+        fcmock = mock(FedoraForUpdateTracker.class);
+        File configFile = new File(Thread.currentThread().getContextClassLoader().getResource("hibernate.cfg.xml")
+                                         .toURI());
+        File mappings = new File(Thread.currentThread().getContextClassLoader().getResource("updateTrapperMappings.xml")
+                                       .toURI());
+
         final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L);
-        db = new UpdateTrackerPersistentStoreImpl(configFile,fcmock, updateTrackerBackend);
+        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings,fcmock, updateTrackerBackend);
     }
 
     @After

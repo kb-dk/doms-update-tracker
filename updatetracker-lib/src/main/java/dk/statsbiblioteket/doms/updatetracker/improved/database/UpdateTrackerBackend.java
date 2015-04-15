@@ -79,7 +79,7 @@ public class UpdateTrackerBackend {
                     if (UpdateTrackerDAO.recordNotExists(session, newRecord)) {
                         log.debug("Pid {} is not marked as an entry for viewAngle {}. Fixing", pid, entryAngle);
                         final DomsObject object = UpdateTrackerDAO.loadOrCreate(session, pid);
-                        newRecord.getObjects().add(object);
+                        newRecord.addObject(object);
                         newRecord.setInactive(timestamp);
                         if (state == State.ACTIVE){
                             newRecord.setActive(timestamp);
@@ -118,14 +118,16 @@ public class UpdateTrackerBackend {
 
 
             for (Record otherRecord : otherRecordsThanThisWhichThisObjectIsPart) {
-                reconnectObjectsInRecord(timestamp, session, otherRecord);
+                if (otherRecord.getState() != State.DELETED) {
+                    reconnectObjectsInRecord(timestamp, session, otherRecord);
+                }
             }
             session.delete(thisObject);
 
             Set<Record> recordsWhichThisObjectIsEntry = removeOthers(pid, thisObject);
 
             for (Record record : recordsWhichThisObjectIsEntry) {
-                record.getObjects().clear();
+                record.clearObjects();
                 record.setDeleted(timestamp);
                 record.setInactive(null);
                 record.setActive(null);
@@ -155,14 +157,16 @@ public class UpdateTrackerBackend {
 
     private void reconnectObjectsInRecord(Date timestamp, Session session, Record otherRecord) throws FedoraFailedException {
         ViewBundle bundle = getViewBundle(timestamp, otherRecord);
-        otherRecord.getObjects().clear();
+        otherRecord.clearObjects();
         for (String viewObject : bundle.getContained()) {
             log.debug("Marking object {} as part of record {},{},{}", viewObject, otherRecord.getEntryPid(), otherRecord.getViewAngle(), otherRecord.getCollection());
             final DomsObject object = UpdateTrackerDAO.loadOrCreate(session, viewObject);
-            otherRecord.getObjects().add(object);
+            otherRecord.addObject(object);
         }
 
-        if (otherRecord.getInactive().equals(otherRecord.getActive())){
+        if (otherRecord.getInactive() != null &&
+            otherRecord.getActive() != null &&
+            otherRecord.getInactive().equals(otherRecord.getActive())){
             otherRecord.setActive(timestamp);
         }
         otherRecord.setInactive(timestamp);
@@ -206,7 +210,7 @@ public class UpdateTrackerBackend {
                 Record record = new Record(pid, entryViewAngle, collection);
                 if (UpdateTrackerDAO.recordNotExists(session, record)){
                     DomsObject object = UpdateTrackerDAO.loadOrCreate(session, pid);
-                    record.getObjects().add(object);
+                    record.addObject(object);
                     record.setInactive(timestamp);
                     session.saveOrUpdate(record);
                 }
@@ -223,7 +227,7 @@ public class UpdateTrackerBackend {
             previousRecord.setDeleted(timestamp);
             previousRecord.setInactive(null);
             previousRecord.setActive(null);
-            previousRecord.getObjects().clear();
+            previousRecord.clearObjects();
             session.saveOrUpdate(previousRecord);
         }
 
@@ -236,64 +240,20 @@ public class UpdateTrackerBackend {
 
          */
 
-        Set<Record> records = UpdateTrackerDAO.loadOrCreate(session, pid).getRecords();
+        Set<Record> records = new HashSet<Record>(UpdateTrackerDAO.loadOrCreate(session, pid).getRecords());
         log.debug("Find all records {} containing {} ", records, pid);
         for (Record otherRecord : records) {
-            reconnectObjectsInRecord(timestamp, session, otherRecord);
+            if (otherRecord.getState() != State.DELETED) {
+                reconnectObjectsInRecord(timestamp, session, otherRecord);
+            }
         }
     }
 
     public void updateDates(String pid, Date timestamp, Session session) {
-
-        /*
-        explain     update
-        PUBLIC.RECORDS
-    set
-        inactive='1970-01-01Z',
-        active=case
-            when active>=inactive then '1970-01-01Z'
-            else active
-        end
-    where
-        (
-            'uuid:xxx' in (
-                select
-                    objects1_.objects_OBJECTPID
-                from
-                    PUBLIC.MEMBERSHIPS objects1_
-                where
-                    PUBLIC.RECORDS.VIEWANGLE=objects1_.records_VIEWANGLE
-                    and PUBLIC.RECORDS.ENTRYPID=objects1_.records_ENTRYPID
-                    and PUBLIC.RECORDS.COLLECTION=objects1_.records_COLLECTION
-            )
-        )
-        and (
-            deleted is null
-            or inactive>=deleted
-        )
-;
-                                                                                      QUERY PLAN
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Update on records  (cost=0.00..166526.76 rows=19214 width=107)
-   ->  Seq Scan on records  (cost=0.00..166526.76 rows=19214 width=107)
-         Filter: (((deleted IS NULL) OR (inactive >= deleted)) AND (SubPlan 1))
-         SubPlan 1
-           ->  Index Only Scan using memberships_pkey on memberships objects1_  (cost=0.00..8.52 rows=1 width=41)
-                 Index Cond: ((records_viewangle = (records.viewangle)::text) AND (records_entrypid = (records.entrypid)::text) AND (records_collection = (records.collection)::text))
-(6 rows)
-
-         */
-        //TODO this query is expensive, figure out why
-            final Query query
-                    = session.createQuery("update Record e " +
-                                          "set" +
-                                          " e.inactive=:timestamp," +
-                                          " e.active=(case when e.active>=e.inactive then :timestamp else e.active end) " +
-                                          "where :pid member of e.objects " +
-                                          "and (e.deleted is null or e.inactive>=e.deleted)");
-            query.setParameter("pid", pid);
-            query.setParameter("timestamp", timestamp);
-            query.executeUpdate();
+        final Query query = session.getNamedQuery("updateDates");
+        query.setParameter("pid", pid);
+        query.setParameter("timestamp", timestamp);
+        query.executeUpdate();
     }
 
     public List<Record> lookup(Date since, String viewAngle, int offset, int limit, String state, String collection,
@@ -325,11 +285,11 @@ public class UpdateTrackerBackend {
 
 
         query.setReadOnly(true);
-        query.setFirstResult(offset)
-             .setMaxResults(limit);
+        query.setFirstResult(offset);
         query.setTimestamp("since", since)
              .setString("collection", collection)
-             .setString("viewAngle", viewAngle);
+             .setString("viewAngle", viewAngle)
+             .setLong("limit", limit);
 
         return UpdateTrackerDAO.listRecords(query);
     }
