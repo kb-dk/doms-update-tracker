@@ -83,7 +83,7 @@ public class UpdateTrackingConfig {
     private final int fedoraUpdatetrackerLimit;
     private final File updatetrackerHibernateConfig;
     private final long viewBundleCacheTime;
-    private File updatetrackerHibernateMappings;
+    private final File updatetrackerHibernateMappings;
 
 
     /**
