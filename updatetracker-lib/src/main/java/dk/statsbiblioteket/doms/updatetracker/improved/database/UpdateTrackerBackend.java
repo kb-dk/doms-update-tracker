@@ -200,6 +200,7 @@ public class UpdateTrackerBackend {
 
         log.debug("starting reconnectObjects({},{})",pid,timestamp);
 
+        Set<Record> newRecords = new HashSet<Record>();
         //Create new Records
         final Collection<String> entryViewAngles = fedora.getEntryAngles(pid, timestamp);
         for (String entryViewAngle : entryViewAngles) {
@@ -209,6 +210,7 @@ public class UpdateTrackerBackend {
                     record.getObjects().add(pid);
                     record.setInactive(timestamp);
                     session.saveOrUpdate(record);
+                    newRecords.add(record);
                 }
             }
         }
@@ -237,6 +239,7 @@ public class UpdateTrackerBackend {
          */
 
         Set<Record> records = new HashSet<Record>(UpdateTrackerDAO.getRecordsForPid(session,pid));
+        records.addAll(newRecords);
         log.debug("Find all records {} containing {} ", records, pid);
         for (Record otherRecord : records) {
             if (otherRecord.getState() != State.DELETED) {

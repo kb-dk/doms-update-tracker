@@ -3,6 +3,7 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
+import org.hibernate.FlushMode;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -103,7 +104,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
 
     private Session getSession() {
         Session session = sessionFactory.getCurrentSession();
-        //session.setFlushMode(FlushMode.ALWAYS);
+        session.setFlushMode(FlushMode.COMMIT);
         return session;
     }
 
@@ -200,6 +201,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                             Set<String> collections = fedora.getCollections(object, timestamp);
                             backend.reconnectObjects(object, timestamp, session, collections);
                             backend.updateDates(object, timestamp, session);
+                            session.flush();
                         }
                     } else if (dsid.equals("RELS-EXT")) {
                         Set<String> collections = fedora.getCollections(pid, timestamp);
