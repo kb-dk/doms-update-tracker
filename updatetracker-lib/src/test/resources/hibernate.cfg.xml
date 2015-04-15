@@ -7,17 +7,22 @@
         <!-- database connection settings, change these for drift-->
         <property name="hibernate.connection.driver_class">org.hsqldb.jdbcDriver</property>
         <property name="hibernate.connection.url">
-            jdbc:hsqldb:${project.build.directory}/testdb;close_result=true;shutdown=true</property>
+            jdbc:hsqldb:${project.build.directory}/testdb</property>
         <property name="hibernate.connection.username">sa</property>
         <property name="hibernate.connection.password"></property>
         <property name="hibernate.default_schema">PUBLIC</property>
         <property name="hibernate.dialect">org.hibernate.dialect.HSQLDialect</property>
 
 
-        <!-- Enable UpdateTrackerPersistentStore's automatic session context management -->
         <property name="hibernate.current_session_context_class">thread</property>
-        <!-- JDBC connection pool (use the built-in) -->
-        <property name="hibernate.connection.pool_size">5</property>
+        <property name="transaction.factory_class">org.hibernate.engine.transaction.internal.jdbc.JdbcTransactionFactory</property>
+        <property name="hibernate.connection.provider_class">org.hibernate.c3p0.internal.C3P0ConnectionProvider</property>
+        <property name="hibernate.c3p0.min_size">1</property>
+        <property name="hibernate.c3p0.max_size">10</property>
+        <property name="hibernate.c3p0.timeout">300</property>
+        <property name="hibernate.c3p0.max_statements">50</property>
+        <property name="hibernate.c3p0.idle_test_period">3000</property>
+
         <!-- Drop and re-create the database schema on startup -->
         <property name="hibernate.hbm2ddl.auto">create</property>
 

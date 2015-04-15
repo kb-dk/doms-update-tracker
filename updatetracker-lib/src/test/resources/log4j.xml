@@ -21,7 +21,7 @@
     <logger name="org.hibernate">
         <level value="INFO"/>
     </logger>
-    <logger name="com.mchange.v2.c3p0">
+    <logger name="com.mchange.v2" additivity="false">
         <level value="ERROR"/>
     </logger>
     <logger name="org.jboss.logging">
