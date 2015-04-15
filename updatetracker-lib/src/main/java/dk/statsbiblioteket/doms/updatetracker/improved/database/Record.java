@@ -11,6 +11,7 @@ import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.NamedNativeQueries;
 import javax.persistence.NamedNativeQuery;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -233,19 +234,8 @@ public class Record implements Serializable {
         }
     }
 
-    /** The pid of the object */
     @Id
-    @Column(name = "ENTRYPID",length = 64, nullable = false)
-    private String entryPid;
-
-    /** The viewangle the object is an entry for */
-    @Id
-    @Column(name = "VIEWANGLE",length = 64, nullable = false)
-    private String viewAngle;
-
-    @Id
-    @Column(name = "COLLECTION",length = 64, nullable = false)
-    private String collection;
+    private RecordKey recordKey;
 
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "active",columnDefinition = "timestamp with time zone", nullable = true)
@@ -259,8 +249,7 @@ public class Record implements Serializable {
     @Column(name="deleted",columnDefinition = "timestamp with time zone", nullable = true)
     private Date deleted = null;
 
-    @ManyToMany
-    @JoinTable(name = "MEMBERSHIPS")
+    @OneToMany
     @Cascade({CascadeType.REFRESH,CascadeType.REPLICATE,CascadeType.SAVE_UPDATE,CascadeType.PERSIST,CascadeType.MERGE})
     private Set<DomsObject> objects = new HashSet<DomsObject>();
 
@@ -286,42 +275,26 @@ public class Record implements Serializable {
 
 
     public Record(String entryPid, String viewAngle, String collection) {
-        this.entryPid = entryPid;
-        this.viewAngle = viewAngle;
-        this.collection = collection;
+        this.recordKey = new RecordKey(entryPid,viewAngle,collection);
     }
 
     public Record(String viewAngle, String entryPid, String collection, Date active, Date deleted, Date inactive) {
-        this.entryPid = entryPid;
-        this.viewAngle = viewAngle;
-        this.collection = collection;
+        this.recordKey = new RecordKey(entryPid, viewAngle, collection);
         this.active = active;
         this.inactive = inactive;
         this.deleted = deleted;
     }
 
     public String getEntryPid() {
-        return entryPid;
-    }
-
-    public void setEntryPid(String entryPid) {
-        this.entryPid = entryPid;
+        return recordKey.getEntryPid();
     }
 
     public String getViewAngle() {
-        return viewAngle;
-    }
-
-    public void setViewAngle(String viewAngle) {
-        this.viewAngle = viewAngle;
+        return recordKey.getViewAngle();
     }
 
     public String getCollection() {
-        return collection;
-    }
-
-    public void setCollection(String collection) {
-        this.collection = collection;
+        return recordKey.getCollection();
     }
 
     @Transient
@@ -358,19 +331,6 @@ public class Record implements Serializable {
         return timestamp;
     }
 
-
-    @Override
-    public String toString() {
-        return "Record{" +
-               "entryPid='" + entryPid + '\'' +
-               ", viewAngle='" + viewAngle + '\'' +
-               ", collection='" + collection + '\'' +
-               ", active=" + active +
-               ", inactive=" + inactive +
-               ", deleted=" + deleted +
-               '}';
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -382,25 +342,7 @@ public class Record implements Serializable {
 
         Record record = (Record) o;
 
-        if (active != null ? !active.equals(record.active) : record.active != null) {
-            return false;
-        }
-        if (!collection.equals(record.collection)) {
-            return false;
-        }
-        if (deleted != null ? !deleted.equals(record.deleted) : record.deleted != null) {
-            return false;
-        }
-        if (!entryPid.equals(record.entryPid)) {
-            return false;
-        }
-        if (inactive != null ? !inactive.equals(record.inactive) : record.inactive != null) {
-            return false;
-        }
-        if (objects != null ? !objects.equals(record.objects) : record.objects != null) {
-            return false;
-        }
-        if (!viewAngle.equals(record.viewAngle)) {
+        if (!recordKey.equals(record.recordKey)) {
             return false;
         }
 
@@ -409,14 +351,7 @@ public class Record implements Serializable {
 
     @Override
     public int hashCode() {
-        int result = entryPid.hashCode();
-        result = 31 * result + viewAngle.hashCode();
-        result = 31 * result + collection.hashCode();
-        result = 31 * result + (active != null ? active.hashCode() : 0);
-        result = 31 * result + (inactive != null ? inactive.hashCode() : 0);
-        result = 31 * result + (deleted != null ? deleted.hashCode() : 0);
-        result = 31 * result + (objects != null ? objects.hashCode() : 0);
-        return result;
+        return recordKey.hashCode();
     }
 
     public Date getActive() {

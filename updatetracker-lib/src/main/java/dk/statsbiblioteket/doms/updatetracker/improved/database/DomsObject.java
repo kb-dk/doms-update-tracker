@@ -6,6 +6,7 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.ManyToMany;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import java.io.Serializable;
 import java.util.Collections;
@@ -28,9 +29,8 @@ public class DomsObject implements Serializable {
     @Column(name = "OBJECTPID",length = 64)
     private String objectPid;
 
-
-    @ManyToMany(mappedBy = "objects")
-    private Set<Record> records = new HashSet<Record>();
+    @Id
+    private RecordKey recordKey;
 
     public DomsObject() {
     }
@@ -40,18 +40,10 @@ public class DomsObject implements Serializable {
     }
 
 
-    public DomsObject(String objectPid, Set<Record> records) {
-        this.objectPid = objectPid;
-        this.records = records;
-    }
-
     public String getObjectPid() {
         return objectPid;
     }
 
-    public void setObjectPid(String objectPid) {
-        this.objectPid = objectPid;
-    }
 
     public Set<Record> getRecords() {
         return Collections.unmodifiableSet(new HashSet<Record>(records));
@@ -78,17 +70,6 @@ public class DomsObject implements Serializable {
         return true;
     }
 
-    @Override
-    public int hashCode() {
-        int result = objectPid.hashCode();
-        return result;
-    }
 
-    @Override
-    public String toString() {
-        return "DomsObject{" +
-               "objectPid='" + objectPid + '\'' +
-               '}';
-    }
 }
 

@@ -58,6 +58,10 @@ public class UpdateTrackerDAO {
         return (DomsObject) session.load(DomsObject.class, pid);
     }
 
+    static List<Record> getRecordsForPid(Session session, String pid){
+        return  listRecords(session.createQuery("from Record r,DomsObject d where d.objectPid=:pid and r.id=d.recordKey"));
+    }
+
     @SuppressWarnings("unchecked")
     static <T> List<T> listRecords(Query query) {
         return query.list();
