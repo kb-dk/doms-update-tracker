@@ -16,7 +16,6 @@ import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.ACT
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.GUI;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.SBOI;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.SUMMA_VISIBLE;
-import static java.util.Collections.emptyList;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -133,14 +132,14 @@ public class NewspaperTests {
 
         //We now simulate a change to newspaper
         final Date newspaperChanged = new Date();
-        db.datastreamChanged(newspaper, newspaperChanged,"MODS");
+        db.datastreamChanged(newspaper, newspaperChanged,"MODS", 1);
         //Both the page and newspaper is updated
         items = db.lookup(beginning, SUMMA_VISIBLE, 0, 10, null, COLLECTION);
         Tests.verifyTwoHits(items, newspaper, newspaperChanged, page1, newspaperChanged);
 
         //We now simulate a change to edition, which is in the view of page
         final Date editionChanged = new Date();
-        db.datastreamChanged(edition, editionChanged, "EDITION");
+        db.datastreamChanged(edition, editionChanged, "EDITION", 1);
 
         //The newspaper have not been updated, but the page have
         items = db.lookup(beginning, SUMMA_VISIBLE, 0, 10, null, COLLECTION);
@@ -151,7 +150,7 @@ public class NewspaperTests {
         final Date newspaper2Created = Tests.createNewspaperObject(db, newspaper2, fcmock);
         final Date newspaper2Linked = new Date();
         Tests.linkNewspaperToNewspaper(fcmock, edition, page1, newspaper2Linked, newspaper, newspaper2);
-        db.objectRelationsChanged(newspaper2,newspaper2Linked);
+        db.objectRelationsChanged(newspaper2,newspaper2Linked, 1);
         //Since the change happened to an unconnected object, it should not have been noticed
         items = db.lookup(beginning, SUMMA_VISIBLE, 0, 10, null, COLLECTION);
         Tests.verifyThreeHits(items, newspaper, newspaperChanged, page1, editionChanged, newspaper2, newspaper2Linked);

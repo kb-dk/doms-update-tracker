@@ -242,8 +242,6 @@ public class Record implements Serializable {
     @Column(name = "COLLECTION", length = 64, nullable = false)
     private String collection;
 
-
-
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "active",columnDefinition = "timestamp with time zone", nullable = true)
     private Date active = null;
@@ -278,7 +276,6 @@ public class Record implements Serializable {
         this.inactive = inactive;
         this.deleted = deleted;
     }
-
 
     public String getEntryPid() {
         return entryPid;

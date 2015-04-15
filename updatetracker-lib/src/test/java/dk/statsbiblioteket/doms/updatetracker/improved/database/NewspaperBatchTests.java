@@ -22,7 +22,6 @@ import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.MIX
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.MODS;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.SBOI;
 import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
 import static junit.framework.Assert.assertEquals;
 import static org.mockito.AdditionalMatchers.geq;
 import static org.mockito.AdditionalMatchers.lt;
@@ -68,26 +67,26 @@ public class NewspaperBatchTests {
         when(fcmock.calcViewBundle(eq(roundTrip), eq(viewAngle), any(Date.class))).thenReturn(new ViewBundle(roundTrip,
                                                                                                                     viewAngle));
         when(fcmock.getEntryAngles(eq(roundTrip), any(Date.class))).thenReturn(asList(viewAngle));
-        db.objectCreated(roundTrip, beginning);
+        db.objectCreated(roundTrip, beginning, 1);
 
         List<Record> list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
         Tests.verifyOneHit(list, roundTrip, beginning);
 
         Date eventAdded = new Date();
-        db.datastreamChanged(roundTrip, eventAdded, EVENTS);
+        db.datastreamChanged(roundTrip, eventAdded, EVENTS, 1);
 
         list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
         Tests.verifyOneHit(list, roundTrip, eventAdded);
 
         Date eventAdded2 = new Date();
-        db.datastreamChanged(roundTrip, eventAdded2, EVENTS);
+        db.datastreamChanged(roundTrip, eventAdded2, EVENTS, 1);
 
         list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
         Tests.verifyOneHit(list, roundTrip, eventAdded2);
 
 
         Date eventAdded3 = new Date();
-        db.datastreamChanged(roundTrip, eventAdded3, EVENTS);
+        db.datastreamChanged(roundTrip, eventAdded3, EVENTS, 1);
 
         list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
         Tests.verifyOneHit(list, roundTrip, eventAdded3);
@@ -114,7 +113,7 @@ public class NewspaperBatchTests {
         when(fcmock.getEntryAngles(eq(roundTrip), geq(becomingItemTime))).thenReturn(asList(viewAngle));
 
 
-        db.objectCreated(roundTrip, beginning);
+        db.objectCreated(roundTrip, beginning, 1);
 
         //So, no records expected, as no entry objects declared
         List<Record> list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
@@ -122,12 +121,12 @@ public class NewspaperBatchTests {
 
 
         //Even with changes, nothing should be found
-        db.datastreamChanged(roundTrip, eventAdded, EVENTS);
+        db.datastreamChanged(roundTrip, eventAdded, EVENTS, 1);
         list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
         assertEquals(0, list.size());
 
         //Now we change the relations, at the becomingItem time. So, now the object becomes an entry and is discovered
-        db.objectRelationsChanged(roundTrip, becomingItemTime);
+        db.objectRelationsChanged(roundTrip, becomingItemTime, 1);
         list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
         assertEquals(1, list.size());
         assertEquals(becomingItemTime.getTime(), list.get(0).getDateForChange().getTime());
@@ -135,7 +134,7 @@ public class NewspaperBatchTests {
 
         //Check that we track changes from this point on
         Date eventAdded3 = new Date();
-        db.datastreamChanged(roundTrip, eventAdded3, EVENTS);
+        db.datastreamChanged(roundTrip, eventAdded3, EVENTS, 1);
         list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
         assertEquals(1, list.size());
         assertEquals(eventAdded3.getTime(), list.get(0).getDateForChange().getTime());
@@ -225,25 +224,25 @@ public class NewspaperBatchTests {
         assertEquals(State.INACTIVE, items.get(0).getState());
 
         //mimetype and relations and content models
-        db.datastreamChanged(page1, new Date(), MODS);
-        db.datastreamChanged(page1, new Date(), MIX);
-        db.datastreamChanged(page1, new Date(), ALTO);
+        db.datastreamChanged(page1, new Date(), MODS, 1);
+        db.datastreamChanged(page1, new Date(), MIX, 1);
+        db.datastreamChanged(page1, new Date(), ALTO, 1);
         final Date pageContentModel = new Date();
         Tests.setContentModelPage(page1, pageContentModel, image1, edition, fcmock);
-        db.objectRelationsChanged(page1, pageContentModel);
+        db.objectRelationsChanged(page1, pageContentModel, 1);
 
-        db.datastreamChanged(edition, new Date(), EDITION);
+        db.datastreamChanged(edition, new Date(), EDITION, 1);
         final Date editionContentModel = new Date();
         Tests.setContentModelEditionAndItem(edition, editionContentModel, page1, image1, fcmock);
-        db.objectRelationsChanged(edition, editionContentModel);
+        db.objectRelationsChanged(edition, editionContentModel, 1);
 
-        db.datastreamChanged(film, new Date(), FILM);
+        db.datastreamChanged(film, new Date(), FILM, 1);
         final Date filmContentModel = new Date();
         Tests.setContentModelFilm(film, filmContentModel, edition, page1, image1, fcmock);
-        db.objectRelationsChanged(film, filmContentModel);
+        db.objectRelationsChanged(film, filmContentModel, 1);
 
         final Date roundtripRelations = new Date();
-        db.objectRelationsChanged(roundTrip, roundtripRelations);
+        db.objectRelationsChanged(roundTrip, roundtripRelations, 1);
 
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
@@ -263,7 +262,7 @@ public class NewspaperBatchTests {
         assertEquals(roundTrip, items.get(0).getEntryPid());
 
         final Date enricherEvents = new Date();
-        db.datastreamChanged(roundTrip, enricherEvents, EVENTS);
+        db.datastreamChanged(roundTrip, enricherEvents, EVENTS, 1);
 
         items = db.lookup(beginning, SBOI, 0, 10, "A", collection);
         assertEquals(2, items.size());

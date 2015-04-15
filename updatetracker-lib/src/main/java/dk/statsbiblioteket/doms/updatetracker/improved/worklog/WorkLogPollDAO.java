@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.Properties;
 import java.util.TimeZone;
 
 
@@ -48,8 +47,6 @@ public class WorkLogPollDAO implements Closeable {
         this.connectionPool = new ComboPooledDataSource();
 
         initialiseConnectionPool();
-
-        ensureLatestKey();
     }
 
     /**
@@ -131,55 +128,6 @@ public class WorkLogPollDAO implements Closeable {
                 } finally {
                     statement.close();
                 }
-            } finally {
-                conn.close();
-            }
-        } catch (SQLException e) {
-            throw new IOException(e);
-        }
-    }
-
-    private void ensureLatestKey() {
-        try {
-            getLatestKey();
-        } catch (IOException e) {
-            try {
-                Connection conn = getConnection();
-                try {
-                    conn.prepareStatement("CREATE TABLE latestKey (key BIGINT)").execute();
-                    conn.prepareStatement("INSERT INTO latestKey (key) VALUES (0)").execute();
-                } finally {
-                    conn.close();
-                }
-                getLatestKey();
-            } catch (Exception e1) {
-                throw new IllegalStateException(e1);
-            }
-        }
-    }
-
-    public Long getLatestKey() throws IOException {
-        try {
-            Connection conn = getConnection();
-            try {
-                ResultSet resultSet = conn.prepareStatement("SELECT key FROM latestKey").executeQuery();
-                resultSet.next();
-                return resultSet.getLong(1);
-            } finally {
-                conn.close();
-            }
-        } catch (SQLException e) {
-            throw new IOException(e);
-        }
-    }
-
-    public void setLatestKey(Long latestKey) throws IOException {
-        try {
-            Connection conn = getConnection();
-            try {
-                PreparedStatement preparedStatement = conn.prepareStatement("UPDATE latestKey SET key=? WHERE true");
-                preparedStatement.setLong(1, latestKey);
-                preparedStatement.execute();
             } finally {
                 conn.close();
             }

@@ -6,7 +6,6 @@ import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerSto
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -40,17 +39,13 @@ public class WorkLogPollTask extends TimerTask {
     public void run() {
 
         try {
-            Long latestKey = workLogPollDAO.getLatestKey();
+            Long latestKey = updateTrackerPersistentStore.getLatestKey();
 
             List<WorkLogUnit> events = getEvents(latestKey);
 
             for (WorkLogUnit event : events) {
                 try {
                     handleEvent(event);
-                    workLogPollDAO.setLatestKey(event.getKey());
-                } catch(IOException e){
-                    log.error("Failed to update latestKey in database. Failed on '" + event + "'", e);
-                    break; //If we fail, break the loop, as we DO NOT WANT to miss an event
                 } catch(UpdateTrackerStorageException e){
                     log.error("Failed to store events in update tracker. Failed on '" + event + "'", e);
                     break; //If we fail, break the loop, as we DO NOT WANT to miss an event
@@ -86,27 +81,28 @@ public class WorkLogPollTask extends TimerTask {
     }
 
     private void handleEvent(WorkLogUnit event) throws UpdateTrackerStorageException, FedoraFailedException {
-            final String pid = event.getPid();
+        long key = event.getKey();
+        final String pid = event.getPid();
             final Date date = event.getDate();
             final String param = event.getParam();
             final String method = event.getMethod();
             log.debug("Registering the event '{}'", event);
 
             if (method.equals("ingest")) {
-                updateTrackerPersistentStore.objectCreated(pid, date);
+                updateTrackerPersistentStore.objectCreated(pid, date, key);
             } else if (method.equals("modifyObject")) {
-                updateTrackerPersistentStore.objectStateChanged(pid, date, param);
+                updateTrackerPersistentStore.objectStateChanged(pid, date, param, key);
             } else if (method.equals("purgeObject")) {
-                updateTrackerPersistentStore.objectDeleted(pid, date);
+                updateTrackerPersistentStore.objectDeleted(pid, date, key);
             } else if (method.equals("addDatastream") ||
                        method.equals("modifyDatastreamByReference") ||
                        method.equals("modifyDatastreamByValue") ||
                        method.equals("purgeDatastream") ||
                        method.equals("setDatastreamState") ||
                        method.equals("setDatastreamVersionable")) {
-                updateTrackerPersistentStore.datastreamChanged(pid, date, param);
+                updateTrackerPersistentStore.datastreamChanged(pid, date, param, key);
             } else if (method.equals("addRelationship") || method.equals("purgeRelationship")) {
-                updateTrackerPersistentStore.objectRelationsChanged(pid, date);
+                updateTrackerPersistentStore.objectRelationsChanged(pid, date, key);
             } else if (method.equals("getObjectXML") || method.equals("export") ||
                        method.equals("getDatastream") ||
                        method.equals("getDatastreams") ||
