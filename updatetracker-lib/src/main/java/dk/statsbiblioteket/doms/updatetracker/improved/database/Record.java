@@ -183,6 +183,16 @@ import java.util.Set;
 
 
                             ),
+                            @NamedNativeQuery(
+                                    name = "GetRecordsForPid",
+                                    resultClass = Record.class,
+                                    query =
+                                        "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                        "FROM RECORDS " +
+                                            "JOIN MEMBERSHIPS USING (VIEWANGLE,ENTRYPID,COLLECTION) " +
+                                        "WHERE MEMBERSHIPS.OBJECTPID = :pid"
+                            )
+
 })
 
 
@@ -194,7 +204,9 @@ import java.util.Set;
 public class Record implements Serializable {
 
     public enum State {
-        ACTIVE("A","Published"), INACTIVE("I","Inactive"),DELETED("D","Deleted");
+        ACTIVE("A", "Published"),
+        INACTIVE("I", "Inactive"),
+        DELETED("D", "Deleted");
         private final String shortName;
         private final String longName;
 
@@ -211,12 +223,12 @@ public class Record implements Serializable {
             return longName;
         }
 
-        public static State fromName(String name){
+        public static State fromName(String name) {
             for (State state : values()) {
-                if (state.getShortName().equals(name)){
+                if (state.getShortName().equals(name)) {
                     return state;
                 }
-                if (state.getLongName().equalsIgnoreCase(name)){
+                if (state.getLongName().equalsIgnoreCase(name)) {
                     return state;
                 }
             }
@@ -244,24 +256,24 @@ public class Record implements Serializable {
     private String collection;
 
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "active",columnDefinition = "timestamp with time zone", nullable = true)
+    @Column(name = "ACTIVE", columnDefinition = "timestamp with time zone", nullable = true)
     private Date active = null;
 
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(name="inactive",columnDefinition = "timestamp with time zone", nullable = true)
+    @Column(name = "INACTIVE", columnDefinition = "timestamp with time zone", nullable = true)
     private Date inactive = null;
 
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(name="deleted",columnDefinition = "timestamp with time zone", nullable = true)
+    @Column(name = "DELETED", columnDefinition = "timestamp with time zone", nullable = true)
     private Date deleted = null;
 
     @ElementCollection
     @CollectionTable(name = "MEMBERSHIPS",
-                    joinColumns = {
-                            @JoinColumn(referencedColumnName = "VIEWANGLE",name = "VIEWANGLE"),
-                            @JoinColumn(referencedColumnName = "ENTRYPID", name = "ENTRYPID"),
-                            @JoinColumn(referencedColumnName = "COLLECTION", name = "COLLECTION")
-    })
+                            joinColumns = {
+                                                  @JoinColumn(referencedColumnName = "VIEWANGLE", name = "VIEWANGLE"),
+                                                  @JoinColumn(referencedColumnName = "ENTRYPID", name = "ENTRYPID"),
+                                                  @JoinColumn(referencedColumnName = "COLLECTION", name = "COLLECTION")
+                            })
     @Column(name = "OBJECTPID", length = 64)
     private Set<String> objects = new HashSet<String>();
 
@@ -317,17 +329,21 @@ public class Record implements Serializable {
     }
 
     @Transient
-    public Date getDateForChange(){
-        switch (getState()){
-            case ACTIVE:return active;
-            case INACTIVE: return inactive;
-            case DELETED: return deleted;
-            default: return null;
+    public Date getDateForChange() {
+        switch (getState()) {
+            case ACTIVE:
+                return active;
+            case INACTIVE:
+                return inactive;
+            case DELETED:
+                return deleted;
+            default:
+                return null;
         }
     }
 
     private Date real(Date timestamp) {
-        if (timestamp == null){
+        if (timestamp == null) {
             return new Date(Long.MIN_VALUE);
         }
         return timestamp;

@@ -51,7 +51,7 @@ public class UpdateTrackerDAO {
     }
 
     static List<Record> getRecordsForPid(Session session, String pid){
-        return  listRecords(session.createQuery("from Record r where :pid member of r.objects").setString("pid",pid));
+        return  listRecords(session.getNamedQuery("GetRecordsForPid").setString("pid",pid));
     }
 
     @SuppressWarnings("unchecked")
