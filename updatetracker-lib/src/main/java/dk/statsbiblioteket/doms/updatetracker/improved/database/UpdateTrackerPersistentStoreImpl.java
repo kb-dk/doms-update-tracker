@@ -201,6 +201,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                             Set<String> collections = fedora.getCollections(object, timestamp);
                             backend.reconnectObjects(object, timestamp, session, collections);
                             backend.updateDates(object, timestamp, session);
+                            //TODO is flush the right thing to clear the session here? No need to keep track of the objects from last iteration of this loop
                             session.flush();
                         }
                     } else if (dsid.equals("RELS-EXT")) {

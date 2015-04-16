@@ -161,7 +161,7 @@ import java.util.Set;
                                             "r.ENTRYPID " +
                                         "LIMIT :limit"),
                             @NamedNativeQuery(
-                                      name = "updateDates",
+                                      name = "UpdateDates",
                                       query =
                                         "UPDATE RECORDS as r " +
                                         "SET INACTIVE=:timestamp, " +

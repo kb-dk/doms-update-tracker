@@ -200,6 +200,7 @@ public class UpdateTrackerBackend {
 
         log.debug("starting reconnectObjects({},{})",pid,timestamp);
 
+        //Store the new records so that we do not need to flush the database to find them again
         Set<Record> newRecords = new HashSet<Record>();
         //Create new Records
         final Collection<String> entryViewAngles = fedora.getEntryAngles(pid, timestamp);
@@ -239,6 +240,7 @@ public class UpdateTrackerBackend {
          */
 
         Set<Record> records = new HashSet<Record>(UpdateTrackerDAO.getRecordsForPid(session,pid));
+        //Since the database connection have not been flushed, the newly created records will not be found, so add them
         records.addAll(newRecords);
         log.debug("Find all records {} containing {} ", records, pid);
         for (Record otherRecord : records) {
@@ -249,7 +251,7 @@ public class UpdateTrackerBackend {
     }
 
     public void updateDates(String pid, Date timestamp, Session session) {
-        final Query query = session.getNamedQuery("updateDates");
+        final Query query = session.getNamedQuery("UpdateDates");
         query.setParameter("pid", pid);
         query.setParameter("timestamp", timestamp);
         query.executeUpdate();
