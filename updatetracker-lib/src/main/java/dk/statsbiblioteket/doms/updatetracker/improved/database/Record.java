@@ -5,6 +5,7 @@ import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
 import javax.persistence.NamedNativeQueries;
 import javax.persistence.NamedNativeQuery;
 import javax.persistence.Table;
@@ -174,9 +175,9 @@ import java.util.Set;
                                         "WHERE " +
                                             "(r.ENTRYPID,r.VIEWANGLE,r.COLLECTION) in " +
                                                 "(" +
-                                                    "SELECT m.RECORD_ENTRYPID,m.RECORD_VIEWANGLE,m.RECORD_COLLECTION " +
+                                                    "SELECT m.ENTRYPID,m.VIEWANGLE,m.COLLECTION " +
                                                     "FROM MEMBERSHIPS as m " +
-                                                    "WHERE m.OBJECTS = :pid " +
+                                                    "WHERE m.OBJECTPID = :pid " +
                                                 ") " +
                                             "AND (r.DELETED is null or r.INACTIVE >= r.DELETED);"
 
@@ -255,8 +256,13 @@ public class Record implements Serializable {
     private Date deleted = null;
 
     @ElementCollection
-    @CollectionTable(name = "memberships")
-    @Column(name = "objects", length = 64)
+    @CollectionTable(name = "MEMBERSHIPS",
+                    joinColumns = {
+                            @JoinColumn(referencedColumnName = "VIEWANGLE",name = "VIEWANGLE"),
+                            @JoinColumn(referencedColumnName = "ENTRYPID", name = "ENTRYPID"),
+                            @JoinColumn(referencedColumnName = "COLLECTION", name = "COLLECTION")
+    })
+    @Column(name = "OBJECTPID", length = 64)
     private Set<String> objects = new HashSet<String>();
 
     public Record() {
