@@ -113,7 +113,7 @@ public class UpdateTrackerBackend {
 
             final Collection<Record> records = UpdateTrackerDAO.getRecordsForPid(session, pid);
 
-            Set<Record> otherRecordsThanThisWhichThisObjectIsPart = removeThis(pid, records);
+            Set<Record> otherRecordsThanThisWhichThisObjectIsPart = recordsWithoutThisPidAsEntry(pid, records);
 
 
             for (Record otherRecord : otherRecordsThanThisWhichThisObjectIsPart) {
@@ -122,7 +122,7 @@ public class UpdateTrackerBackend {
                 }
             }
 
-            Set<Record> recordsWhichThisObjectIsEntry = removeOthers(pid, records);
+            Set<Record> recordsWhichThisObjectIsEntry = recordWithThisPidAsEntry(pid, records);
 
             for (Record record : recordsWhichThisObjectIsEntry) {
                 record.getObjects().clear();
@@ -135,7 +135,7 @@ public class UpdateTrackerBackend {
 
     }
 
-    private Set<Record> removeOthers(final String pid, Collection<Record> records) {
+    private Set<Record> recordWithThisPidAsEntry(final String pid, Collection<Record> records) {
         final Set<Record> coll = new HashSet<Record>(records);
         CollectionUtils.filter(coll, new Predicate<Record>() {
             @Override
@@ -144,7 +144,7 @@ public class UpdateTrackerBackend {
         return coll;
     }
 
-    private Set<Record> removeThis(final String pid, Collection<Record> records) {
+    private Set<Record> recordsWithoutThisPidAsEntry(final String pid, Collection<Record> records) {
         final Set<Record> coll = new HashSet<Record>(records);
         CollectionUtils.filter(coll, new Predicate<Record>() {
             @Override
