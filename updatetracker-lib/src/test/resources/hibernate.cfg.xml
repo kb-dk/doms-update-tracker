@@ -15,8 +15,6 @@
 
 
         <property name="hibernate.current_session_context_class">thread</property>
-        <property name="transaction.factory_class">org.hibernate.engine.transaction.internal.jdbc.JdbcTransactionFactory</property>
-        <property name="hibernate.connection.provider_class">org.hibernate.c3p0.internal.C3P0ConnectionProvider</property>
         <property name="hibernate.c3p0.min_size">1</property>
         <property name="hibernate.c3p0.max_size">10</property>
         <property name="hibernate.c3p0.timeout">300</property>
