@@ -113,12 +113,17 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
         Date now;
         String param;
         try {
-            Context context = (Context) args[0];
-            now = Server.getCurrentDate(context);
-            pid = toPid(args[1].toString());
-            param = null;
-            if (args.length > 2 && args[2] != null) {
-                param = args[2].toString();
+            if (methodName.equals("getTempStream") || methodName.equals("putTempStream")){
+                //These methods do not take the standard arguments, so break out here
+                return method.invoke(target, args);
+            } else {
+                Context context = (Context) args[0];
+                now = Server.getCurrentDate(context);
+                pid = toPid(args[1].toString());
+                param = null;
+                if (args.length > 2 && args[2] != null) {
+                    param = args[2].toString();
+                }
             }
         } catch (Exception e) {
             final String message = "Failed to parse params for method '" + methodName + "': " + Arrays.toString(args) +
@@ -141,8 +146,7 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
             return invokeHook(method, args, methodName, pid, now, param);
         } else if (methodName.equals("getObjectXML") || methodName.equals("export") ||
                    methodName.equals("getDatastream") || methodName.equals("getDatastreams") ||
-                   methodName.equals("getDatastreamHistory") || methodName.equals("putTempStream") ||
-                   methodName.equals("getTempStream") || methodName.equals("compareDatastreamChecksum") ||
+                   methodName.equals("getDatastreamHistory") || methodName.equals("compareDatastreamChecksum") ||
                    methodName.equals("getNextPID") || methodName.equals("getRelationships") ||
                    methodName.equals("validate")) {
             return method.invoke(target, args);
