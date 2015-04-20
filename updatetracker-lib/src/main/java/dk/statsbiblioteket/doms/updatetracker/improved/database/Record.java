@@ -22,10 +22,10 @@ import java.util.Set;
                                       resultClass = Record.class,
                                       name = "ActiveAndDeleted",
                                       query =
-                                        "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                        "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE, LASTMODIFIED " +
                                         "FROM ( " +
                                             "(" +
-                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE, LASTMODIFIED " +
                                                 "FROM RECORDS " +
                                                 "WHERE DELETED >= :since " +
                                                     "AND VIEWANGLE = :viewAngle " +
@@ -33,7 +33,7 @@ import java.util.Set;
                                                 "ORDER BY DELETED " +
                                                 "LIMIT :limit " +
                                             ") UNION ( " +
-                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE, LASTMODIFIED " +
                                                 "FROM RECORDS " +
                                                 "WHERE ACTIVE >= :since " +
                                                     "AND VIEWANGLE = :viewAngle " +
@@ -57,10 +57,10 @@ import java.util.Set;
                                       resultClass = Record.class,
                                       name = "InactiveOrDeleted",
                                       query =
-                                        "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                        "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE, LASTMODIFIED " +
                                         "FROM ( " +
                                             "(" +
-                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE, LASTMODIFIED " +
                                                 "FROM RECORDS " +
                                                 "WHERE DELETED >= :since " +
                                                     "AND VIEWANGLE = :viewAngle " +
@@ -68,7 +68,7 @@ import java.util.Set;
                                                 "ORDER BY DELETED " +
                                                 "LIMIT :limit " +
                                             ") UNION (" +
-                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE, LASTMODIFIED " +
                                                 "FROM RECORDS " +
                                                 "WHERE INACTIVE >= :since " +
                                                     "AND VIEWANGLE = :viewAngle " +
@@ -92,10 +92,10 @@ import java.util.Set;
                                       resultClass = Record.class,
                                       name = "Deleted",
                                       query =
-                                        "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                        "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE, LASTMODIFIED " +
                                         "FROM ( " +
                                             "(" +
-                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE, LASTMODIFIED " +
                                                 "FROM RECORDS " +
                                                 "WHERE DELETED >= :since " +
                                                     "AND VIEWANGLE = :viewAngle " +
@@ -115,10 +115,10 @@ import java.util.Set;
                                       resultClass = Record.class,
                                       name = "All",
                                       query =
-                                        "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                        "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE, LASTMODIFIED " +
                                         "FROM ( " +
                                             "(" +
-                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE, LASTMODIFIED " +
                                                 "FROM RECORDS " +
                                                 "WHERE DELETED >= :since " +
                                                     "AND VIEWANGLE = :viewAngle " +
@@ -126,7 +126,7 @@ import java.util.Set;
                                                 "ORDER BY DELETED " +
                                                 "LIMIT :limit " +
                                             ") UNION ( " +
-                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE, LASTMODIFIED " +
                                                 "FROM RECORDS " +
                                                 "WHERE ACTIVE >= :since " +
                                                     "AND VIEWANGLE = :viewAngle " +
@@ -134,7 +134,7 @@ import java.util.Set;
                                                 "ORDER BY ACTIVE " +
                                                 "LIMIT :limit " +
                                             ") UNION (" +
-                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                                "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE, LASTMODIFIED " +
                                                 "FROM RECORDS " +
                                                 "WHERE INACTIVE >= :since " +
                                                     "AND VIEWANGLE = :viewAngle " +
@@ -171,7 +171,8 @@ import java.util.Set;
                                                     "THEN :timestamp " +
                                                     "ELSE ACTIVE " +
                                                 "END " +
-                                            ") " +
+                                            "), " +
+                                            "LASTMODIFIED=NOW() " +
                                         "WHERE " +
                                             "(r.ENTRYPID,r.VIEWANGLE,r.COLLECTION) in " +
                                                 "(" +
@@ -187,7 +188,7 @@ import java.util.Set;
                                     name = "GetRecordsForPid",
                                     resultClass = Record.class,
                                     query =
-                                        "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE " +
+                                        "SELECT VIEWANGLE, ENTRYPID, COLLECTION, ACTIVE, DELETED, INACTIVE, LASTMODIFIED " +
                                         "FROM RECORDS " +
                                             "JOIN MEMBERSHIPS USING (VIEWANGLE,ENTRYPID,COLLECTION) " +
                                         "WHERE MEMBERSHIPS.OBJECTPID = :pid"
@@ -201,7 +202,17 @@ import java.util.Set;
  */
 @Entity
 @Table(name = "RECORDS")
-public class Record implements Serializable {
+public class Record implements LastModifiable, Serializable {
+
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "LASTMODIFIED", columnDefinition = "timestamp with time zone", nullable = true)
+    private Date lastModified;
+
+    @Override
+    public void setLastModified(Date date) {
+        lastModified = date;
+    }
 
     public enum State {
         ACTIVE("A", "Published"),
@@ -286,13 +297,15 @@ public class Record implements Serializable {
         this.collection = collection;
     }
 
-    public Record(String viewAngle, String entryPid, String collection, Date active, Date deleted, Date inactive) {
+    public Record(String entryPid, String viewAngle, String collection, Date active, Date inactive, Date deleted,
+                  Date lastModified) {
         this.entryPid = entryPid;
         this.viewAngle = viewAngle;
         this.collection = collection;
         this.active = active;
         this.inactive = inactive;
         this.deleted = deleted;
+        this.lastModified = lastModified;
     }
 
     public String getEntryPid() {
