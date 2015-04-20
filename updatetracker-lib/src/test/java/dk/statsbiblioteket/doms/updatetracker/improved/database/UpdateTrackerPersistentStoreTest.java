@@ -173,10 +173,10 @@ public class UpdateTrackerPersistentStoreTest {
         List<Record> list = db.lookup(start, "SummaVisible", 0, 100, null, "doms:Root_Collection");
         assertEquals("To many objects, some should have been deleted", 1, list.size());
 
-        List<Record> list2 = db.lookup(new Date(start.getTime()-1), "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        List<Record> list2 = db.lookup(new Date(list.get(0).getLastModified().getTime() - 1), "SummaVisible", 0, 100, null, "doms:Root_Collection");
         assertEquals("To many objects, some should have been deleted", 1, list2.size());
 
-        List<Record> list3 = db.lookup(new Date(start.getTime() + 1), "SummaVisible", 0, 100, null,
+        List<Record> list3 = db.lookup(new Date(list.get(0).getLastModified().getTime() + 1), "SummaVisible", 0, 100, null,
                                              "doms:Root_Collection");
         assertEquals("To many objects, some should have been deleted", 0, list3.size());
     }
@@ -218,7 +218,7 @@ public class UpdateTrackerPersistentStoreTest {
         list = db.lookup(test1Delete, "SummaVisible", 0, 100, null, "doms:Root_Collection");
         assertEquals("To many objects", 1, list.size());
 
-        list = db.lookup(new Date(test1Delete.getTime() + 1), "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        list = db.lookup(new Date(list.get(0).getLastModified().getTime()+1), "SummaVisible", 0, 100, null, "doms:Root_Collection");
         assertEquals("To many objects", 0, list.size());
     }
 
@@ -239,7 +239,7 @@ public class UpdateTrackerPersistentStoreTest {
         list = db.lookup(test1Delete, "SummaVisible", 0, 100, null, "doms:Root_Collection");
         assertEquals("To many objects", 1, list.size());
 
-        list = db.lookup(new Date(test1Delete.getTime() + 1), "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        list = db.lookup(new Date(list.get(0).getLastModified().getTime() + 1), "SummaVisible", 0, 100, null, "doms:Root_Collection");
         assertEquals("To many objects", 0, list.size());
     }
 
