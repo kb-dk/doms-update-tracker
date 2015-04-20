@@ -154,6 +154,7 @@ public class UpdateTrackerBackend {
     }
 
     private void reconnectObjectsInRecord(Date timestamp, Session session, Record otherRecord) throws FedoraFailedException {
+        Set<String> before = new HashSet<String>(otherRecord.getObjects());
         ViewBundle bundle = getViewBundle(timestamp, otherRecord);
         otherRecord.getObjects().clear();
         for (String viewObject : bundle.getContained()) {
@@ -161,13 +162,15 @@ public class UpdateTrackerBackend {
             otherRecord.getObjects().add(viewObject);
         }
 
-        if (otherRecord.getInactive() != null &&
-            otherRecord.getActive() != null &&
-            otherRecord.getInactive().equals(otherRecord.getActive())){
-            otherRecord.setActive(timestamp);
+        if (!before.equals(otherRecord.getObjects())) {
+            if (otherRecord.getInactive() != null &&
+                otherRecord.getActive() != null &&
+                otherRecord.getInactive().equals(otherRecord.getActive())) {
+                otherRecord.setActive(timestamp);
+            }
+            otherRecord.setInactive(timestamp);
+            session.saveOrUpdate(otherRecord);
         }
-        otherRecord.setInactive(timestamp);
-        session.saveOrUpdate(otherRecord);
     }
 
     private ViewBundle getViewBundle(Date timestamp, Record otherRecord) throws FedoraFailedException {
