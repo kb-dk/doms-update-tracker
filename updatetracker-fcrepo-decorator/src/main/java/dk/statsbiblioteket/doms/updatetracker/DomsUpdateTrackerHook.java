@@ -109,21 +109,26 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
 
         final String methodName = method.getName();
 
+
+        if (methodName.equals("getObjectXML") || methodName.equals("export") ||
+            methodName.equals("getDatastream") || methodName.equals("getDatastreams") ||
+            methodName.equals("getDatastreamHistory") || methodName.equals("compareDatastreamChecksum") ||
+            methodName.equals("getNextPID") || methodName.equals("getRelationships") ||
+            methodName.equals("validate") || methodName.equals("getTempStream") || methodName.equals("putTempStream")){
+            //These methods should not be hooked, so go on immediately
+            return method.invoke(target, args);
+        }
+
         String pid;
         Date now;
         String param;
         try {
-            if (methodName.equals("getTempStream") || methodName.equals("putTempStream")){
-                //These methods do not take the standard arguments, so break out here
-                return method.invoke(target, args);
-            } else {
-                Context context = (Context) args[0];
-                now = Server.getCurrentDate(context);
-                pid = toPid(args[1].toString());
-                param = null;
-                if (args.length > 2 && args[2] != null) {
-                    param = args[2].toString();
-                }
+            Context context = (Context) args[0];
+            now = Server.getCurrentDate(context);
+            pid = toPid(args[1].toString());
+            param = null;
+            if (args.length > 2 && args[2] != null) {
+                param = args[2].toString();
             }
         } catch (Exception e) {
             final String message = "Failed to parse params for method '" + methodName + "': " + Arrays.toString(args) +
@@ -144,12 +149,6 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
                    methodName.equals("addRelationship") || methodName.equals("purgeRelationship")) {
             replayableLog.info("Method: " + methodName + "(" + pid + ", " + now.getTime() + ", " + param + ")");
             return invokeHook(method, args, methodName, pid, now, param);
-        } else if (methodName.equals("getObjectXML") || methodName.equals("export") ||
-                   methodName.equals("getDatastream") || methodName.equals("getDatastreams") ||
-                   methodName.equals("getDatastreamHistory") || methodName.equals("compareDatastreamChecksum") ||
-                   methodName.equals("getNextPID") || methodName.equals("getRelationships") ||
-                   methodName.equals("validate")) {
-            return method.invoke(target, args);
         } else {
             logger.warn("Unknown method invoked: " + methodName + "(" + pid + ", " + now.getTime() + ", " +
                         param +
