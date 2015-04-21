@@ -4,6 +4,7 @@
         "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
 
 <hibernate-mapping>
+    <!--TODO update with the new lastModified-->
     <database-object>
         <create>create index memberships_objects_idx on PUBLIC.MEMBERSHIPS (OBJECTPID)</create>
         <drop>drop index if exists membership_objects_idx</drop>
