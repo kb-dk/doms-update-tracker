@@ -259,6 +259,7 @@ public class UpdateTrackerBackend {
         final Query query = session.getNamedQuery("UpdateDates");
         query.setParameter("pid", pid);
         query.setParameter("timestamp", timestamp);
+        query.setParameter("now",new Date());
         query.executeUpdate();
     }
 

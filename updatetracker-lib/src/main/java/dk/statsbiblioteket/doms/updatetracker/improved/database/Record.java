@@ -87,7 +87,7 @@ import java.util.Set;
                                         "           ELSE ACTIVE " +
                                         "       END " +
                                         "   ), " +
-                                        "   LASTMODIFIED=NOW() " +
+                                        "   LASTMODIFIED=:now " +
                                         "WHERE " +
                                         "   (r.ENTRYPID,r.VIEWANGLE,r.COLLECTION) in " +
                                         "       (" +
