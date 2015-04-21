@@ -1,6 +1,8 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DB;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.StatelessDB;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import dk.statsbiblioteket.util.Pair;
@@ -8,7 +10,6 @@ import dk.statsbiblioteket.util.caching.TimeSensitiveCache;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.Predicate;
 import org.hibernate.Query;
-import org.hibernate.Session;
 import org.hibernate.StatelessSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,9 +50,9 @@ public class UpdateTrackerBackend {
      * @param timestamp    the timestamp of the change
      * @param collection
      * @param state   the state of the entries that should be updated
-     * @param session
+     * @param db
      */
-    public void modifyState(String pid, Date timestamp, String collection, State state, Session session) throws
+    public void modifyState(String pid, Date timestamp, String collection, State state, DB db) throws
                                                                            UpdateTrackerStorageException,
                                                                            FedoraFailedException {
         log.debug("Starting modifyState({},{},{})", pid, timestamp, state);
@@ -70,20 +71,20 @@ public class UpdateTrackerBackend {
                         set Active Timestamp
          */
         if ( state != State.DELETED) {
-            List<Record> allRecordsWithThisEntryPid = UpdateTrackerDAO.getAllRecordsWithThisEntryPid(pid, session);
+            List<Record> allRecordsWithThisEntryPid = db.getAllRecordsWithThisEntryPid(pid);
             if (allRecordsWithThisEntryPid.isEmpty()){
                 List<String> entryAngles = fedora.getEntryAngles(pid, timestamp);
                 for (String entryAngle : entryAngles) {
                     log.debug("Pid {} is an entry for viewangle {}", pid, entryAngle);
                     Record newRecord = new Record(pid, entryAngle, collection);
-                    if (UpdateTrackerDAO.recordNotExists(session, newRecord)) {
+                    if (db.recordNotExists(newRecord)) {
                         log.debug("Pid {} is not marked as an entry for viewAngle {}. Fixing", pid, entryAngle);
                         newRecord.getObjects().add(pid);
                         newRecord.setInactive(timestamp);
                         if (state == State.ACTIVE){
                             newRecord.setActive(timestamp);
                         }
-                        session.saveOrUpdate(newRecord);
+                        db.saveOrUpdate(newRecord);
                     }
                 }
             } else {
@@ -92,7 +93,7 @@ public class UpdateTrackerBackend {
                     if (state == State.ACTIVE) {
                         recordWithThisEntryPid.setActive(timestamp);
                     }
-                    session.saveOrUpdate(recordWithThisEntryPid);
+                    db.saveOrUpdate(recordWithThisEntryPid);
                 }
             }
         }
@@ -111,14 +112,14 @@ public class UpdateTrackerBackend {
         else if (state == State.DELETED){
             log.debug("Switching on states for pid {}, got the Deleted branch", pid);
 
-            final Collection<Record> records = UpdateTrackerDAO.getRecordsForPid(session, pid);
+            final Collection<Record> records = db.getRecordsForPid(pid);
 
             Set<Record> otherRecordsThanThisWhichThisObjectIsPart = recordsWithoutThisPidAsEntry(pid, records);
 
 
             for (Record otherRecord : otherRecordsThanThisWhichThisObjectIsPart) {
                 if (otherRecord.getState() != State.DELETED) {
-                    reconnectObjectsInRecord(timestamp, session, otherRecord);
+                    reconnectObjectsInRecord(timestamp, db, otherRecord);
                 }
             }
 
@@ -129,7 +130,7 @@ public class UpdateTrackerBackend {
                 record.setDeleted(timestamp);
                 record.setInactive(null);
                 record.setActive(null);
-                session.saveOrUpdate(record);
+                db.saveOrUpdate(record);
             }
         }
 
@@ -153,7 +154,7 @@ public class UpdateTrackerBackend {
         return coll;
     }
 
-    private void reconnectObjectsInRecord(Date timestamp, Session session, Record otherRecord) throws FedoraFailedException {
+    private void reconnectObjectsInRecord(Date timestamp, DB db, Record otherRecord) throws FedoraFailedException {
         Set<String> before = new HashSet<String>(otherRecord.getObjects());
         Set<String> after = new HashSet<String>();
         ViewBundle bundle = getViewBundle(timestamp, otherRecord);
@@ -171,7 +172,7 @@ public class UpdateTrackerBackend {
                 otherRecord.setActive(timestamp);
             }
             otherRecord.setInactive(timestamp);
-            session.saveOrUpdate(otherRecord);
+            db.saveOrUpdate(otherRecord);
         }
     }
 
@@ -186,7 +187,7 @@ public class UpdateTrackerBackend {
     }
 
 
-    public void reconnectObjects(String pid, Date timestamp, Session session, Collection<String> collections) throws
+    public void reconnectObjects(String pid, Date timestamp, DB db, Collection<String> collections) throws
                                                                  FedoraFailedException,
                                                                  UpdateTrackerStorageException {
         /*
@@ -212,27 +213,24 @@ public class UpdateTrackerBackend {
         for (String entryViewAngle : entryViewAngles) {
             for (String collection : collections) {
                 Record record = new Record(pid, entryViewAngle, collection);
-                if (UpdateTrackerDAO.recordNotExists(session, record)){
+                if (db.recordNotExists(record)){
                     record.getObjects().add(pid);
                     record.setInactive(timestamp);
-                    session.saveOrUpdate(record);
+                    db.saveOrUpdate(record);
                     newRecords.add(record);
                 }
             }
         }
         //Remove old records
         //"not (A and B)" is the same as "(not A) or (not B)"
-        List<Record> previousRecords = UpdateTrackerDAO.getRecordsNotInTheseCollectionsAndViewAngles(pid,
-                                                                                                     session,
-                                                                                                     entryViewAngles,
-                                                                                                     collections);
+        List<Record> previousRecords = db.getRecordsNotInTheseCollectionsAndViewAngles(pid, entryViewAngles, collections);
 
         for (Record previousRecord : previousRecords) {
             previousRecord.setDeleted(timestamp);
             previousRecord.setInactive(null);
             previousRecord.setActive(null);
             previousRecord.getObjects().clear();
-            session.saveOrUpdate(previousRecord);
+            db.saveOrUpdate(previousRecord);
         }
 
         log.debug("Recalculating view for {}", pid);
@@ -244,61 +242,24 @@ public class UpdateTrackerBackend {
 
          */
 
-        Set<Record> records = new HashSet<Record>(UpdateTrackerDAO.getRecordsForPid(session,pid));
+        Set<Record> records = new HashSet<Record>(db.getRecordsForPid(pid));
         //Since the database connection have not been flushed, the newly created records will not be found, so add them
         records.addAll(newRecords);
         log.debug("Find all records {} containing {} ", records, pid);
         for (Record otherRecord : records) {
             if (otherRecord.getState() != State.DELETED) {
-                reconnectObjectsInRecord(timestamp, session, otherRecord);
+                reconnectObjectsInRecord(timestamp, db, otherRecord);
             }
         }
     }
 
-    public void updateDates(String pid, Date timestamp, Session session) {
-        final Query query = session.getNamedQuery("UpdateDates");
-        query.setParameter("pid", pid);
-        query.setParameter("timestamp", timestamp);
-        query.setParameter("now",new Date());
-        query.executeUpdate();
+    public void updateDates(String pid, Date timestamp, DB db) {
+        db.updateDates(pid, timestamp);
     }
 
     public List<Record> lookup(Date since, String viewAngle, int offset, int limit, String state, String collection,
-                               StatelessSession session) {
-        Query query;
-        if (state == null) {
-            query = session.getNamedQuery("All");
-        } else {
-            final State fromName = State.fromName(state);
-            if (fromName == null){
-                query = session.getNamedQuery("All");
-            } else {
-                switch (fromName) {
-                    case ACTIVE:
-                        query = session.getNamedQuery("ActiveAndDeleted");
-                        break;
-                    case INACTIVE:
-                        query = session.getNamedQuery("InactiveOrDeleted");
-                        break;
-                    case DELETED:
-                        query = session.getNamedQuery("Deleted");
-                        break;
-                    default:
-                        query = session.getNamedQuery("All");
-                        break;
-                }
-            }
-        }
-
-
-        query.setReadOnly(true);
-        query.setFirstResult(offset);
-        query.setTimestamp("since", since)
-             .setString("collection", collection)
-             .setString("viewAngle", viewAngle)
-             .setLong("limit", limit);
-
-        return UpdateTrackerDAO.listRecords(query);
+                               StatelessDB session) {
+        return session.lookup(since, viewAngle, offset, limit, state, collection);
     }
 
     public Date lastChanged(StatelessSession session) {

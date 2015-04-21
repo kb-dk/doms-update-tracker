@@ -14,9 +14,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerDAO.asSet;
 import static junit.framework.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
@@ -47,6 +48,11 @@ public class UpdateTrackerPersistentStoreTest {
         when(fedora.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptyList());
         final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fedora,10000L);
         db = new UpdateTrackerPersistentStoreImpl(configFile, mappings, fedora, updateTrackerBackend);
+    }
+
+
+    static <T> Set<T> asSet(T... vars) {
+        return new HashSet<T>(Arrays.asList(vars));
     }
 
 

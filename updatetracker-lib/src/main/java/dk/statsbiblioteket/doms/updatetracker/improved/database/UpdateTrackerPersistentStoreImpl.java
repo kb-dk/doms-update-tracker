@@ -1,6 +1,8 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DB;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.StatelessDB;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import org.hibernate.FlushMode;
@@ -20,7 +22,6 @@ import java.util.List;
 import java.util.Set;
 
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State.DELETED;
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State.INACTIVE;
 
 /**
  * This class correspond the the operations detailed in <a href="https://sbforge.org/display/DOMS/Update+Tracking#UpdateTracking-HighLevelChanges">https://sbforge.org/display/DOMS/Update+Tracking#UpdateTracking-HighLevelChanges</a>
@@ -76,19 +77,19 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      */
     @Override
     public void objectCreated(String pid, Date timestamp, long key) throws UpdateTrackerStorageException, FedoraFailedException {
-        Session session = getSession();
-        Transaction transaction = session.beginTransaction();
+        DB db = new DB(getSession());
+        Transaction transaction = db.beginTransaction();
         log.debug("ObjectCreated({},{}) Starting",pid,timestamp);
         try {
             Set<String> collections = fedora.getCollections(pid, timestamp);
             State ingestState = fedora.getState(pid, timestamp);
             for (String collection : collections) {
-                backend.modifyState(pid, timestamp, collection, ingestState, session);
+                backend.modifyState(pid, timestamp, collection, ingestState, db);
             }
-            backend.reconnectObjects(pid, timestamp, session, collections);
-            backend.updateDates(pid, timestamp, session);
+            backend.reconnectObjects(pid, timestamp, db, collections);
+            backend.updateDates(pid, timestamp, db);
 
-            setLatestKey(key, session);
+            db.setLatestKey(key);
             transaction.commit();
             log.info("ObjectCreated({},{}) Completed", pid, timestamp);
         } catch (Exception e) {
@@ -135,13 +136,13 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      */
     @Override
     public void objectDeleted(String pid, Date timestamp, long key) throws UpdateTrackerStorageException, FedoraFailedException {
-        Session session = getSession();
-        Transaction transaction = session.beginTransaction();
+        DB db = new DB(getSession());
+        Transaction transaction = db.beginTransaction();
         log.debug("ObjectDeleted({},{}) Starting", pid, timestamp);
         try {
-            backend.modifyState(pid, timestamp, null, DELETED, session);
-            backend.updateDates(pid, timestamp, session);
-            setLatestKey(key, session);
+            backend.modifyState(pid, timestamp, null, DELETED, db);
+            backend.updateDates(pid, timestamp, db);
+            db.setLatestKey(key);
             transaction.commit();
             log.info("ObjectDeleted({},{}) Completed", pid, timestamp);
         } catch (Exception e) {
@@ -186,8 +187,8 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     public void datastreamChanged(String pid, Date timestamp, String dsid, long key) throws
                                                                       UpdateTrackerStorageException,
                                                                       FedoraFailedException {
-        Session session = getSession();
-        Transaction transaction = session.beginTransaction();
+        DB db = new DB(getSession());
+        Transaction transaction = db.beginTransaction();
         log.debug("DatastreamChanged({},{},{}) Starting", pid, timestamp,dsid);
         try {
             if (dsid != null) {
@@ -200,19 +201,19 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                         for (String object : objectsOfThisContentModel) {
                             log.debug("Working on object {}, number {} of the {} objects of content model {}",object,i++,objectsOfThisContentModel.size(),pid);
                             Set<String> collections = fedora.getCollections(object, timestamp);
-                            backend.reconnectObjects(object, timestamp, session, collections);
-                            backend.updateDates(object, timestamp, session);
+                            backend.reconnectObjects(object, timestamp, db, collections);
+                            backend.updateDates(object, timestamp, db);
                             //TODO is flush the right thing to clear the session here? No need to keep track of the objects from last iteration of this loop
-                            session.flush();
+                            db.flush();
                         }
                     } else if (dsid.equals("RELS-EXT")) {
                         Set<String> collections = fedora.getCollections(pid, timestamp);
-                        backend.reconnectObjects(pid, timestamp, session, collections);
+                        backend.reconnectObjects(pid, timestamp, db, collections);
                     }
                 }
             }
-            backend.updateDates(pid, timestamp, session);
-            setLatestKey(key, session);
+            backend.updateDates(pid, timestamp, db);
+            db.setLatestKey(key);
             transaction.commit();
             log.info("DatastreamChanged({},{},{}) Completed", pid, timestamp, dsid);
         } catch (Exception e) {
@@ -280,16 +281,16 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                                                                            UpdateTrackerStorageException,
                                                                            FedoraFailedException {
 
-        Session session = getSession();
-        Transaction transaction = session.beginTransaction();
+        DB db = new DB(getSession());
+        Transaction transaction = db.beginTransaction();
         log.debug("objectStateChanged({},{},{}) Starting", pid, timestamp, newstate);
         try {
             Set<String> collections = fedora.getCollections(pid, timestamp);
             for (String collection : collections) {
-                backend.modifyState(pid, timestamp, collection, State.fromName(newstate), session);
+                backend.modifyState(pid, timestamp, collection, State.fromName(newstate), db);
             }
-            backend.updateDates(pid, timestamp, session);
-            setLatestKey(key, session);
+            backend.updateDates(pid, timestamp, db);
+            db.setLatestKey(key);
             transaction.commit();
             log.info("objectStateChanged({},{},{}) Completed", pid, timestamp, newstate);
         } catch (Exception e) {
@@ -306,12 +307,13 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     @Override
     public List<Record> lookup(Date since, String viewAngle, int offset, int limit, String state, String collection) throws UpdateTrackerStorageException {
         StatelessSession session = sessionFactory.openStatelessSession();
+        StatelessDB db = new StatelessDB(session);
         session.beginTransaction();
         try {
             log.info("lookup({},{},{},{},{},{}) Starting", since,viewAngle,offset,limit,state,collection);
 
 
-            final List<Record> entries = backend.lookup(since, viewAngle, offset, limit, state, collection, session);
+            final List<Record> entries = backend.lookup(since, viewAngle, offset, limit, state, collection, db);
             session.getTransaction().commit();
             log.debug("lookup({},{},{},{},{},{}) Completed", since, viewAngle, offset, limit, state, collection);
             return entries;
@@ -370,7 +372,5 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         }
     }
 
-    private void setLatestKey(Long latestKey, Session session) throws UpdateTrackerStorageException {
-        session.saveOrUpdate(new LatestKey(latestKey));
-    }
+
 }

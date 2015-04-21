@@ -9,11 +9,13 @@ import org.junit.Test;
 
 import java.io.File;
 import java.net.URISyntaxException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerDAO.asSet;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.ALTO;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.EDITION;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.EVENTS;
@@ -268,5 +270,10 @@ public class NewspaperBatchTests {
         assertEquals(2, items.size());
         assertEquals(edition, items.get(0).getEntryPid());
         assertEquals(roundTrip, items.get(1).getEntryPid());
+    }
+
+
+    static <T> Set<T> asSet(T... vars) {
+        return new HashSet<T>(Arrays.asList(vars));
     }
 }

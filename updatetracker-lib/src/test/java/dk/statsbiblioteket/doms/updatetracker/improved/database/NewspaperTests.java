@@ -7,11 +7,13 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerDAO.asSet;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.ACTIVE;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.GUI;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.SBOI;
@@ -156,4 +158,8 @@ public class NewspaperTests {
         Tests.verifyThreeHits(items, newspaper, newspaperChanged, page1, editionChanged, newspaper2, newspaper2Linked);
     }
 
+
+    static <T> Set<T> asSet(T... vars) {
+        return new HashSet<T>(Arrays.asList(vars));
+    }
 }
