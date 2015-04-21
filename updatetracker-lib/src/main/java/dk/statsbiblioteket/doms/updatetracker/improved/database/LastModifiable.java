@@ -1,10 +1,37 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Inheritance;
+import javax.persistence.InheritanceType;
+import javax.persistence.MappedSuperclass;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 import java.util.Date;
 
-public interface LastModifiable {
+/**
+ * Utility class that gives this entity a lastModifiable field with getters and setters
+ */
+@MappedSuperclass()
+public abstract class LastModifiable {
 
-    public void setLastModified(Date date);
+    public LastModifiable() {
+        lastModified = new Date();
+    }
 
-    public Date getLastModified();
+    public LastModifiable(Date lastModified) {
+        this.lastModified = lastModified;
+    }
+
+    private Date lastModified;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "LASTMODIFIED", columnDefinition = "timestamp with time zone", nullable = true)
+    public Date getLastModified() {
+        return lastModified;
+    }
+
+    public void setLastModified(Date lastModified) {
+        this.lastModified = lastModified;
+    }
 }

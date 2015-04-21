@@ -117,22 +117,7 @@ import java.util.Set;
  */
 @Entity
 @Table(name = "RECORDS")
-public class Record implements LastModifiable, Serializable {
-
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "LASTMODIFIED", columnDefinition = "timestamp with time zone", nullable = true)
-    private Date lastModified;
-
-    @Override
-    public void setLastModified(Date date) {
-        lastModified = date;
-    }
-
-    @Override
-    public Date getLastModified() {
-        return lastModified;
-    }
+public class Record extends LastModifiable implements Serializable {
 
     public enum State {
         ACTIVE("A", "Published"),
@@ -219,13 +204,13 @@ public class Record implements LastModifiable, Serializable {
 
     public Record(String entryPid, String viewAngle, String collection, Date active, Date inactive, Date deleted,
                   Date lastModified) {
+        super(lastModified);
         this.entryPid = entryPid;
         this.viewAngle = viewAngle;
         this.collection = collection;
         this.active = active;
         this.inactive = inactive;
         this.deleted = deleted;
-        this.lastModified = lastModified;
     }
 
     public String getEntryPid() {
