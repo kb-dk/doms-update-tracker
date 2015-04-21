@@ -154,20 +154,25 @@ public class UpdateTrackerBackend {
     }
 
     private void reconnectObjectsInRecord(Date timestamp, Session session, Record otherRecord) throws FedoraFailedException {
+        Set<String> before = new HashSet<String>(otherRecord.getObjects());
+        Set<String> after = new HashSet<String>();
         ViewBundle bundle = getViewBundle(timestamp, otherRecord);
-        otherRecord.getObjects().clear();
         for (String viewObject : bundle.getContained()) {
             log.debug("Marking object {} as part of record {},{},{}", viewObject, otherRecord.getEntryPid(), otherRecord.getViewAngle(), otherRecord.getCollection());
-            otherRecord.getObjects().add(viewObject);
+            after.add(viewObject);
         }
 
-        if (otherRecord.getInactive() != null &&
-            otherRecord.getActive() != null &&
-            otherRecord.getInactive().equals(otherRecord.getActive())){
-            otherRecord.setActive(timestamp);
+        if (!before.equals(after)) {
+            otherRecord.getObjects().clear();
+            otherRecord.getObjects().addAll(after);
+            if (otherRecord.getInactive() != null &&
+                otherRecord.getActive() != null &&
+                otherRecord.getInactive().equals(otherRecord.getActive())) {
+                otherRecord.setActive(timestamp);
+            }
+            otherRecord.setInactive(timestamp);
+            session.saveOrUpdate(otherRecord);
         }
-        otherRecord.setInactive(timestamp);
-        session.saveOrUpdate(otherRecord);
     }
 
     private ViewBundle getViewBundle(Date timestamp, Record otherRecord) throws FedoraFailedException {
@@ -254,6 +259,7 @@ public class UpdateTrackerBackend {
         final Query query = session.getNamedQuery("UpdateDates");
         query.setParameter("pid", pid);
         query.setParameter("timestamp", timestamp);
+        query.setParameter("now",new Date());
         query.executeUpdate();
     }
 

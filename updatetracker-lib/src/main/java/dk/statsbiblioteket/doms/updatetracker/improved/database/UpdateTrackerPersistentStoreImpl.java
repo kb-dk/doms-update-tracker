@@ -54,6 +54,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         if (hibernateMappings != null) {
             configuration.addFile(hibernateMappings);
         }
+        configuration.setInterceptor(new SetLastModifiedInterceptor());
         sessionFactory = configuration.buildSessionFactory();
 
     }
