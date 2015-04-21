@@ -31,7 +31,7 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class NewspaperBatchTests {
+public class NewspaperBatchIT {
 
     UpdateTrackerPersistentStore db;
     FedoraForUpdateTracker fcmock;

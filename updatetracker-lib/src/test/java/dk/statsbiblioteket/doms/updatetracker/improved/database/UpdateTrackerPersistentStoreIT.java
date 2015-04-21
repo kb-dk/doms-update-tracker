@@ -24,7 +24,7 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class UpdateTrackerPersistentStoreTest {
+public class UpdateTrackerPersistentStoreIT {
 
     private final String collection = "doms:Root_Collection";
     UpdateTrackerPersistentStore db;

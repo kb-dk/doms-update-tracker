@@ -356,7 +356,7 @@ public class Tests {
      */
     static void verifyNoHits(UpdateTrackerPersistentStore db, String viewAngle) throws UpdateTrackerStorageException {
         List<Record> items;
-        items = db.lookup(new Date(1), viewAngle, 0, 10, null, NewspaperTests.COLLECTION);
+        items = db.lookup(new Date(1), viewAngle, 0, 10, null, NewspaperIT.COLLECTION);
         assertEquals(0, items.size());
 
     }
