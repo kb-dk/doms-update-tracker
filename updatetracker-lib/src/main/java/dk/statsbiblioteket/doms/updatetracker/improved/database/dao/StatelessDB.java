@@ -1,19 +1,23 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database.dao;
 
-import dk.statsbiblioteket.doms.updatetracker.improved.database.Record;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.LatestKey;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
 import org.hibernate.Query;
+import org.hibernate.SessionFactory;
 import org.hibernate.StatelessSession;
 
+import java.io.Closeable;
 import java.util.Date;
 import java.util.List;
 
-public class StatelessDB extends AbstractDB {
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DBUtils.listRecords;
+
+public class StatelessDB implements Closeable{
 
     private final StatelessSession session;
 
-    public StatelessDB(StatelessSession session) {
-        super(session);
-        this.session = session;
+    public StatelessDB(SessionFactory sessionFactory) {
+        this.session = sessionFactory.openStatelessSession();
     }
 
     public List<Record> lookup(Date since, String viewAngle, int offset, int limit, String state, String collection) {
@@ -54,4 +58,29 @@ public class StatelessDB extends AbstractDB {
     }
 
 
+    @Override
+    public void close() {
+        session.close();
+    }
+
+    public long getLatestKey() {
+        List<LatestKey> list = session.createCriteria(LatestKey.class).list();
+        if (list.size() > 0) {
+            return list.get(0).getKey();
+        } else {
+            return 0L;
+        }
+    }
+
+    public Date getLastChangedTimestamp() {
+        final Query query = session.createQuery("select max(e.inactive) from Record e");
+        query.setMaxResults(1);
+        Object result = query.uniqueResult();
+        if (result != null) {
+            if (result instanceof Date) {
+                return (Date) result;
+            }
+        }
+        return null;
+    }
 }

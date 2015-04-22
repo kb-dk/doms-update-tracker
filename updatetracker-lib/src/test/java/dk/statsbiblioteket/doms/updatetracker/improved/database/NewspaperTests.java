@@ -1,5 +1,7 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
+import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DBFactory;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import org.junit.After;
@@ -44,15 +46,15 @@ public class NewspaperTests {
 
         fcmock = mock(FedoraForUpdateTracker.class);
         final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L);
-        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings,fcmock, updateTrackerBackend);
+        db = new UpdateTrackerPersistentStoreImpl(fcmock, updateTrackerBackend, new DBFactory(configFile, mappings));
         tearDown();
-        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings, fcmock, updateTrackerBackend);
+        db = new UpdateTrackerPersistentStoreImpl(fcmock, updateTrackerBackend, new DBFactory(configFile, mappings));
 
         //Collections for everybody
         when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(asSet(COLLECTION));
 
         //No entry objects or view stuff until initialised
-        when(fcmock.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptyList());
+        when(fcmock.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptySet());
     }
 
 

@@ -1,6 +1,7 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
-import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DB;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.StatelessDB;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
@@ -9,8 +10,6 @@ import dk.statsbiblioteket.util.Pair;
 import dk.statsbiblioteket.util.caching.TimeSensitiveCache;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.Predicate;
-import org.hibernate.Query;
-import org.hibernate.StatelessSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,11 +72,12 @@ public class UpdateTrackerBackend {
         if ( state != State.DELETED) {
             List<Record> allRecordsWithThisEntryPid = db.getAllRecordsWithThisEntryPid(pid);
             if (allRecordsWithThisEntryPid.isEmpty()){
-                List<String> entryAngles = fedora.getEntryAngles(pid, timestamp);
+                Collection<String> entryAngles = fedora.getEntryAngles(pid, timestamp);
                 for (String entryAngle : entryAngles) {
                     log.debug("Pid {} is an entry for viewangle {}", pid, entryAngle);
-                    Record newRecord = new Record(pid, entryAngle, collection);
-                    if (db.recordNotExists(newRecord)) {
+
+                    if (db.recordExists(new Record(pid, entryAngle, collection)) == null) {
+                        Record newRecord = new Record(pid, entryAngle, collection);
                         log.debug("Pid {} is not marked as an entry for viewAngle {}. Fixing", pid, entryAngle);
                         newRecord.getObjects().add(pid);
                         newRecord.setInactive(timestamp);
@@ -154,25 +154,29 @@ public class UpdateTrackerBackend {
         return coll;
     }
 
-    private void reconnectObjectsInRecord(Date timestamp, DB db, Record otherRecord) throws FedoraFailedException {
-        Set<String> before = new HashSet<String>(otherRecord.getObjects());
+    private void reconnectObjectsInRecord(Date timestamp, DB db, Record record) throws FedoraFailedException {
+        Set<String> before = new HashSet<String>(record.getObjects());
         Set<String> after = new HashSet<String>();
-        ViewBundle bundle = getViewBundle(timestamp, otherRecord);
+        ViewBundle bundle = getViewBundle(timestamp, record);
         for (String viewObject : bundle.getContained()) {
-            log.debug("Marking object {} as part of record {},{},{}", viewObject, otherRecord.getEntryPid(), otherRecord.getViewAngle(), otherRecord.getCollection());
+            log.debug("Marking object {} as part of record {},{},{}",
+                      viewObject,
+                      record.getEntryPid(),
+                      record.getViewAngle(),
+                      record.getCollection());
             after.add(viewObject);
         }
 
         if (!before.equals(after)) {
-            otherRecord.getObjects().clear();
-            otherRecord.getObjects().addAll(after);
-            if (otherRecord.getInactive() != null &&
-                otherRecord.getActive() != null &&
-                otherRecord.getInactive().equals(otherRecord.getActive())) {
-                otherRecord.setActive(timestamp);
+            record.getObjects().clear();
+            record.getObjects().addAll(after);
+            if (record.getInactive() != null &&
+                record.getActive() != null &&
+                record.getInactive().equals(record.getActive())) {
+                record.setActive(timestamp);
             }
-            otherRecord.setInactive(timestamp);
-            db.saveOrUpdate(otherRecord);
+            record.setInactive(timestamp);
+            db.saveOrUpdate(record);
         }
     }
 
@@ -213,12 +217,13 @@ public class UpdateTrackerBackend {
         for (String entryViewAngle : entryViewAngles) {
             for (String collection : collections) {
                 Record record = new Record(pid, entryViewAngle, collection);
-                if (db.recordNotExists(record)){
+                if ((record = db.recordExists(record)) == null){
+                    record = new Record(pid, entryViewAngle, collection);
                     record.getObjects().add(pid);
                     record.setInactive(timestamp);
                     db.saveOrUpdate(record);
-                    newRecords.add(record);
                 }
+                newRecords.add(record);
             }
         }
         //Remove old records
@@ -258,20 +263,11 @@ public class UpdateTrackerBackend {
     }
 
     public List<Record> lookup(Date since, String viewAngle, int offset, int limit, String state, String collection,
-                               StatelessDB session) {
-        return session.lookup(since, viewAngle, offset, limit, state, collection);
+                               StatelessDB db) {
+        return db.lookup(since, viewAngle, offset, limit, state, collection);
     }
 
-    public Date lastChanged(StatelessSession session) {
-
-        final Query query = session.createQuery("select max(e.inactive) from Record e");
-        query.setMaxResults(1);
-        Object result = query.uniqueResult();
-        if (result != null){
-            if (result instanceof Date) {
-                return (Date) result;
-            }
-        }
-        return null;
+    public Date lastChanged(StatelessDB db) {
+        return db.getLastChangedTimestamp();
     }
 }

@@ -1,4 +1,4 @@
-package dk.statsbiblioteket.doms.updatetracker.improved.database;
+package dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures;
 
 import javax.persistence.Entity;
 import javax.persistence.Id;

@@ -1,6 +1,8 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
-import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DBFactory;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import org.junit.After;
@@ -8,7 +10,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -49,7 +50,8 @@ public class NewspaperBatchTests {
                                        .toURI());
 
         final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L);
-        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings,fcmock, updateTrackerBackend);
+
+        db = new UpdateTrackerPersistentStoreImpl(fcmock, updateTrackerBackend,new DBFactory(configFile, mappings));
     }
 
     @After
@@ -68,7 +70,7 @@ public class NewspaperBatchTests {
         when(fcmock.getCollections(eq(roundTrip), any(Date.class))).thenReturn(asSet(collection));
         when(fcmock.calcViewBundle(eq(roundTrip), eq(viewAngle), any(Date.class))).thenReturn(new ViewBundle(roundTrip,
                                                                                                                     viewAngle));
-        when(fcmock.getEntryAngles(eq(roundTrip), any(Date.class))).thenReturn(asList(viewAngle));
+        when(fcmock.getEntryAngles(eq(roundTrip), any(Date.class))).thenReturn(asSet(viewAngle));
         db.objectCreated(roundTrip, beginning, 1);
 
         List<Record> list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
@@ -109,10 +111,10 @@ public class NewspaperBatchTests {
         when(fcmock.calcViewBundle(eq(roundTrip), eq(viewAngle), any(Date.class))).thenReturn(new ViewBundle(roundTrip,
                                                                                                                     viewAngle));
         //Not a entry object before this time
-        when(fcmock.getEntryAngles(eq(roundTrip), lt(becomingItemTime))).thenReturn(Collections.<String>emptyList());
+        when(fcmock.getEntryAngles(eq(roundTrip), lt(becomingItemTime))).thenReturn(Collections.<String>emptySet());
 
         //But after this time, the object is an entry
-        when(fcmock.getEntryAngles(eq(roundTrip), geq(becomingItemTime))).thenReturn(asList(viewAngle));
+        when(fcmock.getEntryAngles(eq(roundTrip), geq(becomingItemTime))).thenReturn(asSet(viewAngle));
 
 
         db.objectCreated(roundTrip, beginning, 1);
@@ -160,7 +162,7 @@ public class NewspaperBatchTests {
         when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(asSet(collection));
 
         //No entry objects or view stuff until initialised
-        when(fcmock.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptyList());
+        when(fcmock.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptySet());
 
         //Content Model for roundtrip
         Tests.setContentModelItem(roundTrip, fcmock);

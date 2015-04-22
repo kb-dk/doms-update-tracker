@@ -29,8 +29,8 @@
         <property name="hibernate.show_sql">true</property>
         <property name="hibernate.format_sql">true</property>
 
-        <mapping class="dk.statsbiblioteket.doms.updatetracker.improved.database.Record"/>
-        <mapping class="dk.statsbiblioteket.doms.updatetracker.improved.database.LatestKey"/>
+        <mapping class="dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record"/>
+        <mapping class="dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.LatestKey"/>
     </session-factory>
 </hibernate-configuration>
 

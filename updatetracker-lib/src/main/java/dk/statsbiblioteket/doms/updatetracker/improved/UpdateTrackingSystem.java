@@ -7,6 +7,7 @@ import dk.statsbiblioteket.doms.central.connectors.fedora.views.ViewsImpl;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerBackend;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStore;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStoreImpl;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DBFactory;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.EntryAngleCache;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.worklog.WorkLogPollDAO;
@@ -47,9 +48,11 @@ public class UpdateTrackingSystem implements Closeable {
 
             //Start up the database
             final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fedora, updateTrackingConfig.getViewBundleCacheTime());
-            store = new UpdateTrackerPersistentStoreImpl(updateTrackingConfig.getUpdatetrackerHibernateConfig(),
-                                                         updateTrackingConfig.getUpdatetrackerHibernateMappings(), fedora,
-                                                         updateTrackerBackend);
+            DBFactory dbFactory = new DBFactory(updateTrackingConfig.getUpdatetrackerHibernateConfig(),
+                                                updateTrackingConfig.getUpdatetrackerHibernateMappings());
+            store = new UpdateTrackerPersistentStoreImpl(fedora,
+                                                         updateTrackerBackend,
+                                                         dbFactory);
 
 
             //initialise the connection to the work log

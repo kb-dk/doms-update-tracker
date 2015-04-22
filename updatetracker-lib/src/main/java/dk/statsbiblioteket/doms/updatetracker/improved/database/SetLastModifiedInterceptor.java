@@ -1,5 +1,6 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
+import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.LastModifiable;
 import org.hibernate.EmptyInterceptor;
 import org.hibernate.type.Type;
 
@@ -15,7 +16,7 @@ import java.util.Date;
  *         configuration.setInterceptor(new SetLastModifiedInterceptor());
  </p>
  *
- * @see dk.statsbiblioteket.doms.updatetracker.improved.database.LastModifiable
+ * @see dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.LastModifiable
  */
 public class SetLastModifiedInterceptor extends EmptyInterceptor {
 

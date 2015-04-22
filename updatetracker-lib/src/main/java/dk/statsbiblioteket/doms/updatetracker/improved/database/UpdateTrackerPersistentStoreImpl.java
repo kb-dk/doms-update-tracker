@@ -1,27 +1,25 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
-import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.LatestKey;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DB;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DBFactory;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.StatelessDB;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
-import org.hibernate.FlushMode;
 import org.hibernate.HibernateException;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
 import org.hibernate.StatelessSession;
 import org.hibernate.Transaction;
-import org.hibernate.cfg.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
-import java.io.File;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State.DELETED;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State.DELETED;
 
 /**
  * This class correspond the the operations detailed in <a href="https://sbforge.org/display/DOMS/Update+Tracking#UpdateTracking-HighLevelChanges">https://sbforge.org/display/DOMS/Update+Tracking#UpdateTracking-HighLevelChanges</a>
@@ -38,26 +36,18 @@ import static dk.statsbiblioteket.doms.updatetracker.improved.database.Record.St
 public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistentStore, Closeable {
 
     private static Logger log = LoggerFactory.getLogger(UpdateTrackerPersistentStoreImpl.class);
+    private final DBFactory dbfac;
 
-    private SessionFactory sessionFactory;
 
     private FedoraForUpdateTracker fedora;
     private UpdateTrackerBackend backend;
 
 
-    public UpdateTrackerPersistentStoreImpl(File configFile, File hibernateMappings, FedoraForUpdateTracker fedora,
-                                            UpdateTrackerBackend backend) {
+    public UpdateTrackerPersistentStoreImpl(FedoraForUpdateTracker fedora,
+                                            UpdateTrackerBackend backend, DBFactory dbfac) {
         this.fedora = fedora;
         this.backend = backend;
-        // A SessionFactory is set up once for an application
-        final Configuration configuration = new Configuration()
-                                                .configure(configFile);
-        if (hibernateMappings != null) {
-            configuration.addFile(hibernateMappings);
-        }
-        configuration.setInterceptor(new SetLastModifiedInterceptor());
-        sessionFactory = configuration.buildSessionFactory();
-
+        this.dbfac = dbfac;
     }
 
     /**
@@ -77,7 +67,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      */
     @Override
     public void objectCreated(String pid, Date timestamp, long key) throws UpdateTrackerStorageException, FedoraFailedException {
-        DB db = new DB(getSession());
+        DB db = dbfac.getInstance();
         Transaction transaction = db.beginTransaction();
         log.debug("ObjectCreated({},{}) Starting",pid,timestamp);
         try {
@@ -104,11 +94,6 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
 
     }
 
-    private Session getSession() {
-        Session session = sessionFactory.getCurrentSession();
-        session.setFlushMode(FlushMode.COMMIT);
-        return session;
-    }
 
     /**
      * The object was deleted
@@ -136,7 +121,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      */
     @Override
     public void objectDeleted(String pid, Date timestamp, long key) throws UpdateTrackerStorageException, FedoraFailedException {
-        DB db = new DB(getSession());
+        DB db = dbfac.getInstance();
         Transaction transaction = db.beginTransaction();
         log.debug("ObjectDeleted({},{}) Starting", pid, timestamp);
         try {
@@ -187,7 +172,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     public void datastreamChanged(String pid, Date timestamp, String dsid, long key) throws
                                                                       UpdateTrackerStorageException,
                                                                       FedoraFailedException {
-        DB db = new DB(getSession());
+        DB db = dbfac.getInstance();
         Transaction transaction = db.beginTransaction();
         log.debug("DatastreamChanged({},{},{}) Starting", pid, timestamp,dsid);
         try {
@@ -281,7 +266,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                                                                            UpdateTrackerStorageException,
                                                                            FedoraFailedException {
 
-        DB db = new DB(getSession());
+        DB db = dbfac.getInstance();
         Transaction transaction = db.beginTransaction();
         log.debug("objectStateChanged({},{},{}) Starting", pid, timestamp, newstate);
         try {
@@ -306,69 +291,60 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
 
     @Override
     public List<Record> lookup(Date since, String viewAngle, int offset, int limit, String state, String collection) throws UpdateTrackerStorageException {
-        StatelessSession session = sessionFactory.openStatelessSession();
-        StatelessDB db = new StatelessDB(session);
-        session.beginTransaction();
+        StatelessDB db = dbfac.getStatelessDB();
+//        session.beginTransaction();
         try {
             log.info("lookup({},{},{},{},{},{}) Starting", since,viewAngle,offset,limit,state,collection);
 
 
             final List<Record> entries = backend.lookup(since, viewAngle, offset, limit, state, collection, db);
-            session.getTransaction().commit();
+//            session.getTransaction().commit();
             log.debug("lookup({},{},{},{},{},{}) Completed", since, viewAngle, offset, limit, state, collection);
             return entries;
         } catch (HibernateException e) {
             try {
-                session.getTransaction()
-                       .rollback();
+//                session.getTransaction().rollback();
             } catch (HibernateException he) {
                 log.error("Failed to rollback transaction", he);
             }
             throw new UpdateTrackerStorageException("Failed to query for since='"+since.getTime()+"', viewAngle='"+viewAngle+"', offset='"+offset+"', limit="+limit+"', state='"+state+"', collection='"+collection+"'", e);
         } finally {
-            session.close();
+            db.close();
         }
     }
 
     @Override
     public Date lastChanged() throws UpdateTrackerStorageException {
-        StatelessSession session = sessionFactory.openStatelessSession();
-        session.beginTransaction();
+        StatelessDB db = dbfac.getStatelessDB();
+        //session.beginTransaction();
         try {
-            final Date lastChangeRecord = backend.lastChanged(session);
-            session.getTransaction()
-                   .commit();
+            final Date lastChangeRecord = backend.lastChanged(db);
+            //session.getTransaction().commit();
             return lastChangeRecord;
         } catch (HibernateException e) {
             try {
-                session.getTransaction()
-                       .rollback();
+                //session.getTransaction().rollback();
             } catch (HibernateException he) {
                 log.error("Failed to rollback transaction", he);
             }
             throw new UpdateTrackerStorageException("Failed to query for last changed object", e);
         } finally {
-            session.close();
+            db.close();
         }
     }
 
     @Override
     public void close() {
-        sessionFactory.close();
+        dbfac.close();
     }
 
     @Override
     public long getLatestKey() {
-        StatelessSession session = sessionFactory.openStatelessSession();
+        StatelessDB db = dbfac.getStatelessDB();
         try {
-            List<LatestKey> list = session.createCriteria(LatestKey.class).list();
-            if (list.size() > 0) {
-                return list.get(0).getKey();
-            } else {
-                return 0L;
-            }
+            return db.getLatestKey();
         } finally {
-            session.close();
+            db.close();
         }
     }
 

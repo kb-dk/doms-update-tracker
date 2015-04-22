@@ -1,5 +1,6 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
+import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 
@@ -7,6 +8,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.NewspaperTests.asSet;
 import static java.util.Arrays.asList;
 import static junit.framework.Assert.assertEquals;
 import static org.mockito.AdditionalMatchers.geq;
@@ -41,7 +43,7 @@ public class Tests {
     static void setContentModelItem(String roundTrip, FedoraForUpdateTracker fcmock) throws FedoraFailedException {
         when(fcmock.calcViewBundle(eq(roundTrip), eq(SBOI), any(Date.class))).thenReturn(new ViewBundle(roundTrip,
                                                                                                         SBOI));
-        when(fcmock.getEntryAngles(eq(roundTrip), gt(new Date()))).thenReturn(asList(SBOI));
+        when(fcmock.getEntryAngles(eq(roundTrip), gt(new Date()))).thenReturn(asSet(SBOI));
     }
 
     /**
@@ -87,7 +89,7 @@ public class Tests {
         when(fcmock.calcViewBundle(eq(pid), eq(SBOI), geq(date))).thenReturn(new ViewBundle(pid, SBOI, asList(pid)));
 
 
-        when(fcmock.getEntryAngles(eq(pid), geq(date))).thenReturn(asList(GUI, SBOI));
+        when(fcmock.getEntryAngles(eq(pid), geq(date))).thenReturn(asSet(GUI, SBOI));
     }
 
     /**
@@ -113,7 +115,7 @@ public class Tests {
                                                                                                                         edition)));
 
         //But after this time, the object is an entry
-        when(fcmock.getEntryAngles(eq(pid), geq(pageContentModel))).thenReturn(asList(SUMMA_VISIBLE));
+        when(fcmock.getEntryAngles(eq(pid), geq(pageContentModel))).thenReturn(asSet(SUMMA_VISIBLE));
     }
 
     /**
@@ -132,7 +134,7 @@ public class Tests {
                                                                                                            SUMMA_VISIBLE));
 
         //But after this time, the object is an entry
-        when(fcmock.getEntryAngles(eq(pid), geq(changeDate))).thenReturn(asList(SUMMA_VISIBLE, GUI));
+        when(fcmock.getEntryAngles(eq(pid), geq(changeDate))).thenReturn(asSet(SUMMA_VISIBLE, GUI));
 
 
         //Newspapers are a linked list, with the relation relatedSucceeding. These are view relations in

@@ -5,14 +5,13 @@ import dk.statsbiblioteket.doms.central.connectors.BackendInvalidResourceExcepti
 import dk.statsbiblioteket.doms.central.connectors.BackendMethodFailedException;
 import dk.statsbiblioteket.doms.central.connectors.Connector;
 import dk.statsbiblioteket.doms.central.connectors.fedora.Fedora;
-import dk.statsbiblioteket.doms.central.connectors.fedora.FedoraRest;
 import dk.statsbiblioteket.doms.central.connectors.fedora.structures.FedoraRelation;
 import dk.statsbiblioteket.doms.central.connectors.fedora.structures.ObjectProfile;
 import dk.statsbiblioteket.doms.central.connectors.fedora.structures.ObjectType;
 import dk.statsbiblioteket.doms.central.connectors.fedora.tripleStore.TripleStoreRest;
 import dk.statsbiblioteket.doms.central.connectors.fedora.views.Views;
 import dk.statsbiblioteket.doms.central.connectors.fedora.views.ViewsImpl;
-import dk.statsbiblioteket.doms.updatetracker.improved.database.Record;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.ViewBundle;
 import dk.statsbiblioteket.util.Pair;
 import dk.statsbiblioteket.util.caching.TimeSensitiveCache;
@@ -22,6 +21,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import javax.xml.bind.JAXBException;
 import java.lang.String;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -68,7 +68,7 @@ public class FedoraForUpdateTracker {
         this.views = views;
     }
 
-    public List<String> getEntryAngles(String pid, Date date) throws FedoraFailedException {
+    public Collection<String> getEntryAngles(String pid, Date date) throws FedoraFailedException {
         try {
             Set<String> entryAngles = new HashSet<String>();
             ObjectProfile profile = getObjectProfile(pid, date);
@@ -78,7 +78,7 @@ public class FedoraForUpdateTracker {
             for (String contentmodelPid : profile.getContentModels()) {
                 entryAngles.addAll(getEntryAnglesForContentModel(contentmodelPid, date));
             }
-            return new ArrayList<String>(entryAngles);
+            return entryAngles;
         } catch (BackendInvalidCredsException e) {
             throw new FedoraFailedException("Failed to get view info from Fedora for pid " + pid, e);
         } catch (BackendMethodFailedException e) {

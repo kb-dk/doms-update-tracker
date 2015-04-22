@@ -1,6 +1,6 @@
 package dk.statsbiblioteket.doms.updatetracker.improved;
 
-import dk.statsbiblioteket.doms.updatetracker.improved.database.Record;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerStorageException;
 import dk.statsbiblioteket.doms.updatetracker.webservice.InvalidCredentialsException;
 import dk.statsbiblioteket.doms.updatetracker.webservice.MethodFailedException;

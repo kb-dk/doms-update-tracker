@@ -15,6 +15,7 @@ import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedExcept
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -83,9 +84,9 @@ public class ContentModelTest {
         when(fedoraRest.getLimitedObjectProfile(eq("doms:Object1"), anyLong())).thenReturn(objectprofile);
 
         assertTrue(fedora.isCurrentlyContentModel("doms:ContentModel1", new Date()));
-        List<String> angles = fedora.getEntryAngles("doms:Object1", new Date());
+        Collection<String> angles = fedora.getEntryAngles("doms:Object1", new Date());
         assertEquals(1,angles.size());
-        assertEquals("SummaVisible",angles.get(0));
+        assertEquals("SummaVisible",angles.iterator().next());
 
         //No remove the entry relation from the content model
         when(fedoraRest.getNamedRelations(eq("doms:ContentModel1"),
@@ -94,7 +95,7 @@ public class ContentModelTest {
         //But this is not visible as we get the cached copy
         angles = fedora.getEntryAngles("doms:Object1", new Date());
         assertEquals(1, angles.size());
-        assertEquals("SummaVisible", angles.get(0));
+        assertEquals("SummaVisible", angles.iterator().next());
 
         //We now invalidate the cached copy
         fedora.invalidateContentModel("doms:ContentModel1");

@@ -1,4 +1,4 @@
-package dk.statsbiblioteket.doms.updatetracker.improved.database;
+package dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures;
 
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
@@ -211,6 +211,18 @@ public class Record extends LastModifiable implements Serializable {
         this.active = active;
         this.inactive = inactive;
         this.deleted = deleted;
+    }
+
+    public Record(String entryPid, String viewAngle, String collection, Date active, Date inactive, Date deleted,
+                  Date lastModified, Set<String> objects) {
+        super(lastModified);
+        this.entryPid = entryPid;
+        this.viewAngle = viewAngle;
+        this.collection = collection;
+        this.active = active;
+        this.inactive = inactive;
+        this.deleted = deleted;
+        this.objects = objects;
     }
 
     public String getEntryPid() {
