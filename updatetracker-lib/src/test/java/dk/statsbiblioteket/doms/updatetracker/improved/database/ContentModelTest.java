@@ -33,8 +33,6 @@ import static org.mockito.Mockito.when;
 public class ContentModelTest {
 
 
-    private final String collection = "doms:Root_Collection";
-
     @Before
     public void setUp() throws Exception {
     }

@@ -1,15 +1,13 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
-import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.LatestKey;
-import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
-import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DB;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DBFactory;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.StatelessDB;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import org.hibernate.HibernateException;
-import org.hibernate.StatelessSession;
 import org.hibernate.Transaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
