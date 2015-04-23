@@ -85,7 +85,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             for (String collection : collections) {
                 backend.modifyState(pid, timestamp, collection, ingestState, session);
             }
-            backend.reconnectObjects(pid, timestamp, session, collections);
+            backend.reconnectObjects(pid, timestamp, session, collections, ingestState);
             backend.updateDates(pid, timestamp, session);
 
             setLatestKey(key, session);
@@ -200,14 +200,17 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                         for (String object : objectsOfThisContentModel) {
                             log.debug("Working on object {}, number {} of the {} objects of content model {}",object,i++,objectsOfThisContentModel.size(),pid);
                             Set<String> collections = fedora.getCollections(object, timestamp);
-                            backend.reconnectObjects(object, timestamp, session, collections);
+                            State objectState = fedora.getState(object, timestamp);
+                            backend.reconnectObjects(object, timestamp, session, collections,objectState);
                             backend.updateDates(object, timestamp, session);
                             //TODO is flush the right thing to clear the session here? No need to keep track of the objects from last iteration of this loop
                             session.flush();
                         }
                     } else if (dsid.equals("RELS-EXT")) {
                         Set<String> collections = fedora.getCollections(pid, timestamp);
-                        backend.reconnectObjects(pid, timestamp, session, collections);
+                        State state = fedora.getState(pid, timestamp);
+
+                        backend.reconnectObjects(pid, timestamp, session, collections,state);
                     }
                 }
             }
