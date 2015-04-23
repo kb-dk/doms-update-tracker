@@ -76,16 +76,17 @@ public class UpdateTrackerBackend {
                 for (String entryAngle : entryAngles) {
                     log.debug("Pid {} is an entry for viewangle {}", pid, entryAngle);
 
-                    if (db.recordExists(new Record(pid, entryAngle, collection)) == null) {
-                        Record newRecord = new Record(pid, entryAngle, collection);
+                    Record newRecord = db.recordExists(new Record(pid, entryAngle, collection));
+                    if (newRecord == null) {
+                        newRecord = new Record(pid, entryAngle, collection);
                         log.debug("Pid {} is not marked as an entry for viewAngle {}. Fixing", pid, entryAngle);
-                        newRecord.getObjects().add(pid);
-                        newRecord.setInactive(timestamp);
-                        if (state == State.ACTIVE){
-                            newRecord.setActive(timestamp);
-                        }
-                        db.saveOrUpdate(newRecord);
                     }
+                    newRecord.getObjects().add(pid);
+                    newRecord.setInactive(timestamp);
+                    if (state == State.ACTIVE){
+                        newRecord.setActive(timestamp);
+                    }
+                    db.saveOrUpdate(newRecord);
                 }
             } else {
                 for (Record recordWithThisEntryPid : allRecordsWithThisEntryPid) {
