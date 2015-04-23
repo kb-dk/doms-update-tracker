@@ -126,14 +126,14 @@ public class UpdateTrackerPersistentStoreTest {
         objects.add(pid);
         when(fcmock.calcViewBundle(eq(pid),eq(VIEW_ANGLE),any(Date.class))).thenReturn(new ViewBundle(pid,
                                                                                                       VIEW_ANGLE,
-                                                                                                     objects));
+                                                                                                      objects));
     }
 
     private void removeEntry(String pid) throws FedoraFailedException {
 
         when(fcmock.getEntryAngles(eq(pid), any(Date.class))).thenThrow(new FedoraFailedException("Object not found"));
         when(fcmock.calcViewBundle(eq(pid), eq(VIEW_ANGLE), any(Date.class))).thenThrow(
-                                                                                              new FedoraFailedException("Object not found"));
+                                                                                               new FedoraFailedException("Object not found"));
     }
 
     @Test
@@ -239,6 +239,7 @@ public class UpdateTrackerPersistentStoreTest {
 
         mocks.verify(fcmock).isCurrentlyContentModel(pid, now);
         mocks.verify(fcmock).getCollections(pid, now);
+        mocks.verify(fcmock).getState(pid,now);
 
         mocks.verify(fcmock).getEntryAngles(pid, now);
         mocks.verify(dbSession).recordExists(keyedRecord);
@@ -290,6 +291,7 @@ public class UpdateTrackerPersistentStoreTest {
         //Datastream RELSEXT changed
         mocks.verify(fcmock).isCurrentlyContentModel(pid, now);
         mocks.verify(fcmock).getCollections(pid, now);
+        mocks.verify(fcmock).getState(pid,now);
 
         //backend.reconnectObjects
         mocks.verify(fcmock).getEntryAngles(pid, now);
@@ -348,6 +350,8 @@ public class UpdateTrackerPersistentStoreTest {
         //Datastream RELSEXT changed
         mocks.verify(fcmock).isCurrentlyContentModel(child, now);
         mocks.verify(fcmock).getCollections(child, now);
+        mocks.verify(fcmock).getState(child, now);
+
 
         //backend.reconnectObjects
         mocks.verify(fcmock).getEntryAngles(child, now);

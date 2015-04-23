@@ -192,7 +192,7 @@ public class UpdateTrackerBackend {
     }
 
 
-    public void reconnectObjects(String pid, Date timestamp, DB db, Collection<String> collections) throws
+    public void reconnectObjects(String pid, Date timestamp, DB db, Collection<String> collections, State state) throws
                                                                  FedoraFailedException,
                                                                  UpdateTrackerStorageException {
         /*
@@ -222,7 +222,11 @@ public class UpdateTrackerBackend {
                     record = new Record(pid, entryViewAngle, collection);
                     record.getObjects().add(pid);
                     record.setInactive(timestamp);
+                    if (state == State.ACTIVE) {
+                        record.setActive(timestamp);
+                    }
                     db.saveOrUpdate(record);
+                   newRecords.add(record);
                 }
                 newRecords.add(record);
             }
