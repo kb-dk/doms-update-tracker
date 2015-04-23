@@ -129,13 +129,6 @@ public class UpdateTrackerPersistentStoreTest {
                                                                                                       objects));
     }
 
-    private void removeEntry(String pid) throws FedoraFailedException {
-
-        when(fcmock.getEntryAngles(eq(pid), any(Date.class))).thenThrow(new FedoraFailedException("Object not found"));
-        when(fcmock.calcViewBundle(eq(pid), eq(VIEW_ANGLE), any(Date.class))).thenThrow(
-                                                                                               new FedoraFailedException("Object not found"));
-    }
-
     @Test
     public void testObjectDeletedBasic() throws Exception {
 
@@ -209,11 +202,7 @@ public class UpdateTrackerPersistentStoreTest {
         mocks.verify(dbSession).setLatestKey(key);
 
         verifyNoMoreInteractions(dbSession, fcmock);
-
     }
-
-
-
 
     @Test
     public void testObjectRelationsChangedSameBundle() throws Exception {
@@ -229,7 +218,6 @@ public class UpdateTrackerPersistentStoreTest {
         when(dbSession.recordExists(eq(keyedRecord)))
                 .thenReturn(newRecord);
         when(dbSession.getRecordsForPid(pid)).thenReturn(asSet(newRecord));
-
 
         store.objectRelationsChanged(pid, now, key);
 
@@ -271,7 +259,6 @@ public class UpdateTrackerPersistentStoreTest {
         final Record recordToLookup = new Record(pid, VIEW_ANGLE, COLLECTION);
 
         final Record recordBefore = new Record(pid, VIEW_ANGLE, COLLECTION, null, new Date(1), null, null, asSet(pid));
-
 
         final Record recordToSave = new Record(pid, VIEW_ANGLE, COLLECTION, null, now, null, null, asSet(pid,
                                                                                                          child));
@@ -339,11 +326,9 @@ public class UpdateTrackerPersistentStoreTest {
         when(dbSession.getRecordsForPid(pid)).thenReturn(asSet(recordBefore));
         when(dbSession.getRecordsForPid(child)).thenReturn(asSet(recordBefore));
 
-
         store.objectRelationsChanged(child, now, key);
 
         InOrder mocks = inOrder(dbSession, fcmock);
-
 
         mocks.verify(dbSession).beginTransaction();
 
