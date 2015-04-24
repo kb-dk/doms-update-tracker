@@ -191,7 +191,7 @@ public class Record extends LastModifiable implements Serializable {
                                                   @JoinColumn(referencedColumnName = "COLLECTION", name = "COLLECTION")
                             })
     @Column(name = "OBJECTPID", length = 64)
-    private Set<String> objects = new HashSet<String>();
+    private Set<String> objects = new HashSet<>();
 
     public Record() {
     }

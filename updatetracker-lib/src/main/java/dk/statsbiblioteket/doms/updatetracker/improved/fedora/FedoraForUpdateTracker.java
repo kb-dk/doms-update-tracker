@@ -55,7 +55,7 @@ public class FedoraForUpdateTracker {
      * same event. The next event will have a new date, and will thus not hit the old profile, and thus I do not need
      * to invalidate entries in this cache.
      */
-    private static final TimeSensitiveCache<Pair<String,Date>, ObjectProfile> profileCache = new TimeSensitiveCache<Pair<String, Date>, ObjectProfile>(ONE_MINUTE_IN_MILLISECONDS, false);
+    private static final TimeSensitiveCache<Pair<String,Date>, ObjectProfile> profileCache = new TimeSensitiveCache<>(ONE_MINUTE_IN_MILLISECONDS, false);
 
 
 
@@ -70,7 +70,7 @@ public class FedoraForUpdateTracker {
 
     public List<String> getEntryAngles(String pid, Date date) throws FedoraFailedException {
         try {
-            Set<String> entryAngles = new HashSet<String>();
+            Set<String> entryAngles = new HashSet<>();
             ObjectProfile profile = getObjectProfile(pid, date);
             if (profile.getType() == ObjectType.CONTENT_MODEL){
                 cmCache.setEntryViewAngles(pid, getEntryAnglesForContentModel(pid, date) );
@@ -78,14 +78,8 @@ public class FedoraForUpdateTracker {
             for (String contentmodelPid : profile.getContentModels()) {
                 entryAngles.addAll(getEntryAnglesForContentModel(contentmodelPid, date));
             }
-            return new ArrayList<String>(entryAngles);
-        } catch (BackendInvalidCredsException e) {
-            throw new FedoraFailedException("Failed to get view info from Fedora for pid " + pid, e);
-        } catch (BackendMethodFailedException e) {
-            throw new FedoraFailedException("Failed to get view info from Fedora for pid " + pid, e);
-        } catch (BackendInvalidResourceException e) {
-            throw new FedoraFailedException("Failed to get view info from Fedora for pid " + pid, e);
-        } catch (JAXBException e) {
+            return new ArrayList<>(entryAngles);
+        } catch (BackendInvalidCredsException | BackendMethodFailedException | BackendInvalidResourceException | JAXBException e) {
             throw new FedoraFailedException("Failed to get view info from Fedora for pid " + pid, e);
         }
     }
@@ -103,7 +97,7 @@ public class FedoraForUpdateTracker {
                 entryAngles = getObject(entryRelations);
                 entryAngles = scrubViewAngles(entryAngles);
             } catch (BackendInvalidResourceException e) {
-                entryAngles = new HashSet<String>();
+                entryAngles = new HashSet<>();
             }
             cmCache.setEntryViewAngles(contentmodel,entryAngles);
         }
@@ -111,11 +105,11 @@ public class FedoraForUpdateTracker {
    }
 
     private Set<String> scrubViewAngles(Set<String> entryAngles) {
-        Set<String> scrubbedEntryAngles = new HashSet<String>();
+        Set<String> scrubbedEntryAngles = new HashSet<>();
         CollectionUtils.collect(entryAngles, new Transformer<String, String>() {
             @Override
             public String transform(String string) {
-                return string.replaceAll("^\\\"", "").replaceAll("\\\"$", "");
+                return string.replaceAll("^\"", "").replaceAll("\"$", "");
             }
         }, scrubbedEntryAngles);
         return scrubbedEntryAngles;
@@ -123,7 +117,7 @@ public class FedoraForUpdateTracker {
 
     private Set<String> getObject(List<FedoraRelation> entryRelations) {
         Set<String> entryAngles;
-        entryAngles = new HashSet<String>();
+        entryAngles = new HashSet<>();
         CollectionUtils.collect(entryRelations, new Transformer<FedoraRelation, String>() {
             @Override
             public String transform(FedoraRelation relation) {
@@ -135,7 +129,7 @@ public class FedoraForUpdateTracker {
 
     private Set<String> getSubject(List<FedoraRelation> entryRelations) {
         Set<String> entryAngles;
-        entryAngles = new HashSet<String>();
+        entryAngles = new HashSet<>();
         CollectionUtils.collect(entryRelations, new Transformer<FedoraRelation, String>() {
             @Override
             public String transform(FedoraRelation relation) {
@@ -150,26 +144,20 @@ public class FedoraForUpdateTracker {
         try {
             List<String> pids = views.getViewObjectsListForObject(entryPid, viewAngle, date.getTime());
             return new ViewBundle(entryPid, viewAngle, pids);
-        } catch (BackendInvalidCredsException e) {
-            throw new FedoraFailedException("Failed calculating view bundle", e);
-        } catch (BackendMethodFailedException e) {
-            throw new FedoraFailedException("Failed calculating view bundle", e);
-        } catch (BackendInvalidResourceException e) {
+        } catch (BackendInvalidCredsException | BackendMethodFailedException | BackendInvalidResourceException e) {
             throw new FedoraFailedException("Failed calculating view bundle", e);
         }
     }
 
     public Set<String> getCollections(String pid, Date date) throws FedoraFailedException {
-        List<FedoraRelation> collectionRelations = null;
+        List<FedoraRelation> collectionRelations;
         try {
             collectionRelations = fedoraRest.getNamedRelations(pid, COLLECTION_RELATION,
                                                                                        date.getTime());
-        } catch (BackendInvalidCredsException e) {
-            throw new FedoraFailedException("Failed to get collection info from Fedora for pid " + pid, e);
-        } catch (BackendMethodFailedException e) {
+        } catch (BackendInvalidCredsException | BackendMethodFailedException e) {
             throw new FedoraFailedException("Failed to get collection info from Fedora for pid " + pid, e);
         } catch (BackendInvalidResourceException e) {
-            return new HashSet<String>();
+            return new HashSet<>();
         }
         return getObject(collectionRelations);
     }
@@ -179,11 +167,7 @@ public class FedoraForUpdateTracker {
         List<FedoraRelation> hasModelRelations;
         try {
             hasModelRelations = tripleStoreRest.getInverseRelations(contentModelPid, HASMODEL_RELATION);
-        } catch (BackendInvalidCredsException e) {
-            throw new FedoraFailedException("Failed to get content model info from Fedora for pid " + contentModelPid, e);
-        } catch (BackendMethodFailedException e) {
-            throw new FedoraFailedException("Failed to get content model info from Fedora for pid " + contentModelPid, e);
-        } catch (BackendInvalidResourceException e) {
+        } catch (BackendInvalidCredsException | BackendMethodFailedException | BackendInvalidResourceException e) {
             throw new FedoraFailedException("Failed to get content model info from Fedora for pid " + contentModelPid, e);
         }
         return getSubject(hasModelRelations);
@@ -203,11 +187,7 @@ public class FedoraForUpdateTracker {
         try {
             ObjectProfile profile = getObjectProfile(pid, date);
             return profile.getType() == ObjectType.CONTENT_MODEL;
-        } catch (BackendInvalidCredsException e) {
-            throw new FedoraFailedException("Failed to get profile of object '"+pid+"' at date '"+date.toString()+"'",e);
-        } catch (BackendInvalidResourceException e) {
-            throw new FedoraFailedException("Failed to get profile of object '"+pid+"' at date '"+date.toString()+"'",e);
-        } catch (BackendMethodFailedException e) {
+        } catch (BackendInvalidCredsException | BackendInvalidResourceException | BackendMethodFailedException e) {
             throw new FedoraFailedException("Failed to get profile of object '"+pid+"' at date '"+date.toString()+"'",e);
         }
     }
@@ -216,7 +196,7 @@ public class FedoraForUpdateTracker {
                                                                   BackendInvalidResourceException,
                                                                   BackendMethodFailedException,
                                                                   BackendInvalidCredsException {
-        final Pair<String, Date> key = new Pair<String, Date>(pid, date);
+        final Pair<String, Date> key = new Pair<>(pid, date);
         ObjectProfile cachedProfile = profileCache.get(key);
         if (cachedProfile == null){
             cachedProfile = fedoraRest.getLimitedObjectProfile(pid, date.getTime());
@@ -233,13 +213,7 @@ public class FedoraForUpdateTracker {
         try {
             ObjectProfile profile = getObjectProfile(pid, date);
             return Record.State.fromName(profile.getState());
-        } catch (BackendInvalidCredsException e) {
-            throw new FedoraFailedException("Failed to get profile of object '" + pid + "' at date '" +
-                                            date.toString() + "'", e);
-        } catch (BackendInvalidResourceException e) {
-            throw new FedoraFailedException("Failed to get profile of object '" + pid + "' at date '" +
-                                            date.toString() + "'", e);
-        } catch (BackendMethodFailedException e) {
+        } catch (BackendInvalidCredsException | BackendInvalidResourceException | BackendMethodFailedException e) {
             throw new FedoraFailedException("Failed to get profile of object '" + pid + "' at date '" +
                                             date.toString() + "'", e);
         }

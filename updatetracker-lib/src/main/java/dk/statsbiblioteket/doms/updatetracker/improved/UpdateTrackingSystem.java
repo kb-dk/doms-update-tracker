@@ -27,8 +27,6 @@ public class UpdateTrackingSystem implements Closeable {
     private  Timer timer;
 
 
-    private static UpdateTrackingSystem instance = null;
-
     public UpdateTrackingSystem(UpdateTrackingConfig updateTrackingConfig) {
 
 

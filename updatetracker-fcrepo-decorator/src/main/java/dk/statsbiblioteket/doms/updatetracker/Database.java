@@ -79,12 +79,11 @@ public class Database implements Closeable {
         try {
             Connection conn = cPool.getReadWriteConnection();
             try {
-                PreparedStatement statement = conn.prepareStatement("INSERT INTO updateTrackerLogs(pid,happened," +
-                                                                    "method,param) VALUES (?,?,?,?)",
-                                                                    Statement.RETURN_GENERATED_KEYS);
-                try {
+                try (PreparedStatement statement = conn.prepareStatement("INSERT INTO updateTrackerLogs(pid,happened," +
+                                                                         "method,param) VALUES (?,?,?,?)",
+                                                                         Statement.RETURN_GENERATED_KEYS)) {
                     statement.setString(1, pid);
-                    statement.setTimestamp(2, new Timestamp(timestamp.getTime()),tzUTC);
+                    statement.setTimestamp(2, new Timestamp(timestamp.getTime()), tzUTC);
                     statement.setString(3, name);
                     statement.setString(4, param);
                     statement.executeUpdate();
@@ -94,8 +93,6 @@ public class Database implements Closeable {
                     key = generatedKeys.getLong("key");
 
                     return key;
-                } finally {
-                    statement.close();
                 }
             } finally {
                 try {
@@ -118,12 +115,9 @@ public class Database implements Closeable {
         try {
             Connection conn = cPool.getReadWriteConnection();
             try {
-                PreparedStatement statement = conn.prepareStatement("DELETE FROM updateTrackerLogs WHERE key = ?");
-                try {
+                try (PreparedStatement statement = conn.prepareStatement("DELETE FROM updateTrackerLogs WHERE key = ?")) {
                     statement.setLong(1, key);
                     statement.executeUpdate();
-                } finally {
-                    statement.close();
                 }
             } finally {
                 try {

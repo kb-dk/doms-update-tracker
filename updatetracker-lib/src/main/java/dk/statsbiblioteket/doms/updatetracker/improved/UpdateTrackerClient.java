@@ -43,7 +43,7 @@ public class UpdateTrackerClient implements UpdateTrackerWebservice {
                                                        String state, Integer offset, Integer limit) throws
                                                                                                     InvalidCredentialsException,
                                                                                                     MethodFailedException {
-        List<Record> entries = null;
+        List<Record> entries;
         try {
             entries = updateTrackingSystem.getStore().lookup(new java.util.Date(beginTime),
                                                              viewAngle,
@@ -83,7 +83,7 @@ public class UpdateTrackerClient implements UpdateTrackerWebservice {
 
 
     private List<RecordDescription> convert(List<Record> entries, String state) {
-        List<RecordDescription> list2 = new ArrayList<RecordDescription>(entries.size());
+        List<RecordDescription> list2 = new ArrayList<>(entries.size());
         for (Record record : entries) {
             list2.add(convert(record, state));
         }

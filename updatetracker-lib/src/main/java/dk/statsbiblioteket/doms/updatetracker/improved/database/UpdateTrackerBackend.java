@@ -39,7 +39,7 @@ public class UpdateTrackerBackend {
     private final Map<Pair<Record,Date>,ViewBundle> viewBundleCache;
 
     public UpdateTrackerBackend(FedoraForUpdateTracker fedora, Long viewBundleCacheTime) {
-        viewBundleCache = new TimeSensitiveCache<Pair<Record,Date>, ViewBundle>(viewBundleCacheTime, true);
+        viewBundleCache = new TimeSensitiveCache<>(viewBundleCacheTime, true);
         this.fedora = fedora;
     }
 
@@ -145,7 +145,7 @@ public class UpdateTrackerBackend {
     }
 
     private Set<Record> recordsWithoutThisPidAsEntry(final String pid, Collection<Record> records) {
-        final Set<Record> coll = new HashSet<Record>(records);
+        final Set<Record> coll = new HashSet<>(records);
         CollectionUtils.filter(coll, new Predicate<Record>() {
             @Override
             public boolean evaluate(Record object) { return !object.getEntryPid().equals(pid); }
@@ -176,7 +176,7 @@ public class UpdateTrackerBackend {
     }
 
     private ViewBundle getViewBundle(Date timestamp, Record otherRecord) throws FedoraFailedException {
-        final Pair<Record, Date> key = new Pair<Record, Date>(otherRecord, timestamp);
+        final Pair<Record, Date> key = new Pair<>(otherRecord, timestamp);
         ViewBundle bundle = viewBundleCache.get(key);
         if (bundle == null){
             bundle = fedora.calcViewBundle(otherRecord.getEntryPid(), otherRecord.getViewAngle(), timestamp);
@@ -206,7 +206,7 @@ public class UpdateTrackerBackend {
         log.debug("starting reconnectObjects({},{})",pid,timestamp);
 
         //Store the new records so that we do not need to flush the database to find them again
-        Set<Record> newRecords = new HashSet<Record>();
+        Set<Record> newRecords = new HashSet<>();
         //Create new Records
         final Collection<String> entryViewAngles = fedora.getEntryAngles(pid, timestamp);
         for (String entryViewAngle : entryViewAngles) {
@@ -244,7 +244,7 @@ public class UpdateTrackerBackend {
 
          */
 
-        Set<Record> records = new HashSet<Record>(UpdateTrackerDAO.getRecordsForPid(session,pid));
+        Set<Record> records = new HashSet<>(UpdateTrackerDAO.getRecordsForPid(session,pid));
         //Since the database connection have not been flushed, the newly created records will not be found, so add them
         records.addAll(newRecords);
         log.debug("Find all records {} containing {} ", records, pid);
