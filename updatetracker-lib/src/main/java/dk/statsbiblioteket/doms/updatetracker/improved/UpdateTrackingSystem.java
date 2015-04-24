@@ -44,7 +44,7 @@ public class UpdateTrackingSystem implements Closeable {
             FedoraForUpdateTracker fedora = new FedoraForUpdateTracker(cmCache, fedoraRest, tripleStoreRest, views);
 
             //Start up the database
-            final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fedora, updateTrackingConfig.getViewBundleCacheTime());
+            final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fedora, updateTrackingConfig.getViewBundleCacheTime(), updateTrackingConfig.getViewBundleMaxThreads());
             store = new UpdateTrackerPersistentStoreImpl(updateTrackingConfig.getUpdatetrackerHibernateConfig(),
                                                          updateTrackingConfig.getUpdatetrackerHibernateMappings(), fedora,
                                                          updateTrackerBackend);

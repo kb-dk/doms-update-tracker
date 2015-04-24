@@ -47,13 +47,13 @@ public class UpdateTrackerBackend implements Closeable{
 
     private final Map<Pair<Record,Date>,ViewBundle> viewBundleCache;
 
-    public UpdateTrackerBackend(FedoraForUpdateTracker fedora, Long viewBundleCacheTime) {
+    public UpdateTrackerBackend(FedoraForUpdateTracker fedora, Long viewBundleCacheTime, Integer viewBundleThreadCount) {
         viewBundleCache = new TimeSensitiveCache<>(viewBundleCacheTime, true);
         this.fedora = fedora;
         //This creates the thread pool for view reconnection.
         //The issue here is that the database session is not thread safe, but the fedora service is. Therefore, we must
         //recalculate the view multithreaded, but we must save the results in the main thread
-        viewBundleThreadPool = Executors.newCachedThreadPool(new ThreadFactory() {
+        final ThreadFactory threadFactory = new ThreadFactory() {
             @Override //Hack to make the threads daemon threads so they do not block shutdown
             public Thread newThread(Runnable r) {
                 ThreadFactory fac = Executors.defaultThreadFactory();
@@ -61,7 +61,13 @@ public class UpdateTrackerBackend implements Closeable{
                 thread.setDaemon(true);
                 return thread;
             }
-        });
+        };
+        //If thread count not correctly specified, make a cached thread pool (creates up to infinity threads as required, and kills them after 60 seconds of idle)
+        if (viewBundleThreadCount == null || viewBundleThreadCount <= 0){
+            viewBundleThreadPool = Executors.newCachedThreadPool(threadFactory);
+        } else {
+            viewBundleThreadPool = Executors.newFixedThreadPool(viewBundleThreadCount, threadFactory);
+        }
     }
 
     /**
