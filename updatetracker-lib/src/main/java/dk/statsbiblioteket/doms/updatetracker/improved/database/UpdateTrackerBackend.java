@@ -1,8 +1,8 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.util.Pair;
 import dk.statsbiblioteket.util.caching.TimeSensitiveCache;
 import org.apache.commons.collections4.CollectionUtils;
@@ -13,12 +13,20 @@ import org.hibernate.StatelessSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
 
 
 /**
@@ -32,7 +40,8 @@ import java.util.Set;
  *
  */
 //TODO test if these operations are idempotent. Can we replay the same set of operations for the same result?
-public class UpdateTrackerBackend {
+public class UpdateTrackerBackend implements Closeable{
+    private final ExecutorService viewBundleThreadPool;
     private FedoraForUpdateTracker fedora;
     private Logger log = LoggerFactory.getLogger(UpdateTrackerBackend.class);
 
@@ -41,6 +50,18 @@ public class UpdateTrackerBackend {
     public UpdateTrackerBackend(FedoraForUpdateTracker fedora, Long viewBundleCacheTime) {
         viewBundleCache = new TimeSensitiveCache<>(viewBundleCacheTime, true);
         this.fedora = fedora;
+        //This creates the thread pool for view reconnection.
+        //The issue here is that the database session is not thread safe, but the fedora service is. Therefore, we must
+        //recalculate the view multithreaded, but we must save the results in the main thread
+        viewBundleThreadPool = Executors.newCachedThreadPool(new ThreadFactory() {
+            @Override //Hack to make the threads daemon threads so they do not block shutdown
+            public Thread newThread(Runnable r) {
+                ThreadFactory fac = Executors.defaultThreadFactory();
+                Thread thread = fac.newThread(r);
+                thread.setDaemon(true);
+                return thread;
+            }
+        });
     }
 
     /**
@@ -114,14 +135,7 @@ public class UpdateTrackerBackend {
             final Collection<Record> records = UpdateTrackerDAO.getRecordsForPid(session, pid);
 
             Set<Record> otherRecordsThanThisWhichThisObjectIsPart = recordsWithoutThisPidAsEntry(pid, records);
-
-
-            for (Record otherRecord : otherRecordsThanThisWhichThisObjectIsPart) {
-                if (otherRecord.getState() != State.DELETED) {
-                    reconnectObjectsInRecord(timestamp, session, otherRecord);
-                }
-            }
-
+            reconnectTheseRecords(timestamp, session, otherRecordsThanThisWhichThisObjectIsPart);
             Set<Record> recordsWhichThisObjectIsEntry = recordWithThisPidAsEntry(pid, records);
 
             for (Record record : recordsWhichThisObjectIsEntry) {
@@ -134,7 +148,6 @@ public class UpdateTrackerBackend {
         }
 
     }
-
     private Set<Record> recordWithThisPidAsEntry(final String pid, Collection<Record> records) {
         final Set<Record> coll = new HashSet<Record>(records);
         CollectionUtils.filter(coll, new Predicate<Record>() {
@@ -153,25 +166,53 @@ public class UpdateTrackerBackend {
         return coll;
     }
 
-    private void reconnectObjectsInRecord(Date timestamp, Session session, Record otherRecord) throws FedoraFailedException {
-        Set<String> before = new HashSet<String>(otherRecord.getObjects());
-        Set<String> after = new HashSet<String>();
-        ViewBundle bundle = getViewBundle(timestamp, otherRecord);
-        for (String viewObject : bundle.getContained()) {
-            log.debug("Marking object {} as part of record {},{},{}", viewObject, otherRecord.getEntryPid(), otherRecord.getViewAngle(), otherRecord.getCollection());
-            after.add(viewObject);
-        }
+    private void reconnectTheseRecords(final Date timestamp, Session session,
+                                       Set<Record> records) throws FedoraFailedException {
+        Set<Future<Record>> recordsToSave = new HashSet<>();
+        for (final Record record : records) {
+            Callable<Record> reconnector = new Callable<Record>() {
+                @Override
+                public Record call() throws Exception {
+                    if (record.getState() != State.DELETED) {
+                        Set<String> before = new HashSet<>(record.getObjects());
+                        Set<String> after = new HashSet<>();
+                        ViewBundle bundle = getViewBundle(timestamp, record);
+                        for (String viewObject : bundle.getContained()) {
+                            log.debug("Marking object {} as part of record {},{},{}",
+                                      viewObject,
+                                      record.getEntryPid(),
+                                      record.getViewAngle(),
+                                      record.getCollection());
+                            after.add(viewObject);
+                        }
 
-        if (!before.equals(after)) {
-            otherRecord.getObjects().clear();
-            otherRecord.getObjects().addAll(after);
-            if (otherRecord.getInactive() != null &&
-                otherRecord.getActive() != null &&
-                otherRecord.getInactive().equals(otherRecord.getActive())) {
-                otherRecord.setActive(timestamp);
+                        if (!before.equals(after)) {
+                            record.getObjects().clear();
+                            record.getObjects().addAll(after);
+                            if (record.getInactive() != null &&
+                                record.getActive() != null &&
+                                record.getInactive().equals(record.getActive())) {
+                                record.setActive(timestamp);
+                            }
+                            record.setInactive(timestamp);
+                            return record;
+                        }
+                    }
+                    return null;//This marks that no update should be done
+                }
+            };
+            recordsToSave.add(viewBundleThreadPool.submit(reconnector));
+        }
+        for (Future<Record> recordFuture : recordsToSave) {
+            Record record;
+            try {
+                record = recordFuture.get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new FedoraFailedException("Failed while getting view bundles", e);
             }
-            otherRecord.setInactive(timestamp);
-            session.saveOrUpdate(otherRecord);
+            if (record != null) {
+                session.saveOrUpdate(record);
+            }
         }
     }
 
@@ -248,11 +289,7 @@ public class UpdateTrackerBackend {
         //Since the database connection have not been flushed, the newly created records will not be found, so add them
         records.addAll(newRecords);
         log.debug("Find all records {} containing {} ", records, pid);
-        for (Record otherRecord : records) {
-            if (otherRecord.getState() != State.DELETED) {
-                reconnectObjectsInRecord(timestamp, session, otherRecord);
-            }
-        }
+        reconnectTheseRecords(timestamp, session, records);
     }
 
     public void updateDates(String pid, Date timestamp, Session session) {
@@ -312,5 +349,10 @@ public class UpdateTrackerBackend {
             }
         }
         return null;
+    }
+
+    @Override
+    public void close() throws IOException {
+        viewBundleThreadPool.shutdown();
     }
 }
