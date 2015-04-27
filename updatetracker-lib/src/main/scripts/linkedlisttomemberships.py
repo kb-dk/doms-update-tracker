@@ -17,6 +17,7 @@ linkedlistpairs=dict()
 for line in f:
     lineparts = line.strip().split()
     linkedlistpairs[lineparts[0]] = lineparts[1]
+f.close()
 
 # Find all objects on the left hand side of any pair, but not on any right hand side of any pair.
 # These are the first objects in any list.
@@ -24,15 +25,15 @@ linkedlistheads = set(linkedlistpairs.keys())-set(linkedlistpairs.values())
 
 # Use the list heads to follow relations using the dictionary.
 # Create a dictionary linking each object to the list containing it.
-lists = dict()
+itemToListContainingItem = dict()
 for linkedlisthead in linkedlistheads:
     currentElement = linkedlisthead
     currentList = []
     while currentElement:
         currentList.append(currentElement)
         currentElement = linkedlistpairs.get(currentElement)
-    for np1 in currentList:
-        lists[np1]=currentList
+    for item in currentList:
+        itemToListContainingItem[item]=currentList
 
 # Read all lines from file with objects with relations to these lists.
 # For each line print the membership
@@ -42,10 +43,11 @@ for line in f:
     lineparts = line.strip().split()
     subject = lineparts[0]
     subobject = lineparts[1]
-    currentList = lists.get(subobject)
+    currentList = itemToListContainingItem.get(subobject)
     if currentList:
         for object in currentList:
             print(view +"\t" + subject + "\t" + collection + "\t" + object)
     else:
         # If no list is matched, we should consider it to be a singleton list and add a single line
         print(view +"\t" + subject + "\t" + collection + "\t" + subobject)
+f.close()
