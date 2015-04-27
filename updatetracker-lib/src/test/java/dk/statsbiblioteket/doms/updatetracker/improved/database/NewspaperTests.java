@@ -10,6 +10,8 @@ import java.io.File;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerDAO.asSet;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.ACTIVE;
@@ -41,10 +43,13 @@ public class NewspaperTests {
                                        .toURI());
 
         fcmock = mock(FedoraForUpdateTracker.class);
-        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L,2);
-        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings,fcmock, updateTrackerBackend);
+        final ExecutorService threadPool = Executors.newCachedThreadPool();
+        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L,threadPool);
+        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings,fcmock, updateTrackerBackend,
+                                                  threadPool);
         tearDown();
-        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings, fcmock, updateTrackerBackend);
+        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings, fcmock, updateTrackerBackend,
+                                                  threadPool);
 
         //Collections for everybody
         when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(asSet(COLLECTION));

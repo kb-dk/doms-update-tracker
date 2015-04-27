@@ -47,27 +47,10 @@ public class UpdateTrackerBackend implements Closeable{
 
     private final Map<Pair<Record,Date>,ViewBundle> viewBundleCache;
 
-    public UpdateTrackerBackend(FedoraForUpdateTracker fedora, Long viewBundleCacheTime, Integer viewBundleThreadCount) {
+    public UpdateTrackerBackend(FedoraForUpdateTracker fedora, Long viewBundleCacheTime, ExecutorService viewBundleThreadPool) {
+        this.viewBundleThreadPool = viewBundleThreadPool;
         viewBundleCache = new TimeSensitiveCache<>(viewBundleCacheTime, true);
         this.fedora = fedora;
-        //This creates the thread pool for view reconnection.
-        //The issue here is that the database session is not thread safe, but the fedora service is. Therefore, we must
-        //recalculate the view multithreaded, but we must save the results in the main thread
-        final ThreadFactory threadFactory = new ThreadFactory() {
-            @Override //Hack to make the threads daemon threads so they do not block shutdown
-            public Thread newThread(Runnable r) {
-                ThreadFactory fac = Executors.defaultThreadFactory();
-                Thread thread = fac.newThread(r);
-                thread.setDaemon(true);
-                return thread;
-            }
-        };
-        //If thread count not correctly specified, make a cached thread pool (creates up to infinity threads as required, and kills them after 60 seconds of idle)
-        if (viewBundleThreadCount == null || viewBundleThreadCount <= 0){
-            viewBundleThreadPool = Executors.newCachedThreadPool(threadFactory);
-        } else {
-            viewBundleThreadPool = Executors.newFixedThreadPool(viewBundleThreadCount, threadFactory);
-        }
     }
 
     /**
@@ -140,9 +123,12 @@ public class UpdateTrackerBackend implements Closeable{
 
             final Collection<Record> records = UpdateTrackerDAO.getRecordsForPid(session, pid);
 
-            Set<Record> otherRecordsThanThisWhichThisObjectIsPart = recordsWithoutThisPidAsEntry(pid, records);
-            reconnectTheseRecords(timestamp, session, otherRecordsThanThisWhichThisObjectIsPart);
-            Set<Record> recordsWhichThisObjectIsEntry = recordWithThisPidAsEntry(pid, records);
+            Set<Record> otherRecordsThanThisWhichThisObjectIsPart = getRecordsWithoutThisPidAsEntry(pid, records);
+            Set<Record> changes = recalculateRecords(timestamp, otherRecordsThanThisWhichThisObjectIsPart);
+            for (Record change : changes) {
+                session.saveOrUpdate(change);
+            }
+            Set<Record> recordsWhichThisObjectIsEntry = getRecordWithThisPidAsEntry(pid, records);
 
             for (Record record : recordsWhichThisObjectIsEntry) {
                 record.getObjects().clear();
@@ -154,7 +140,7 @@ public class UpdateTrackerBackend implements Closeable{
         }
 
     }
-    private Set<Record> recordWithThisPidAsEntry(final String pid, Collection<Record> records) {
+    private Set<Record> getRecordWithThisPidAsEntry(final String pid, Collection<Record> records) {
         final Set<Record> coll = new HashSet<Record>(records);
         CollectionUtils.filter(coll, new Predicate<Record>() {
             @Override
@@ -163,7 +149,7 @@ public class UpdateTrackerBackend implements Closeable{
         return coll;
     }
 
-    private Set<Record> recordsWithoutThisPidAsEntry(final String pid, Collection<Record> records) {
+    private Set<Record> getRecordsWithoutThisPidAsEntry(final String pid, Collection<Record> records) {
         final Set<Record> coll = new HashSet<>(records);
         CollectionUtils.filter(coll, new Predicate<Record>() {
             @Override
@@ -172,8 +158,8 @@ public class UpdateTrackerBackend implements Closeable{
         return coll;
     }
 
-    private void reconnectTheseRecords(final Date timestamp, Session session,
-                                       Set<Record> records) throws FedoraFailedException {
+    private Set<Record> recalculateRecords(final Date timestamp,
+                                           Set<Record> records) throws FedoraFailedException {
         Set<Future<Record>> recordsToSave = new HashSet<>();
         for (final Record record : records) {
             Callable<Record> reconnector = new Callable<Record>() {
@@ -209,6 +195,7 @@ public class UpdateTrackerBackend implements Closeable{
             };
             recordsToSave.add(viewBundleThreadPool.submit(reconnector));
         }
+        Set<Record> result = new HashSet<>();
         for (Future<Record> recordFuture : recordsToSave) {
             Record record;
             try {
@@ -217,9 +204,10 @@ public class UpdateTrackerBackend implements Closeable{
                 throw new FedoraFailedException("Failed while getting view bundles", e);
             }
             if (record != null) {
-                session.saveOrUpdate(record);
+                result.add(record);
             }
         }
+        return result;
     }
 
     private ViewBundle getViewBundle(Date timestamp, Record otherRecord) throws FedoraFailedException {
@@ -233,9 +221,21 @@ public class UpdateTrackerBackend implements Closeable{
     }
 
 
-    public void reconnectObjects(String pid, Date timestamp, Session session, Collection<String> collections) throws
+    /**
+     * This methods returns a set of record objects that should be changed when this pid have changed
+     * @param pid the pid that changed
+     * @param timestamp the timestamp
+     * @param session the database session
+     * @param collections collections which this pid belongs to
+     * @return a set of records to save
+     * @throws FedoraFailedException
+     * @throws UpdateTrackerStorageException
+     */
+    public Set<Record> recalculateThisRecord(String pid, Date timestamp, Session session,
+                                             Collection<String> collections) throws
                                                                  FedoraFailedException,
                                                                  UpdateTrackerStorageException {
+        HashSet<Record> result = new HashSet<>();
         /*
         Get the view Information about this object (Which viewAngles is this object entry for)
         get the Collection information about this object (which collections is it in)
@@ -262,7 +262,7 @@ public class UpdateTrackerBackend implements Closeable{
                 if (UpdateTrackerDAO.recordNotExists(session, record)){
                     record.getObjects().add(pid);
                     record.setInactive(timestamp);
-                    session.saveOrUpdate(record);
+                    result.add(record);
                     newRecords.add(record);
                 }
             }
@@ -279,7 +279,7 @@ public class UpdateTrackerBackend implements Closeable{
             previousRecord.setInactive(null);
             previousRecord.setActive(null);
             previousRecord.getObjects().clear();
-            session.saveOrUpdate(previousRecord);
+            result.add(previousRecord);
         }
 
         log.debug("Recalculating view for {}", pid);
@@ -295,7 +295,8 @@ public class UpdateTrackerBackend implements Closeable{
         //Since the database connection have not been flushed, the newly created records will not be found, so add them
         records.addAll(newRecords);
         log.debug("Find all records {} containing {} ", records, pid);
-        reconnectTheseRecords(timestamp, session, records);
+        result.addAll(recalculateRecords(timestamp, records));
+        return result;
     }
 
     public void updateDates(String pid, Date timestamp, Session session) {
@@ -307,7 +308,7 @@ public class UpdateTrackerBackend implements Closeable{
     }
 
     public List<Record> lookup(Date since, String viewAngle, int offset, int limit, String state, String collection,
-                               StatelessSession session) {
+                               Session session) {
         Query query;
         if (state == null) {
             query = session.getNamedQuery("All");

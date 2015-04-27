@@ -1,5 +1,6 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
+import dk.statsbiblioteket.doms.updatetracker.improved.Utils;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
@@ -16,8 +17,13 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.File;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State.DELETED;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State.INACTIVE;
@@ -42,12 +48,14 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
 
     private FedoraForUpdateTracker fedora;
     private UpdateTrackerBackend backend;
+    private final ExecutorService threadPool;
 
 
     public UpdateTrackerPersistentStoreImpl(File configFile, File hibernateMappings, FedoraForUpdateTracker fedora,
-                                            UpdateTrackerBackend backend) {
+                                            UpdateTrackerBackend backend, ExecutorService threadPool) {
         this.fedora = fedora;
         this.backend = backend;
+        this.threadPool = threadPool;
         // A SessionFactory is set up once for an application
         final Configuration configuration = new Configuration()
                                                 .configure(configFile);
@@ -85,7 +93,10 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             for (String collection : collections) {
                 backend.modifyState(pid, timestamp, collection, ingestState, session);
             }
-            backend.reconnectObjects(pid, timestamp, session, collections);
+            Set<Record> changedRecords = backend.recalculateThisRecord(pid, timestamp, session, collections);
+            for (Record changedRecord : changedRecords) {
+                session.saveOrUpdate(changedRecord);
+            }
             backend.updateDates(pid, timestamp, session);
 
             setLatestKey(key, session);
@@ -128,7 +139,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      *  update tracker is justified in ignoring it. If nobody links to the content model, it does not matter that you
      *  purged it.
      If you just changed the state to Deleted, it does, per definition, not matter
-      TODO update the wiki page
+     TODO update the wiki page
      * @param pid  the pid of the object
      * @param timestamp the date of the change
      * @param key the key from the work log table, that defined this operation.
@@ -183,31 +194,23 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      * @throws FedoraFailedException
      */
     @Override
-    public void datastreamChanged(String pid, Date timestamp, String dsid, long key) throws
-                                                                      UpdateTrackerStorageException,
-                                                                      FedoraFailedException {
-        Session session = getSession();
+    public void datastreamChanged(String pid, final Date timestamp, String dsid, long key) throws
+                                                                                           UpdateTrackerStorageException,
+                                                                                           FedoraFailedException {
+        final Session session = getSession();
         Transaction transaction = session.beginTransaction();
         log.debug("DatastreamChanged({},{},{}) Starting", pid, timestamp,dsid);
         try {
             if (dsid != null) {
                 if ((dsid.equals("VIEW") || dsid.equals("RELS-EXT"))) {
                     if (fedora.isCurrentlyContentModel(pid, timestamp)) {
-                        fedora.invalidateContentModel(pid);
-                        int i = 0;
-                        //TODO this set can be HUGE
-                        final Set<String> objectsOfThisContentModel = fedora.getObjectsOfThisContentModel(pid);
-                        for (String object : objectsOfThisContentModel) {
-                            log.debug("Working on object {}, number {} of the {} objects of content model {}",object,i++,objectsOfThisContentModel.size(),pid);
-                            Set<String> collections = fedora.getCollections(object, timestamp);
-                            backend.reconnectObjects(object, timestamp, session, collections);
-                            backend.updateDates(object, timestamp, session);
-                            //TODO is flush the right thing to clear the session here? No need to keep track of the objects from last iteration of this loop
-                            session.flush();
-                        }
+                        contentModelChanged(pid, timestamp, session);
                     } else if (dsid.equals("RELS-EXT")) {
                         Set<String> collections = fedora.getCollections(pid, timestamp);
-                        backend.reconnectObjects(pid, timestamp, session, collections);
+                        Set<Record> changedRecords = backend.recalculateThisRecord(pid, timestamp, session, collections);
+                        for (Record changedRecord : changedRecords) {
+                            session.saveOrUpdate(changedRecord);
+                        }
                     }
                 }
             }
@@ -225,6 +228,60 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                                                     "' at date='" + timestamp.getTime() + "' and dsid='"+dsid+"'", e);
         }
     }
+
+    private void contentModelChanged(String contentModel, final Date timestamp, Session session) throws
+                                                                                                 FedoraFailedException
+    {
+        fedora.invalidateContentModel(contentModel);
+
+        ExecutorCompletionService<Set<Record>> progressTracker = new ExecutorCompletionService<>(threadPool);
+
+        final Set<String> objectsOfThisContentModel = fedora.getObjectsOfThisContentModel(contentModel);//TODO this set can be HUGE
+        Set<Future<Set<Record>>> results = new HashSet<>(objectsOfThisContentModel.size());
+
+        for (final String object : objectsOfThisContentModel) {
+            Callable<Set<Record>> reconnector = new Callable<Set<Record>>() {
+                @Override
+                public Set<Record> call() throws Exception {
+                    Session session = getSession();
+                    //This is a threadlocal session. It will not see the uncommitted changes from the parent session
+                    //but there should be none at this point
+                    session.beginTransaction();
+                    session.setDefaultReadOnly(true);
+                    Set<Record> changedRecords = null;
+                    try {
+                        Set<String> collections = fedora.getCollections(object, timestamp);
+                        changedRecords = backend.recalculateThisRecord(object,
+                                                                       timestamp,
+                                                                       session,
+                                                                       collections);
+                    } catch (FedoraFailedException | UpdateTrackerStorageException e) {
+                        session.getTransaction().rollback(); //I do not know if readonly transactions should be rolled back
+                        throw e;//yes, rethrow. I do not want to lose the type
+                    }
+                    session.getTransaction().commit();
+                    return changedRecords;
+                }
+            };
+            results.add(progressTracker.submit(reconnector));
+        }
+        int records = 0;
+        for (int futureCount = 0; futureCount < objectsOfThisContentModel.size(); futureCount++) {
+            Set<Record> changedRecords;
+            changedRecords = Utils.getCompleted(contentModel, results, progressTracker);
+
+            for (Record changedRecord : changedRecords) { //We log progress on merge back, not on calc of view
+                log.debug("Working on object nr {} out of {} of content model {}",
+                          records++,
+                          objectsOfThisContentModel.size(),
+                          contentModel);
+                session.merge(changedRecord);//Merge them to this session, and since they are changed, they will be changed in the commit
+                backend.updateDates(changedRecord.getEntryPid(), timestamp, session);
+            }
+
+        }
+    }
+
 
 
     /**
@@ -305,8 +362,9 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
 
     @Override
     public List<Record> lookup(Date since, String viewAngle, int offset, int limit, String state, String collection) throws UpdateTrackerStorageException {
-        StatelessSession session = sessionFactory.openStatelessSession();
+        Session session = getSession();
         session.beginTransaction();
+        session.setDefaultReadOnly(true);
         try {
             log.info("lookup({},{},{},{},{},{}) Starting", since,viewAngle,offset,limit,state,collection);
 
@@ -323,8 +381,6 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                 log.error("Failed to rollback transaction", he);
             }
             throw new UpdateTrackerStorageException("Failed to query for since='"+since.getTime()+"', viewAngle='"+viewAngle+"', offset='"+offset+"', limit="+limit+"', state='"+state+"', collection='"+collection+"'", e);
-        } finally {
-            session.close();
         }
     }
 

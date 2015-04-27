@@ -8,10 +8,11 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerDAO.asSet;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.ALTO;
@@ -45,9 +46,11 @@ public class NewspaperBatchTests {
                                          .toURI());
         File mappings = new File(Thread.currentThread().getContextClassLoader().getResource("updateTrapperMappings.xml")
                                        .toURI());
+        final ExecutorService threadPool = Executors.newCachedThreadPool();
 
-        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L,2);
-        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings,fcmock, updateTrackerBackend);
+        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L,threadPool);
+        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings,fcmock, updateTrackerBackend,
+                                                  threadPool);
     }
 
     @After
