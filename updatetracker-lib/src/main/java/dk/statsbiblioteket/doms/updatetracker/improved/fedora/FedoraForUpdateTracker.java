@@ -72,11 +72,13 @@ public class FedoraForUpdateTracker {
         try {
             Set<String> entryAngles = new HashSet<>();
             ObjectProfile profile = getObjectProfile(pid, date);
-            if (profile.getType() == ObjectType.CONTENT_MODEL){
-                cmCache.setEntryViewAngles(pid, getEntryAnglesForContentModel(pid, date) );
-            }
-            for (String contentmodelPid : profile.getContentModels()) {
-                entryAngles.addAll(getEntryAnglesForContentModel(contentmodelPid, date));
+            synchronized (cmCache) {
+                if (profile.getType() == ObjectType.CONTENT_MODEL){
+                    cmCache.setEntryViewAngles(pid, getEntryAnglesForContentModel(pid, date) );
+                }
+                for (String contentmodelPid : profile.getContentModels()) {
+                    entryAngles.addAll(getEntryAnglesForContentModel(contentmodelPid, date));
+                }
             }
             return new ArrayList<>(entryAngles);
         } catch (BackendInvalidCredsException | BackendMethodFailedException | BackendInvalidResourceException | JAXBException e) {
