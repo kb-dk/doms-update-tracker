@@ -27,15 +27,16 @@ import static org.hibernate.criterion.Restrictions.not;
 public class DB implements Closeable{
 
     private final Session session;
+    private final boolean readonly;
 
     /**
      * create a new database connection
      * @param sessionFactory Will create a new session from the session factory with the correct modes and props set
      */
     DB(SessionFactory sessionFactory, boolean readonly) {
+        this.readonly = readonly;
         Session session = sessionFactory.getCurrentSession();
         session.setFlushMode(FlushMode.COMMIT);
-        session.setDefaultReadOnly(readonly);
         this.session=session;
     }
 
@@ -54,7 +55,9 @@ public class DB implements Closeable{
      * @return the transaction object
      */
     public Transaction beginTransaction() {
-        return session.beginTransaction();
+        final Transaction transaction = session.beginTransaction();
+        session.setDefaultReadOnly(readonly);
+        return transaction;
     }
 
     /**

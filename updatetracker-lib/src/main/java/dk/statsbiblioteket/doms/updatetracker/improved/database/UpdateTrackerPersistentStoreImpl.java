@@ -290,6 +290,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     @Override
     public List<Record> lookup(Date since, String viewAngle, int offset, int limit, String state, String collection) throws UpdateTrackerStorageException {
         DB db = dbfac.createReadonlyDBConnection();
+        Transaction transaction = db.beginTransaction();
         try {
             log.info("lookup({},{},{},{},{},{}) Starting", since,viewAngle,offset,limit,state,collection);
             final List<Record> entries = backend.lookup(since, viewAngle, offset, limit, state, collection, db);
@@ -298,6 +299,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         } catch (HibernateException e) {
             throw new UpdateTrackerStorageException("Failed to query for since='"+since.getTime()+"', viewAngle='"+viewAngle+"', offset='"+offset+"', limit="+limit+"', state='"+state+"', collection='"+collection+"'", e);
         } finally {
+            transaction.commit();
             db.close();
         }
     }
@@ -305,11 +307,13 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     @Override
     public Date lastChanged() throws UpdateTrackerStorageException {
         DB db = dbfac.createReadonlyDBConnection();
+        Transaction transaction = db.beginTransaction();
         try {
             return backend.lastChanged(db);
         } catch (HibernateException e) {
             throw new UpdateTrackerStorageException("Failed to query for last changed object", e);
         } finally {
+            transaction.commit();
             db.close();
         }
     }
@@ -322,9 +326,11 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     @Override
     public long getLatestKey() {
         DB db = dbfac.createReadonlyDBConnection();
+        Transaction transaction = db.beginTransaction();
         try {
             return db.getLatestKey();
         } finally {
+            transaction.commit();
             db.close();
         }
     }
