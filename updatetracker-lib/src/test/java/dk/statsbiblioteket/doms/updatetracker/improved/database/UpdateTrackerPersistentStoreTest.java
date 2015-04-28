@@ -1,29 +1,19 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
-import dk.statsbiblioteket.doms.updatetracker.improved.Utils;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DB;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DBFactory;
-import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.StatelessDB;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.collections4.Predicate;
 import org.hibernate.Transaction;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InOrder;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.List;
 
-import static dk.statsbiblioteket.doms.updatetracker.improved.Utils.asSet;
-import static junit.framework.Assert.assertEquals;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.Utils.asSet;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
@@ -35,6 +25,8 @@ import static org.mockito.Mockito.when;
 
 public class UpdateTrackerPersistentStoreTest {
 
+    //TODO make tests that use a mocked UpdateTrackerBackend
+
     protected static final String COLLECTION = "doms:Root_Collection";
     UpdateTrackerPersistentStore store;
     FedoraForUpdateTracker fcmock;
@@ -43,9 +35,6 @@ public class UpdateTrackerPersistentStoreTest {
 
     @Before
     public void setUp() throws Exception {
-
-
-
         fcmock = mock(FedoraForUpdateTracker.class);
         //Collections for everybody
         when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(asSet(COLLECTION));
@@ -56,10 +45,9 @@ public class UpdateTrackerPersistentStoreTest {
         DBFactory dbfac = mock(DBFactory.class);
         dbSession = mock(DB.class);
         Transaction transaction = mock(Transaction.class);
-        when(dbfac.getInstance()).thenReturn(dbSession);
+        when(dbfac.createDBConnection()).thenReturn(dbSession);
+        when(dbfac.createReadonlyDBConnection()).thenReturn(dbSession);
         when(dbSession.beginTransaction()).thenReturn(transaction);
-        StatelessDB statelessDB = mock(StatelessDB.class);
-        when(dbfac.getStatelessDB()).thenReturn(statelessDB);
 
         store = new UpdateTrackerPersistentStoreImpl(fcmock, updateTrackerBackend, dbfac);
     }
@@ -70,15 +58,19 @@ public class UpdateTrackerPersistentStoreTest {
         store.close();
     }
 
+    /**
+     * Simulates the process when we receive a ingest event from the worklog. As can be seen from the code, we run
+     * modifyState, reconnectObjects and updateDates
+     * @throws Exception
+     */
     @Test
     public void testObjectCreatedBasic() throws Exception {
-        init();
         Date now = new Date();
         final String pid = "doms:test1";
-        addEntry(pid);
+        Utils.addEntry(pid, fcmock);
         final int key = 1;
         final Record newRecord = new Record(pid, VIEW_ANGLE, COLLECTION, null, now, null, null, asSet(pid));
-        when(dbSession.recordExists(eq(new Record(pid, VIEW_ANGLE, COLLECTION))))
+        when(dbSession.getPersistentRecord(eq(new Record(pid, VIEW_ANGLE, COLLECTION))))
                 .thenReturn(null)
                 .thenReturn(newRecord);
         store.objectCreated(pid, now, key);
@@ -93,14 +85,14 @@ public class UpdateTrackerPersistentStoreTest {
         //ModifyState
         mocks.verify(dbSession).getAllRecordsWithThisEntryPid(pid);
         mocks.verify(fcmock).getEntryAngles(pid, now);
-        mocks.verify(dbSession).recordExists(new Record(pid, VIEW_ANGLE, COLLECTION));
-        mocks.verify(dbSession).saveOrUpdate(newRecord);  //Because RecordExists give null in the first call
+        mocks.verify(dbSession).getPersistentRecord(new Record(pid, VIEW_ANGLE, COLLECTION));
+        mocks.verify(dbSession).saveRecord(newRecord);  //Because RecordExists give null in the first call
 
         //Reconnect Objects
         mocks.verify(fcmock).getEntryAngles(pid, now);
-        mocks.verify(dbSession).recordExists(new Record(pid, VIEW_ANGLE, COLLECTION)); //This does not give null, so no saveAndUpdate
+        mocks.verify(dbSession).getPersistentRecord(new Record(pid, VIEW_ANGLE, COLLECTION)); //This does not give null, so no saveAndUpdate
         mocks.verify(dbSession).getRecordsNotInTheseCollectionsAndViewAngles(pid, asSet(VIEW_ANGLE), asSet(COLLECTION));//Will be empty set
-        mocks.verify(dbSession).getRecordsForPid(pid);  //Should return empty due to not flushed yet
+        mocks.verify(dbSession).getRecordsContainingThisPid(pid);  //Should return empty due to not flushed yet
         mocks.verify(fcmock).calcViewBundle(pid,VIEW_ANGLE,now);
         //No saveAndUpdate as the contained objects have not changed
 
@@ -114,41 +106,30 @@ public class UpdateTrackerPersistentStoreTest {
 
     }
 
-    private void init() throws Exception {
-        //tearDown();
-        //setUp();
-    }
 
-    private void addEntry(String pid, String... contained) throws FedoraFailedException {
-        when(fcmock.getEntryAngles(eq(pid), any(Date.class))).thenReturn(asSet(VIEW_ANGLE));
-        when(fcmock.getState(eq(pid), any(Date.class))).thenReturn(Record.State.INACTIVE);
-        List < String > objects = new ArrayList<String>(Arrays.asList(contained));
-        objects.add(pid);
-        when(fcmock.calcViewBundle(eq(pid),eq(VIEW_ANGLE),any(Date.class))).thenReturn(new ViewBundle(pid,
-                                                                                                      VIEW_ANGLE,
-                                                                                                      objects));
-    }
-
+    /**
+     * Simulates the process when we receive an object purged or object changed state to deleted from the worklog
+     * @throws Exception
+     */
     @Test
     public void testObjectDeletedBasic() throws Exception {
-
         Date now = new Date();
         final String pid = "doms:test1";
         int key = 1;
 
         final Record newRecord = new Record(pid, VIEW_ANGLE, COLLECTION, null, now, null, null, asSet(pid));
 
-        when(dbSession.recordExists(eq(new Record(pid, VIEW_ANGLE, COLLECTION))))
+        when(dbSession.getPersistentRecord(eq(new Record(pid, VIEW_ANGLE, COLLECTION))))
                 .thenReturn(newRecord);
-        when(dbSession.getRecordsForPid(pid)).thenReturn(asSet(newRecord));
+        when(dbSession.getRecordsContainingThisPid(pid)).thenReturn(asSet(newRecord));
         store.objectDeleted(pid, now, ++key);
 
         InOrder mocks = inOrder(dbSession, fcmock);
         //ObjectDeleted
         mocks.verify(dbSession).beginTransaction();
         //ModifyStates
-        mocks.verify(dbSession).getRecordsForPid(pid);
-        mocks.verify(dbSession).saveOrUpdate(newRecord);
+        mocks.verify(dbSession).getRecordsContainingThisPid(pid);
+        mocks.verify(dbSession).saveRecord(newRecord);
         //UpdateDAtes
         mocks.verify(dbSession).updateDates(pid, now);
         //LatestKey
@@ -157,33 +138,24 @@ public class UpdateTrackerPersistentStoreTest {
         verifyNoMoreInteractions(dbSession, fcmock);
     }
 
-
-    private Collection<Record> filter(List<Record> inactive) {
-        Collection<Record> result = new ArrayList<Record>(inactive);
-        CollectionUtils.filter(result, new Predicate<Record>() {
-            @Override
-            public boolean evaluate(Record record) {
-                return record.getState() != Record.State.DELETED;
-            }
-        });
-        return result;
-    }
-
+    /**
+     * Simulates the process when we receive a object changed state to active from the worklog
+     * @throws Exception
+     */
     @Test
     public void testObjectPublished() throws Exception {
-
         Date now = new Date();
         final String pid = "doms:test1";
         int key = 1;
 
         final Record keyedRecord = new Record(pid, VIEW_ANGLE, COLLECTION);
         final Record newRecord = new Record(pid, VIEW_ANGLE, COLLECTION, null, now, null, null, asSet(pid));
-        addEntry("doms:test1");
+        Utils.addEntry("doms:test1", fcmock);
 
 
-        when(dbSession.recordExists(eq(keyedRecord)))
+        when(dbSession.getPersistentRecord(eq(keyedRecord)))
                 .thenReturn(newRecord);
-        when(dbSession.getRecordsForPid(pid)).thenReturn(asSet(newRecord));
+        when(dbSession.getRecordsContainingThisPid(pid)).thenReturn(asSet(newRecord));
         store.objectStateChanged("doms:test1", now, "A", 1);
 
         InOrder mocks = inOrder(dbSession, fcmock);
@@ -194,8 +166,8 @@ public class UpdateTrackerPersistentStoreTest {
         //ModifyStates
         mocks.verify(dbSession).getAllRecordsWithThisEntryPid(pid);
         mocks.verify(fcmock).getEntryAngles(pid,now);
-        mocks.verify(dbSession).recordExists(keyedRecord);
-        mocks.verify(dbSession).saveOrUpdate(newRecord);
+        mocks.verify(dbSession).getPersistentRecord(keyedRecord);
+        mocks.verify(dbSession).saveRecord(newRecord);
         //UpdateDAtes
         mocks.verify(dbSession).updateDates(pid, now);
         //LatestKey
@@ -204,20 +176,24 @@ public class UpdateTrackerPersistentStoreTest {
         verifyNoMoreInteractions(dbSession, fcmock);
     }
 
+    /**
+     * Simulates the process when an object's relations change, but this does not change the view bundle, ie. when
+     * a non-view relation change
+     * @throws Exception
+     */
     @Test
     public void testObjectRelationsChangedSameBundle() throws Exception {
-        init();
         final String pid = "doms:test1";
         final int key = 1;
 
         final String child = "doms:test2";
-        addEntry(pid, child);
+        Utils.addEntry(pid, fcmock, child);
         Date now = new Date();
         final Record keyedRecord = new Record(pid, VIEW_ANGLE, COLLECTION);
         final Record newRecord = new Record(pid, VIEW_ANGLE, COLLECTION, null, now, null, null, asSet(pid, child));
-        when(dbSession.recordExists(eq(keyedRecord)))
+        when(dbSession.getPersistentRecord(eq(keyedRecord)))
                 .thenReturn(newRecord);
-        when(dbSession.getRecordsForPid(pid)).thenReturn(asSet(newRecord));
+        when(dbSession.getRecordsContainingThisPid(pid)).thenReturn(asSet(newRecord));
 
         store.objectRelationsChanged(pid, now, key);
 
@@ -230,10 +206,10 @@ public class UpdateTrackerPersistentStoreTest {
         mocks.verify(fcmock).getState(pid,now);
 
         mocks.verify(fcmock).getEntryAngles(pid, now);
-        mocks.verify(dbSession).recordExists(keyedRecord);
+        mocks.verify(dbSession).getPersistentRecord(keyedRecord);
 
         mocks.verify(dbSession).getRecordsNotInTheseCollectionsAndViewAngles(pid, asSet(VIEW_ANGLE), asSet(COLLECTION));
-        mocks.verify(dbSession).getRecordsForPid(pid);
+        mocks.verify(dbSession).getRecordsContainingThisPid(pid);
 
         mocks.verify(fcmock).calcViewBundle(pid, VIEW_ANGLE, now);
 
@@ -246,14 +222,17 @@ public class UpdateTrackerPersistentStoreTest {
     }
 
 
+    /**
+     * Simulates the process when an object's relations change, so that an additional object becomes part of the view bundle
+     * @throws Exception
+     */
     @Test
     public void testObjectRelationsChangedChangedBundle() throws Exception {
-        init();
         final String pid = "doms:test1";
         final String child = "doms:test2";
         final int key = 1;
 
-        addEntry(pid, child);
+        Utils.addEntry(pid, fcmock, child);
 
         Date now = new Date();
         final Record recordToLookup = new Record(pid, VIEW_ANGLE, COLLECTION);
@@ -263,9 +242,9 @@ public class UpdateTrackerPersistentStoreTest {
         final Record recordToSave = new Record(pid, VIEW_ANGLE, COLLECTION, null, now, null, null, asSet(pid,
                                                                                                          child));
 
-        when(dbSession.recordExists(eq(recordToLookup)))
+        when(dbSession.getPersistentRecord(eq(recordToLookup)))
                 .thenReturn(recordBefore);
-        when(dbSession.getRecordsForPid(pid)).thenReturn(asSet(recordBefore));
+        when(dbSession.getRecordsContainingThisPid(pid)).thenReturn(asSet(recordBefore));
 
 
         store.objectRelationsChanged(pid, now, key);
@@ -282,16 +261,16 @@ public class UpdateTrackerPersistentStoreTest {
 
         //backend.reconnectObjects
         mocks.verify(fcmock).getEntryAngles(pid, now);
-        mocks.verify(dbSession).recordExists(recordToLookup); //This returns true, so no save yet
+        mocks.verify(dbSession).getPersistentRecord(recordToLookup); //This returns true, so no save yet
 
         //Check for any old records which should be unlinked. There are none
         mocks.verify(dbSession).getRecordsNotInTheseCollectionsAndViewAngles(pid, asSet(VIEW_ANGLE), asSet(COLLECTION));
         //Find all the records affected by this change
-        mocks.verify(dbSession).getRecordsForPid(pid);
+        mocks.verify(dbSession).getRecordsContainingThisPid(pid);
         //Calc the new viewbundle for each of these
         mocks.verify(fcmock).calcViewBundle(pid, VIEW_ANGLE, now);
         //Save the change
-        mocks.verify(dbSession).saveOrUpdate(recordToSave);
+        mocks.verify(dbSession).saveRecord(recordToSave);
 
 
         //UpdateDAtes
@@ -303,14 +282,20 @@ public class UpdateTrackerPersistentStoreTest {
     }
 
 
+    /**
+     * Simulates the process when an object's relation change (the child object). The child object is not an entry object
+     * The change connects it to another object, which have this relation as an inverse view relation.
+     * While this does put the child in a record, this is not reflected in the database, as we do not check what the
+     * relation points to.
+     * @throws Exception
+     */
     @Test
     public void testObjectRelationsChangedChildChanged() throws Exception {
-        init();
         final String pid = "doms:test1";
         final String child = "doms:test2";
         final int key = 1;
 
-        addEntry(pid, child);
+        Utils.addEntry(pid, fcmock, child);
 
         Date now = new Date();
         final Record recordToLookup = new Record(child, VIEW_ANGLE, COLLECTION);
@@ -318,13 +303,10 @@ public class UpdateTrackerPersistentStoreTest {
         final Record recordBefore = new Record(pid, VIEW_ANGLE, COLLECTION, null, new Date(1), null, null, asSet(pid));
 
 
-        final Record recordToSave = new Record(pid, VIEW_ANGLE, COLLECTION, null, now, null, null, asSet(pid,
-                                                                                                         child));
-
-        when(dbSession.recordExists(eq(recordToLookup)))
+        when(dbSession.getPersistentRecord(eq(recordToLookup)))
                 .thenReturn(recordBefore);
-        when(dbSession.getRecordsForPid(pid)).thenReturn(asSet(recordBefore));
-        when(dbSession.getRecordsForPid(child)).thenReturn(asSet(recordBefore));
+        when(dbSession.getRecordsContainingThisPid(pid)).thenReturn(asSet(recordBefore));
+        when(dbSession.getRecordsContainingThisPid(child)).thenReturn(asSet(Record.class));
 
         store.objectRelationsChanged(child, now, key);
 
@@ -344,12 +326,7 @@ public class UpdateTrackerPersistentStoreTest {
         //Check for any old records which should be unlinked. There are none
         mocks.verify(dbSession).getRecordsNotInTheseCollectionsAndViewAngles(child, asSet(String.class), asSet(COLLECTION));
         //Find all the records affected by this change
-        mocks.verify(dbSession).getRecordsForPid(child);
-        //Calc the new viewbundle for each of these
-        mocks.verify(fcmock).calcViewBundle(pid, VIEW_ANGLE, now);
-        //Save the change
-        mocks.verify(dbSession).saveOrUpdate(recordToSave);
-
+        mocks.verify(dbSession).getRecordsContainingThisPid(child);
 
         //UpdateDAtes
         mocks.verify(dbSession).updateDates(child, now);
@@ -362,7 +339,6 @@ public class UpdateTrackerPersistentStoreTest {
 
     @Test
     public void testLatestKeyInserted() throws Exception {
-        init();
         long latestKey = store.getLatestKey();
         long newLatestKey = latestKey + 42;
         store.objectCreated("doms:test1", new Date(0L), newLatestKey);

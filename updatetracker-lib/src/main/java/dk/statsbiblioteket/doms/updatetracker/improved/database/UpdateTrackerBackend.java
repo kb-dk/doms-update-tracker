@@ -3,7 +3,6 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DB;
-import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.StatelessDB;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import dk.statsbiblioteket.util.Pair;
@@ -70,13 +69,13 @@ public class UpdateTrackerBackend {
                         set Active Timestamp
          */
         if ( state != State.DELETED) {
-            List<Record> allRecordsWithThisEntryPid = db.getAllRecordsWithThisEntryPid(pid);
+            Collection<Record> allRecordsWithThisEntryPid = db.getAllRecordsWithThisEntryPid(pid);
             if (allRecordsWithThisEntryPid.isEmpty()){
                 Collection<String> entryAngles = fedora.getEntryAngles(pid, timestamp);
                 for (String entryAngle : entryAngles) {
                     log.debug("Pid {} is an entry for viewangle {}", pid, entryAngle);
 
-                    Record newRecord = db.recordExists(new Record(pid, entryAngle, collection));
+                    Record newRecord = db.getPersistentRecord(new Record(pid, entryAngle, collection));
                     if (newRecord == null) {
                         newRecord = new Record(pid, entryAngle, collection);
                         log.debug("Pid {} is not marked as an entry for viewAngle {}. Fixing", pid, entryAngle);
@@ -86,7 +85,7 @@ public class UpdateTrackerBackend {
                     if (state == State.ACTIVE){
                         newRecord.setActive(timestamp);
                     }
-                    db.saveOrUpdate(newRecord);
+                    db.saveRecord(newRecord);
                 }
             } else {
                 for (Record recordWithThisEntryPid : allRecordsWithThisEntryPid) {
@@ -94,7 +93,7 @@ public class UpdateTrackerBackend {
                     if (state == State.ACTIVE) {
                         recordWithThisEntryPid.setActive(timestamp);
                     }
-                    db.saveOrUpdate(recordWithThisEntryPid);
+                    db.saveRecord(recordWithThisEntryPid);
                 }
             }
         }
@@ -113,7 +112,7 @@ public class UpdateTrackerBackend {
         else if (state == State.DELETED){
             log.debug("Switching on states for pid {}, got the Deleted branch", pid);
 
-            final Collection<Record> records = db.getRecordsForPid(pid);
+            final Collection<Record> records = db.getRecordsContainingThisPid(pid);
 
             Set<Record> otherRecordsThanThisWhichThisObjectIsPart = recordsWithoutThisPidAsEntry(pid, records);
 
@@ -131,7 +130,7 @@ public class UpdateTrackerBackend {
                 record.setDeleted(timestamp);
                 record.setInactive(null);
                 record.setActive(null);
-                db.saveOrUpdate(record);
+                db.saveRecord(record);
             }
         }
 
@@ -177,7 +176,7 @@ public class UpdateTrackerBackend {
                 record.setActive(timestamp);
             }
             record.setInactive(timestamp);
-            db.saveOrUpdate(record);
+            db.saveRecord(record);
         }
     }
 
@@ -218,14 +217,14 @@ public class UpdateTrackerBackend {
         for (String entryViewAngle : entryViewAngles) {
             for (String collection : collections) {
                 Record record = new Record(pid, entryViewAngle, collection);
-                if ((record = db.recordExists(record)) == null){
+                if ((record = db.getPersistentRecord(record)) == null){
                     record = new Record(pid, entryViewAngle, collection);
                     record.getObjects().add(pid);
                     record.setInactive(timestamp);
                     if (state == State.ACTIVE) {
                         record.setActive(timestamp);
                     }
-                    db.saveOrUpdate(record);
+                    db.saveRecord(record);
                    newRecords.add(record);
                 }
                 newRecords.add(record);
@@ -233,14 +232,14 @@ public class UpdateTrackerBackend {
         }
         //Remove old records
         //"not (A and B)" is the same as "(not A) or (not B)"
-        List<Record> previousRecords = db.getRecordsNotInTheseCollectionsAndViewAngles(pid, entryViewAngles, collections);
+        Collection<Record> previousRecords = db.getRecordsNotInTheseCollectionsAndViewAngles(pid, entryViewAngles, collections);
 
         for (Record previousRecord : previousRecords) {
             previousRecord.setDeleted(timestamp);
             previousRecord.setInactive(null);
             previousRecord.setActive(null);
             previousRecord.getObjects().clear();
-            db.saveOrUpdate(previousRecord);
+            db.saveRecord(previousRecord);
         }
 
         log.debug("Recalculating view for {}", pid);
@@ -252,7 +251,7 @@ public class UpdateTrackerBackend {
 
          */
 
-        Set<Record> records = new HashSet<Record>(db.getRecordsForPid(pid));
+        Set<Record> records = new HashSet<Record>(db.getRecordsContainingThisPid(pid));
         //Since the database connection have not been flushed, the newly created records will not be found, so add them
         records.addAll(newRecords);
         log.debug("Find all records {} containing {} ", records, pid);
@@ -268,11 +267,11 @@ public class UpdateTrackerBackend {
     }
 
     public List<Record> lookup(Date since, String viewAngle, int offset, int limit, String state, String collection,
-                               StatelessDB db) {
+                               DB db) {
         return db.lookup(since, viewAngle, offset, limit, state, collection);
     }
 
-    public Date lastChanged(StatelessDB db) {
+    public Date lastChanged(DB db) {
         return db.getLastChangedTimestamp();
     }
 }

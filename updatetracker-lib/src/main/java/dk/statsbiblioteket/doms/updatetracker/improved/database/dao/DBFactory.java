@@ -8,10 +8,18 @@ import org.hibernate.cfg.Configuration;
 import java.io.Closeable;
 import java.io.File;
 
+/**
+ * Factory for the Database abstraction classes
+ */
 public class DBFactory implements Closeable{
 
     private final SessionFactory sessionFactory;
 
+    /**
+     * Create a new factory, from a hibernate config file and a file with hibernate mappings
+     * @param configFile the hibernate config file
+     * @param hibernateMappings the hibernate mappings file, can  be null if no mappings
+     */
     public DBFactory(File configFile, File hibernateMappings) {
         // A SessionFactory is set up once for an application
         final Configuration configuration = new Configuration()
@@ -23,11 +31,20 @@ public class DBFactory implements Closeable{
         sessionFactory = configuration.buildSessionFactory();
     }
 
-    public DB getInstance() {
-        return new DB(sessionFactory);
+    /**
+     * Get a read/write database abstraction
+     * @return the database abstraction instance
+     */
+    public DB createDBConnection() {
+        return new DB(sessionFactory,false);
     }
-    public StatelessDB getStatelessDB(){
-        return new StatelessDB(sessionFactory);
+
+    /**
+     * Get a read-only database abstraction
+     * @return the database abstraction instance
+     */
+    public DB createReadonlyDBConnection(){
+        return new DB(sessionFactory,true);
     }
 
 

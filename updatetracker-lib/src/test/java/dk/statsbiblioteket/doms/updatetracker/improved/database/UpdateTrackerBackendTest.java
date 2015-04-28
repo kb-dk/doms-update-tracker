@@ -2,7 +2,6 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DB;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DBFactory;
-import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.StatelessDB;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
@@ -17,7 +16,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
-import static dk.statsbiblioteket.doms.updatetracker.improved.Utils.asSet;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.Utils.asSet;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
@@ -51,11 +50,40 @@ public class UpdateTrackerBackendTest {
         DBFactory dbfac = mock(DBFactory.class);
         dbSession = mock(DB.class);
         Transaction transaction = mock(Transaction.class);
-        when(dbfac.getInstance()).thenReturn(dbSession);
+        when(dbfac.createDBConnection()).thenReturn(dbSession);
         when(dbSession.beginTransaction()).thenReturn(transaction);
-        StatelessDB statelessDB = mock(StatelessDB.class);
-        when(dbfac.getStatelessDB()).thenReturn(statelessDB);
 
+    }
+
+    @Test
+    public void testModifyStateExisting() throws Exception {
+        String pid = "doms:pid1";
+        Date now = new Date();
+        final Record newRecord = new Record(pid, VIEW_ANGLE, COLLECTION, null, now, null, null, asSet(pid));
+
+        addEntry(pid);
+        when(dbSession.getPersistentRecord(new Record(pid, VIEW_ANGLE, COLLECTION))).thenReturn(new Record(pid,
+                                                                             VIEW_ANGLE,
+                                                                             COLLECTION,
+                                                                             null,
+                                                                             new Date(10),
+                                                                             null,
+                                                                             null,
+                                                                             asSet(pid)));
+
+        uptrack.modifyState(pid, now, COLLECTION, INACTIVE, dbSession);
+
+        InOrder mocks = inOrder(dbSession, fcmock);
+        //Get all records where this is the entry, as we will need to update state
+        mocks.verify(dbSession).getAllRecordsWithThisEntryPid(pid);
+        //Get the entry angles of this record
+        mocks.verify(fcmock).getEntryAngles(pid, now);
+        //Check that it does not already exists, it does not
+        mocks.verify(dbSession).getPersistentRecord(new Record(pid, VIEW_ANGLE, COLLECTION));
+        //save it
+        mocks.verify(dbSession).saveRecord(newRecord);  //Because getPersistentRecord give null (ie. not existing)
+
+        verifyNoMoreInteractions(dbSession, fcmock);
     }
 
 
@@ -74,10 +102,10 @@ public class UpdateTrackerBackendTest {
         //Get the entry angles of this record
         mocks.verify(fcmock).getEntryAngles(pid, now);
         //Check that it does not already exists, it does not
-        mocks.verify(dbSession).recordExists(new Record(pid, VIEW_ANGLE, COLLECTION));
+        mocks.verify(dbSession).getPersistentRecord(new Record(pid, VIEW_ANGLE, COLLECTION));
         //save it
         final Record newRecord = new Record(pid, VIEW_ANGLE, COLLECTION, null, now, null, null, asSet(pid));
-        mocks.verify(dbSession).saveOrUpdate(newRecord);  //Because RecordExists give null in the first call
+        mocks.verify(dbSession).saveRecord(newRecord);  //Because getPersistentRecord give null (ie. not existing)
 
         verifyNoMoreInteractions(dbSession, fcmock);
     }
@@ -99,10 +127,9 @@ public class UpdateTrackerBackendTest {
         InOrder mocks = inOrder(dbSession, fcmock);
         mocks.verify(dbSession).getAllRecordsWithThisEntryPid(pid);
         mocks.verify(fcmock).getEntryAngles(pid, now);
-        mocks.verify(dbSession).recordExists(new Record(pid, VIEW_ANGLE, COLLECTION));
+        mocks.verify(dbSession).getPersistentRecord(new Record(pid, VIEW_ANGLE, COLLECTION));
         final Record newRecord = new Record(pid, VIEW_ANGLE, COLLECTION, now, now, null, null, asSet(pid));
-
-        mocks.verify(dbSession).saveOrUpdate(newRecord);  //Because RecordExists give null in the first call
+        mocks.verify(dbSession).saveRecord(newRecord);
         verifyNoMoreInteractions(dbSession,fcmock);
     }
 
@@ -116,9 +143,9 @@ public class UpdateTrackerBackendTest {
         final Record recordToLookup = new Record(pid, VIEW_ANGLE, COLLECTION);
         final Record recordBefore = new Record(pid, VIEW_ANGLE, COLLECTION, null, new Date(1), null, null, asSet(pid));
 
-        when(dbSession.recordExists(eq(recordToLookup)))
+        when(dbSession.getPersistentRecord(eq(recordToLookup)))
                 .thenReturn(recordBefore);
-        when(dbSession.getRecordsForPid(pid)).thenReturn(asSet(recordBefore));
+        when(dbSession.getRecordsContainingThisPid(pid)).thenReturn(asSet(recordBefore));
 
 
         uptrack.modifyState(pid, now, COLLECTION, DELETED, dbSession);
@@ -126,10 +153,10 @@ public class UpdateTrackerBackendTest {
         InOrder mocks = inOrder(dbSession, fcmock);
 
         //Find all records containing this pid; there is one
-        mocks.verify(dbSession).getRecordsForPid(pid);
+        mocks.verify(dbSession).getRecordsContainingThisPid(pid);
         //Delete it
         final Record newRecord = new Record(pid, VIEW_ANGLE, COLLECTION, null, null, now, null, asSet(String.class));
-        mocks.verify(dbSession).saveOrUpdate(newRecord);  //Because RecordExists give null in the first call
+        mocks.verify(dbSession).saveRecord(newRecord);
 
         verifyNoMoreInteractions(dbSession, fcmock);
     }
@@ -146,18 +173,18 @@ public class UpdateTrackerBackendTest {
                                                                                                                  "doms:pid2",
                                                                                                                  "doms:pid3"));
 
-        when(dbSession.recordExists(eq(recordToLookup)))
+        when(dbSession.getPersistentRecord(eq(recordToLookup)))
                 .thenReturn(recordBefore);
-        when(dbSession.getRecordsForPid(pid)).thenReturn(asSet(recordBefore));
+        when(dbSession.getRecordsContainingThisPid(pid)).thenReturn(asSet(recordBefore));
 
         uptrack.modifyState(pid, now, COLLECTION, DELETED, dbSession);
 
         InOrder mocks = inOrder(dbSession, fcmock);
         //Find all records containing this pid
-        mocks.verify(dbSession).getRecordsForPid(pid);
+        mocks.verify(dbSession).getRecordsContainingThisPid(pid);
         //Set the deleted timestamp, remove the other timestamps and clear the objects list
         final Record newRecord = new Record(pid, VIEW_ANGLE, COLLECTION, null, null, now, null, asSet(String.class));
-        mocks.verify(dbSession).saveOrUpdate(newRecord);  //Because RecordExists give null in the first call
+        mocks.verify(dbSession).saveRecord(newRecord);
 
         verifyNoMoreInteractions(dbSession, fcmock);
     }
@@ -177,9 +204,9 @@ public class UpdateTrackerBackendTest {
         //Before, only pid is in the objects set
         final Record recordBefore = new Record(pid, VIEW_ANGLE, COLLECTION, null, new Date(1), null, null, asSet(pid));
 
-        when(dbSession.recordExists(eq(recordToLookup)))
+        when(dbSession.getPersistentRecord(eq(recordToLookup)))
                 .thenReturn(recordBefore);
-        when(dbSession.getRecordsForPid(pid)).thenReturn(asSet(recordBefore));
+        when(dbSession.getRecordsContainingThisPid(pid)).thenReturn(asSet(recordBefore));
 
         uptrack.reconnectObjects(pid, now, dbSession, asSet(COLLECTION), DELETED);
 
@@ -188,17 +215,17 @@ public class UpdateTrackerBackendTest {
         //Find the entry angles
         mocks.verify(fcmock).getEntryAngles(pid,now);
         //Check existence; it exists
-        mocks.verify(dbSession).recordExists(recordToLookup);
+        mocks.verify(dbSession).getPersistentRecord(recordToLookup);
         //Find other entries to unlink; none
         mocks.verify(dbSession).getRecordsNotInTheseCollectionsAndViewAngles(pid, asSet(VIEW_ANGLE), asSet(COLLECTION));
         //Find all records where this is part; only one
-        mocks.verify(dbSession).getRecordsForPid(pid);
+        mocks.verify(dbSession).getRecordsContainingThisPid(pid);
         //Calc the new view bundle
         mocks.verify(fcmock).calcViewBundle(pid,VIEW_ANGLE,now);
         //Save a new version with updated timestamp and another object in the objects list
         final Record newRecord = new Record(pid, VIEW_ANGLE, COLLECTION, null, now, null, null, asSet(pid,
                                                                                                       "doms:pid2"));
-        mocks.verify(dbSession).saveOrUpdate(newRecord);  //Because RecordExists give null in the first call
+        mocks.verify(dbSession).saveRecord(newRecord);
         verifyNoMoreInteractions(dbSession, fcmock);
     }
 
@@ -216,21 +243,21 @@ public class UpdateTrackerBackendTest {
         //Before the bundle had 2 objects
         final Record recordBefore = new Record(pid, VIEW_ANGLE, COLLECTION, null, new Date(1), null, null, asSet(pid, "doms:pid2"));
 
-        when(dbSession.recordExists(eq(recordToLookup)))
+        when(dbSession.getPersistentRecord(eq(recordToLookup)))
                 .thenReturn(recordBefore);
-        when(dbSession.getRecordsForPid(pid)).thenReturn(asSet(recordBefore));
+        when(dbSession.getRecordsContainingThisPid(pid)).thenReturn(asSet(recordBefore));
 
         uptrack.reconnectObjects(pid, now, dbSession, asSet(COLLECTION), DELETED);
 
         InOrder mocks = inOrder(dbSession, fcmock);
         mocks.verify(fcmock).getEntryAngles(pid, now);
-        mocks.verify(dbSession).recordExists(recordToLookup);
+        mocks.verify(dbSession).getPersistentRecord(recordToLookup);
         mocks.verify(dbSession).getRecordsNotInTheseCollectionsAndViewAngles(pid, asSet(VIEW_ANGLE), asSet(COLLECTION));
-        mocks.verify(dbSession).getRecordsForPid(pid);
+        mocks.verify(dbSession).getRecordsContainingThisPid(pid);
         mocks.verify(fcmock).calcViewBundle(pid, VIEW_ANGLE, now);
         //Now the bundle have just one object
         final Record newRecord = new Record(pid, VIEW_ANGLE, COLLECTION, null, now, null, null, asSet(pid));
-        mocks.verify(dbSession).saveOrUpdate(newRecord);  //Because RecordExists give null in the first call
+        mocks.verify(dbSession).saveRecord(newRecord);
         verifyNoMoreInteractions(dbSession, fcmock);
     }
 
@@ -260,9 +287,9 @@ public class UpdateTrackerBackendTest {
                                                null,
                                                asSet(pid2,child1));
 
-        when(dbSession.recordExists(eq(recordToLookup)))
+        when(dbSession.getPersistentRecord(eq(recordToLookup)))
                 .thenReturn(record1Before);
-        when(dbSession.getRecordsForPid(child1)).thenReturn(asSet(record1Before,record2Before));
+        when(dbSession.getRecordsContainingThisPid(child1)).thenReturn(asSet(record1Before,record2Before));
 
         uptrack.reconnectObjects(pid1, now, dbSession, asSet(COLLECTION), DELETED);
 
@@ -270,16 +297,16 @@ public class UpdateTrackerBackendTest {
         //Get the entry angles, in this case just one
         mocks.verify(fcmock).getEntryAngles(pid1, now);
         //So, there could be an object already, check for it
-        mocks.verify(dbSession).recordExists(recordToLookup);
+        mocks.verify(dbSession).getPersistentRecord(recordToLookup);
         //Check if there is other records in collections or view angles no longer used by this obejct
         mocks.verify(dbSession).getRecordsNotInTheseCollectionsAndViewAngles(pid1, asSet(VIEW_ANGLE), asSet(COLLECTION));
         //Find the records which this object is part; just one
-        mocks.verify(dbSession).getRecordsForPid(pid1);
+        mocks.verify(dbSession).getRecordsContainingThisPid(pid1);
         //calc the view bundle for each
         mocks.verify(fcmock).calcViewBundle(pid1, VIEW_ANGLE, now);
         //If changed, save
         final Record newRecord = new Record(pid1, VIEW_ANGLE, COLLECTION, null, now, null, null, asSet(pid1,child1));
-        mocks.verify(dbSession).saveOrUpdate(newRecord);  //Because RecordExists give null in the first call
+        mocks.verify(dbSession).saveRecord(newRecord);
 
         //Notice that record 2 is not affected at all
         verifyNoMoreInteractions(dbSession, fcmock);
@@ -317,9 +344,9 @@ public class UpdateTrackerBackendTest {
                                                 null,
                                                 asSet(pid2, child1));
 
-        when(dbSession.recordExists(eq(recordToLookup)))
+        when(dbSession.getPersistentRecord(eq(recordToLookup)))
                 .thenReturn(null);
-        when(dbSession.getRecordsForPid(child1)).thenReturn(asSet(record1Before, record2Before));
+        when(dbSession.getRecordsContainingThisPid(child1)).thenReturn(asSet(record1Before, record2Before));
 
         uptrack.reconnectObjects(child1, now, dbSession, asSet(COLLECTION), DELETED);
 
@@ -331,7 +358,7 @@ public class UpdateTrackerBackendTest {
                                                                              asSet(String.class),
                                                                              asSet(COLLECTION));
         //Find records with this object
-        mocks.verify(dbSession).getRecordsForPid(child1);
+        mocks.verify(dbSession).getRecordsContainingThisPid(child1);
         //For each calc the view bundle
         mocks.verify(fcmock).calcViewBundle(pid2, VIEW_ANGLE, now);
         //Pid2 bundle not changed so no save here
@@ -341,7 +368,7 @@ public class UpdateTrackerBackendTest {
 
         //pid 1 bundle changed, so save
         final Record newRecord = new Record(pid1, VIEW_ANGLE, COLLECTION, null, now, null, null, asSet(pid1, child1));
-        mocks.verify(dbSession).saveOrUpdate(newRecord);  //Because RecordExists give null in the first call
+        mocks.verify(dbSession).saveRecord(newRecord);
 
         verifyNoMoreInteractions(dbSession, fcmock);
     }
