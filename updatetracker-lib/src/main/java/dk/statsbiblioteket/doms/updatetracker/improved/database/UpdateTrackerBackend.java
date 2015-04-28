@@ -186,7 +186,7 @@ public class UpdateTrackerBackend {
     }
 
 
-    public void reconnectObjects(String pid, Date timestamp, Session session, Collection<String> collections) throws
+    public void reconnectObjects(String pid, Date timestamp, Session session, Collection<String> collections, State state) throws
                                                                  FedoraFailedException,
                                                                  UpdateTrackerStorageException {
         /*
@@ -215,6 +215,9 @@ public class UpdateTrackerBackend {
                 if (UpdateTrackerDAO.recordNotExists(session, record)){
                     record.getObjects().add(pid);
                     record.setInactive(timestamp);
+                    if (state == State.ACTIVE) {
+                        record.setActive(timestamp);
+                    }
                     session.saveOrUpdate(record);
                     newRecords.add(record);
                 }
