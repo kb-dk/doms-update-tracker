@@ -23,7 +23,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-public class UpdateTrackerPersistentStoreTest {
+/**
+ * These tests mock up doms, but use the dockerized postgres to test the update tracker with a real database
+ */
+public class UpdateTrackerPersistentStoreIT {
 
     //TODO make tests that use a mocked UpdateTrackerBackend
 

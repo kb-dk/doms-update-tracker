@@ -28,7 +28,6 @@
     <database-object>
         <create>create index records_active_notnull_idx on PUBLIC.RECORDS (LASTMODIFIED, VIEWANGLE, COLLECTION) where DELETED is not null or ACTIVE is not null</create>
         <drop>drop index if exists records_active_notnull_idx</drop>
-        <dialect-scope name="org.hibernate.dialect.PostgreSQL9Dialect"/>
     </database-object>
 
     <database-object>
@@ -36,7 +35,6 @@
             DELETED is not null or INACTIVE is not null
         </create>
         <drop>drop index if exists records_inactive_notnull_idx</drop>
-        <dialect-scope name="org.hibernate.dialect.PostgreSQL9Dialect"/>
     </database-object>
 
     <database-object>
@@ -44,7 +42,6 @@
             DELETED is not null
         </create>
         <drop>drop index if exists records_deleted_notnull_idx</drop>
-        <dialect-scope name="org.hibernate.dialect.PostgreSQL9Dialect"/>
     </database-object>
 
 

@@ -37,7 +37,14 @@ public class ContentModelTest {
     public void setUp() throws Exception {
     }
 
-
+    /**
+     * This test that the fedoraForUpdateTracker will correctly check an object for contentmodelness
+     * @throws FedoraFailedException
+     * @throws UpdateTrackerStorageException
+     * @throws BackendInvalidResourceException
+     * @throws BackendInvalidCredsException
+     * @throws BackendMethodFailedException
+     */
     @Test
     public void testBecomingContentModel() throws
                                            FedoraFailedException,
@@ -59,6 +66,14 @@ public class ContentModelTest {
         assertTrue(fedora.isCurrentlyContentModel("doms:notCurrentlyContentModel1", new Date()));
     }
 
+    /**
+     * This tests that the FedoraForUpdateTracker will correctly cache and invalidate content models
+     * @throws FedoraFailedException
+     * @throws UpdateTrackerStorageException
+     * @throws BackendInvalidResourceException
+     * @throws BackendInvalidCredsException
+     * @throws BackendMethodFailedException
+     */
     @Test
     public void testCachingViewAngles() throws
                                            FedoraFailedException,
