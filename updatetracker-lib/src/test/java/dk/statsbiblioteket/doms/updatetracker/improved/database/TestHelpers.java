@@ -15,7 +15,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.when;
 
-public class Tests {
+public class TestHelpers {
     protected static final String SBOI = "SBOI";
     protected static final String GUI = "GUI";
     protected static final String SUMMA_VISIBLE = "SummaVisible";
@@ -445,7 +445,7 @@ public class Tests {
 
         //add/remove relation
         final Date editionLinkedToNewspaper = new Date();
-        Tests.linkEditionToNewspaper(fcmock, page1, editionLinkedToNewspaper, edition, newspaper);
+        TestHelpers.linkEditionToNewspaper(fcmock, page1, editionLinkedToNewspaper, edition, newspaper);
         db.objectRelationsChanged(edition, editionLinkedToNewspaper, 1);
 
         //publish edition

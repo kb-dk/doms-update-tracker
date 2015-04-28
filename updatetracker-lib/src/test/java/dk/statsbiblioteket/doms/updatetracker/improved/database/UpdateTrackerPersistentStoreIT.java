@@ -24,6 +24,9 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/**
+ * These tests mock up doms, but use the dockerized postgres to test the update tracker with a real database
+ */
 public class UpdateTrackerPersistentStoreIT {
 
     private final String collection = "doms:Root_Collection";

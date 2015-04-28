@@ -12,15 +12,18 @@ import java.util.Date;
 import java.util.List;
 
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerDAO.asSet;
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.ACTIVE;
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.GUI;
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.SBOI;
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.SUMMA_VISIBLE;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.ACTIVE;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.GUI;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.SBOI;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.SUMMA_VISIBLE;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/**
+ * These tests mock up doms, but use the dockerized postgres to test the update tracker with a real database
+ */
 public class NewspaperIT {
 
 
@@ -60,8 +63,11 @@ public class NewspaperIT {
     }
 
 
-
-
+    /**
+     * This test tests the process when a newspaper object change. The fixture is most of the code
+     * @throws UpdateTrackerStorageException
+     * @throws FedoraFailedException
+     */
     @Test
     public void testUpdateToNewspaper() throws UpdateTrackerStorageException, FedoraFailedException {
 
@@ -82,52 +88,52 @@ public class NewspaperIT {
 
 
         //All is empty beforehand
-        Tests.verifyNoHits(db, SUMMA_VISIBLE);
-        Tests.verifyNoHits(db, SBOI);
-        Tests.verifyNoHits(db, GUI);
+        TestHelpers.verifyNoHits(db, SUMMA_VISIBLE);
+        TestHelpers.verifyNoHits(db, SBOI);
+        TestHelpers.verifyNoHits(db, GUI);
 
 
         //Create the newspaper
-        final Date newspaperCreated = Tests.createNewspaperObject(db, newspaper, fcmock);
+        final Date newspaperCreated = TestHelpers.createNewspaperObject(db, newspaper, fcmock);
         //Expect to find one summa visible record, the newspaper
         items = db.lookup(beginning, SUMMA_VISIBLE, 0, 10, null, COLLECTION);
-        Tests.verifyOneHit(items, newspaper, newspaperCreated);
+        TestHelpers.verifyOneHit(items, newspaper, newspaperCreated);
 
 
         //ingest the relevant part of batch
-        Tests.ingestEdition(db, edition, page1, image1);
+        TestHelpers.ingestEdition(db, edition, page1, image1);
         //No items or anything, as no content models added
-        Tests.verifyNoHits(db, SBOI);
+        TestHelpers.verifyNoHits(db, SBOI);
         //Expect to find one summa visible record, the newspaper
         items = db.lookup(beginning, SUMMA_VISIBLE, 0, 10, null, COLLECTION);
-        Tests.verifyOneHit(items, newspaper, newspaperCreated);
+        TestHelpers.verifyOneHit(items, newspaper, newspaperCreated);
 
 
         //enrich mimetype and relations and content models
-        final Date editionGotCM = Tests.enrichMimetypesAndRelations(db, edition, page1, image1, fcmock);
+        final Date editionGotCM = TestHelpers.enrichMimetypesAndRelations(db, edition, page1, image1, fcmock);
         items = db.lookup(beginning, SBOI, 0, 10, null, COLLECTION);
         //We now finds edition as a SBOI hit
-        Tests.verifyOneHit(items, edition, editionGotCM);
+        TestHelpers.verifyOneHit(items, edition, editionGotCM);
         //In SummaVisible, newspaper is not updated, but page1 now appears
         items = db.lookup(beginning, SUMMA_VISIBLE, 0, 10, null, COLLECTION);
-        Tests.verifyTwoHits(items, newspaper, newspaperCreated, page1, editionGotCM);
+        TestHelpers.verifyTwoHits(items, newspaper, newspaperCreated, page1, editionGotCM);
 
 
         //publish batch
-        Date editionPublished = Tests.publishEdition(db, edition, page1, image1);
+        Date editionPublished = TestHelpers.publishEdition(db, edition, page1, image1);
         items = db.lookup(beginning, SBOI, 0, 10, ACTIVE, COLLECTION);
         //We now find edition as a SBOI hit, when searching for Active
-        Tests.verifyOneHit(items, edition, editionPublished);
+        TestHelpers.verifyOneHit(items, edition, editionPublished);
 
         //Run the edition maintainer
-        final Date maintainerDone = Tests.runEditionMaintainer(db, newspaper, edition, page1, fcmock);
+        final Date maintainerDone = TestHelpers.runEditionMaintainer(db, newspaper, edition, page1, fcmock);
         items = db.lookup(beginning, SBOI, 0, 10, ACTIVE, COLLECTION);
         //This updates the edition
-        Tests.verifyOneHit(items, edition, maintainerDone);
+        TestHelpers.verifyOneHit(items, edition, maintainerDone);
 
         //In SummaVisible, the page is now updated, but the newspaper is not
         items = db.lookup(beginning, SUMMA_VISIBLE, 0, 10, null, COLLECTION);
-        Tests.verifyTwoHits(items, newspaper, newspaperCreated, page1, maintainerDone);
+        TestHelpers.verifyTwoHits(items, newspaper, newspaperCreated, page1, maintainerDone);
 
 
         //We now simulate a change to newspaper
@@ -135,7 +141,7 @@ public class NewspaperIT {
         db.datastreamChanged(newspaper, newspaperChanged,"MODS", 1);
         //Both the page and newspaper is updated
         items = db.lookup(beginning, SUMMA_VISIBLE, 0, 10, null, COLLECTION);
-        Tests.verifyTwoHits(items, newspaper, newspaperChanged, page1, newspaperChanged);
+        TestHelpers.verifyTwoHits(items, newspaper, newspaperChanged, page1, newspaperChanged);
 
         //We now simulate a change to edition, which is in the view of page
         final Date editionChanged = new Date();
@@ -143,17 +149,23 @@ public class NewspaperIT {
 
         //The newspaper have not been updated, but the page have
         items = db.lookup(beginning, SUMMA_VISIBLE, 0, 10, null, COLLECTION);
-        Tests.verifyTwoHits(items, newspaper, newspaperChanged, page1, editionChanged);
+        TestHelpers.verifyTwoHits(items, newspaper, newspaperChanged, page1, editionChanged);
 
         //We now simulate the adding of a linked newspaper
         String newspaper2 = "doms:newspaper2";
-        final Date newspaper2Created = Tests.createNewspaperObject(db, newspaper2, fcmock);
+        final Date newspaper2Created = TestHelpers.createNewspaperObject(db, newspaper2, fcmock);
         final Date newspaper2Linked = new Date();
-        Tests.linkNewspaperToNewspaper(fcmock, edition, page1, newspaper2Linked, newspaper, newspaper2);
+        TestHelpers.linkNewspaperToNewspaper(fcmock, edition, page1, newspaper2Linked, newspaper, newspaper2);
         db.objectRelationsChanged(newspaper2,newspaper2Linked, 1);
         //Since the change happened to an unconnected object, it should not have been noticed
         items = db.lookup(beginning, SUMMA_VISIBLE, 0, 10, null, COLLECTION);
-        Tests.verifyThreeHits(items, newspaper, newspaperChanged, page1, editionChanged, newspaper2, newspaper2Linked);
+        TestHelpers.verifyThreeHits(items,
+                                    newspaper,
+                                    newspaperChanged,
+                                    page1,
+                                    editionChanged,
+                                    newspaper2,
+                                    newspaper2Linked);
     }
 
 }

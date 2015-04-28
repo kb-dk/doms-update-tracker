@@ -8,19 +8,18 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerDAO.asSet;
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.ALTO;
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.EDITION;
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.EVENTS;
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.FILM;
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.MIX;
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.MODS;
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.Tests.SBOI;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.ALTO;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.EDITION;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.EVENTS;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.FILM;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.MIX;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.MODS;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.SBOI;
 import static java.util.Arrays.asList;
 import static junit.framework.Assert.assertEquals;
 import static org.mockito.AdditionalMatchers.geq;
@@ -31,6 +30,9 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/**
+ * These tests mock up doms, but use the dockerized postgres to test the update tracker with a real database
+ */
 public class NewspaperBatchIT {
 
     UpdateTrackerPersistentStore db;
@@ -55,6 +57,11 @@ public class NewspaperBatchIT {
         db.close();
     }
 
+    /**
+     * Test that the system correctly handles the process when an Item's Event datastream changes
+     * @throws UpdateTrackerStorageException
+     * @throws FedoraFailedException
+     */
     @Test
     public void testEventsChanged() throws UpdateTrackerStorageException, FedoraFailedException {
 
@@ -70,29 +77,34 @@ public class NewspaperBatchIT {
         db.objectCreated(roundTrip, beginning, 1);
 
         List<Record> list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
-        Tests.verifyOneHit(list, roundTrip, beginning);
+        TestHelpers.verifyOneHit(list, roundTrip, beginning);
 
         Date eventAdded = new Date();
         db.datastreamChanged(roundTrip, eventAdded, EVENTS, 1);
 
         list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
-        Tests.verifyOneHit(list, roundTrip, eventAdded);
+        TestHelpers.verifyOneHit(list, roundTrip, eventAdded);
 
         Date eventAdded2 = new Date();
         db.datastreamChanged(roundTrip, eventAdded2, EVENTS, 1);
 
         list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
-        Tests.verifyOneHit(list, roundTrip, eventAdded2);
+        TestHelpers.verifyOneHit(list, roundTrip, eventAdded2);
 
 
         Date eventAdded3 = new Date();
         db.datastreamChanged(roundTrip, eventAdded3, EVENTS, 1);
 
         list = db.lookup(beginning, viewAngle, 0, 100, null, collection);
-        Tests.verifyOneHit(list, roundTrip, eventAdded3);
+        TestHelpers.verifyOneHit(list, roundTrip, eventAdded3);
     }
 
 
+    /**
+     * Test that the system correctly handles when an object gets the Content Model Item and thus becomes an record
+     * @throws FedoraFailedException
+     * @throws UpdateTrackerStorageException
+     */
     @Test
     public void testBecomingItem() throws FedoraFailedException, UpdateTrackerStorageException {
 
@@ -140,6 +152,11 @@ public class NewspaperBatchIT {
         assertEquals(eventAdded3.getTime(), list.get(0).getDateForChange().getTime());
     }
 
+    /**
+     * Test the entire process a (small) batch goes through, from ingest all the way to enrichment
+     * @throws FedoraFailedException
+     * @throws UpdateTrackerStorageException
+     */
     @Test
     public void testIngestToEnrich() throws FedoraFailedException, UpdateTrackerStorageException {
 
@@ -161,7 +178,7 @@ public class NewspaperBatchIT {
         when(fcmock.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptyList());
 
         //Content Model for roundtrip
-        Tests.setContentModelItem(roundTrip, fcmock);
+        TestHelpers.setContentModelItem(roundTrip, fcmock);
 
         //Not a entry object before this time
 
@@ -171,7 +188,7 @@ public class NewspaperBatchIT {
 
 
         //Triggered
-        final Date triggerEvents = Tests.batchTriggered(db, batch, roundTrip);
+        final Date triggerEvents = TestHelpers.batchTriggered(db, batch, roundTrip);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
@@ -180,7 +197,7 @@ public class NewspaperBatchIT {
 
 
         //This simulates the order in which objects are created by the doms ingester
-        final Date domsIngestEvents = Tests.batchIngested(db, roundTrip, film, edition, page1, image1);
+        final Date domsIngestEvents = TestHelpers.batchIngested(db, roundTrip, film, edition, page1, image1);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
@@ -189,7 +206,7 @@ public class NewspaperBatchIT {
 
 
         // And then the bit repo ingester
-        final Date bitRepoEvents = Tests.batchBitRepoIngested(db, roundTrip, image1);
+        final Date bitRepoEvents = TestHelpers.batchBitRepoIngested(db, roundTrip, image1);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
@@ -197,7 +214,7 @@ public class NewspaperBatchIT {
         assertEquals(State.INACTIVE, items.get(0).getState());
 
         //Jpylyzer
-        final Date jpylyzerEvents = Tests.batchJpylyzed(db, roundTrip, image1);
+        final Date jpylyzerEvents = TestHelpers.batchJpylyzed(db, roundTrip, image1);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
@@ -206,7 +223,7 @@ public class NewspaperBatchIT {
 
 
         //Histogram
-        final Date histograEvents = Tests.batchHistogrammed(db, roundTrip, image1);
+        final Date histograEvents = TestHelpers.batchHistogrammed(db, roundTrip, image1);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
@@ -216,7 +233,13 @@ public class NewspaperBatchIT {
 
         //Then we come to the enricher
         //Labels
-        final Date roundTripLabels = Tests.batchEnriched_Labeled(db, batch, roundTrip, film, edition, page1, image1);
+        final Date roundTripLabels = TestHelpers.batchEnriched_Labeled(db,
+                                                                       batch,
+                                                                       roundTrip,
+                                                                       film,
+                                                                       edition,
+                                                                       page1,
+                                                                       image1);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
@@ -228,17 +251,17 @@ public class NewspaperBatchIT {
         db.datastreamChanged(page1, new Date(), MIX, 1);
         db.datastreamChanged(page1, new Date(), ALTO, 1);
         final Date pageContentModel = new Date();
-        Tests.setContentModelPage(page1, pageContentModel, image1, edition, fcmock);
+        TestHelpers.setContentModelPage(page1, pageContentModel, image1, edition, fcmock);
         db.objectRelationsChanged(page1, pageContentModel, 1);
 
         db.datastreamChanged(edition, new Date(), EDITION, 1);
         final Date editionContentModel = new Date();
-        Tests.setContentModelEditionAndItem(edition, editionContentModel, page1, image1, fcmock);
+        TestHelpers.setContentModelEditionAndItem(edition, editionContentModel, page1, image1, fcmock);
         db.objectRelationsChanged(edition, editionContentModel, 1);
 
         db.datastreamChanged(film, new Date(), FILM, 1);
         final Date filmContentModel = new Date();
-        Tests.setContentModelFilm(film, filmContentModel, edition, page1, image1, fcmock);
+        TestHelpers.setContentModelFilm(film, filmContentModel, edition, page1, image1, fcmock);
         db.objectRelationsChanged(film, filmContentModel, 1);
 
         final Date roundtripRelations = new Date();
@@ -254,7 +277,7 @@ public class NewspaperBatchIT {
 
 
         //publishing
-        Tests.batchPublished(db, roundTrip, film, edition, page1, image1);
+        TestHelpers.batchPublished(db, roundTrip, film, edition, page1, image1);
 
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(2, items.size());

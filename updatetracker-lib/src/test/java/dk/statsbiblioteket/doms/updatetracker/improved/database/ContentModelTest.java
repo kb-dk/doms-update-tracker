@@ -29,7 +29,7 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class ContentModelIT {
+public class ContentModelTest {
 
 
     private final String collection = "doms:Root_Collection";
@@ -38,7 +38,14 @@ public class ContentModelIT {
     public void setUp() throws Exception {
     }
 
-
+    /**
+     * This test that the fedoraForUpdateTracker will correctly check an object for contentmodelness
+     * @throws FedoraFailedException
+     * @throws UpdateTrackerStorageException
+     * @throws BackendInvalidResourceException
+     * @throws BackendInvalidCredsException
+     * @throws BackendMethodFailedException
+     */
     @Test
     public void testBecomingContentModel() throws
                                            FedoraFailedException,
@@ -60,6 +67,14 @@ public class ContentModelIT {
         assertTrue(fedora.isCurrentlyContentModel("doms:notCurrentlyContentModel1", new Date()));
     }
 
+    /**
+     * This tests that the FedoraForUpdateTracker will correctly cache and invalidate content models
+     * @throws FedoraFailedException
+     * @throws UpdateTrackerStorageException
+     * @throws BackendInvalidResourceException
+     * @throws BackendInvalidCredsException
+     * @throws BackendMethodFailedException
+     */
     @Test
     public void testCachingViewAngles() throws
                                            FedoraFailedException,
