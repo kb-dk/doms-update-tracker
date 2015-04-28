@@ -1,6 +1,8 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
-import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
+
+import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DBFactory;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import org.junit.After;
@@ -12,7 +14,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerDAO.asSet;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.ALTO;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.EDITION;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.EVENTS;
@@ -49,7 +50,7 @@ public class NewspaperBatchIT {
                                        .toURI());
 
         final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L);
-        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings,fcmock, updateTrackerBackend);
+        db = new UpdateTrackerPersistentStoreImpl(fcmock, updateTrackerBackend,new DBFactory(configFile, mappings));
     }
 
     @After
@@ -70,7 +71,7 @@ public class NewspaperBatchIT {
         final String collection = "doms:Root_Collection";
         String viewAngle = SBOI;
 
-        when(fcmock.getCollections(eq(roundTrip), any(Date.class))).thenReturn(asSet(collection));
+        when(fcmock.getCollections(eq(roundTrip), any(Date.class))).thenReturn(Utils.asSet(collection));
         when(fcmock.calcViewBundle(eq(roundTrip), eq(viewAngle), any(Date.class))).thenReturn(new ViewBundle(roundTrip,
                                                                                                                     viewAngle));
         when(fcmock.getEntryAngles(eq(roundTrip), any(Date.class))).thenReturn(asList(viewAngle));
@@ -115,7 +116,7 @@ public class NewspaperBatchIT {
         final String collection = "doms:Root_Collection";
         String viewAngle = SBOI;
 
-        when(fcmock.getCollections(eq(roundTrip), any(Date.class))).thenReturn(asSet(collection));
+        when(fcmock.getCollections(eq(roundTrip), any(Date.class))).thenReturn(Utils.asSet(collection));
         when(fcmock.calcViewBundle(eq(roundTrip), eq(viewAngle), any(Date.class))).thenReturn(new ViewBundle(roundTrip,
                                                                                                                     viewAngle));
         //Not a entry object before this time
@@ -172,7 +173,7 @@ public class NewspaperBatchIT {
         final String collection = "doms:Root_Collection";
 
         //Collections for everybody
-        when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(asSet(collection));
+        when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(Utils.asSet(collection));
 
         //No entry objects or view stuff until initialised
         when(fcmock.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptyList());
@@ -193,7 +194,7 @@ public class NewspaperBatchIT {
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
         assertEquals(triggerEvents.getTime(), items.get(0).getDateForChange().getTime());
-        assertEquals(State.INACTIVE, items.get(0).getState());
+        assertEquals(Record.State.INACTIVE, items.get(0).getState());
 
 
         //This simulates the order in which objects are created by the doms ingester
@@ -202,7 +203,7 @@ public class NewspaperBatchIT {
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
         assertEquals(domsIngestEvents.getTime(), items.get(0).getDateForChange().getTime());
-        assertEquals(State.INACTIVE, items.get(0).getState());
+        assertEquals(Record.State.INACTIVE, items.get(0).getState());
 
 
         // And then the bit repo ingester
@@ -211,7 +212,7 @@ public class NewspaperBatchIT {
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
         assertEquals(bitRepoEvents.getTime(), items.get(0).getDateForChange().getTime());
-        assertEquals(State.INACTIVE, items.get(0).getState());
+        assertEquals(Record.State.INACTIVE, items.get(0).getState());
 
         //Jpylyzer
         final Date jpylyzerEvents = TestHelpers.batchJpylyzed(db, roundTrip, image1);
@@ -219,7 +220,7 @@ public class NewspaperBatchIT {
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
         assertEquals(jpylyzerEvents.getTime(), items.get(0).getDateForChange().getTime());
-        assertEquals(State.INACTIVE, items.get(0).getState());
+        assertEquals(Record.State.INACTIVE, items.get(0).getState());
 
 
         //Histogram
@@ -228,7 +229,7 @@ public class NewspaperBatchIT {
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
         assertEquals(histograEvents.getTime(), items.get(0).getDateForChange().getTime());
-        assertEquals(State.INACTIVE, items.get(0).getState());
+        assertEquals(Record.State.INACTIVE, items.get(0).getState());
 
 
         //Then we come to the enricher
@@ -244,7 +245,7 @@ public class NewspaperBatchIT {
         items = db.lookup(beginning, SBOI, 0, 10, null, collection);
         assertEquals(1, items.size());
         assertEquals(roundTripLabels.getTime(), items.get(0).getDateForChange().getTime());
-        assertEquals(State.INACTIVE, items.get(0).getState());
+        assertEquals(Record.State.INACTIVE, items.get(0).getState());
 
         //mimetype and relations and content models
         db.datastreamChanged(page1, new Date(), MODS, 1);

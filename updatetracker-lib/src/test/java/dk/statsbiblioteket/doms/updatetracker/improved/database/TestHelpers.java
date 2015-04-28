@@ -1,5 +1,6 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
+import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 

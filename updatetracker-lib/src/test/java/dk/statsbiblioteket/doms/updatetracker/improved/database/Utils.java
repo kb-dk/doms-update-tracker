@@ -27,12 +27,12 @@ public class Utils {
     }
 
     static void addEntry(String pid, FedoraForUpdateTracker fcmock, String... contained) throws FedoraFailedException {
-        when(fcmock.getEntryAngles(eq(pid), any(Date.class))).thenReturn(Utils.asSet(UpdateTrackerPersistentStoreTest.VIEW_ANGLE));
+        when(fcmock.getEntryAngles(eq(pid), any(Date.class))).thenReturn(Utils.asSet(UpdateTrackerBackendTest.VIEW_ANGLE));
         when(fcmock.getState(eq(pid), any(Date.class))).thenReturn(Record.State.INACTIVE);
         List< String > objects = new ArrayList<String>(Arrays.asList(contained));
         objects.add(pid);
-        when(fcmock.calcViewBundle(eq(pid), Matchers.eq(UpdateTrackerPersistentStoreTest.VIEW_ANGLE), any(Date.class))).thenReturn(new ViewBundle(pid,
-                                                                                                                                                  UpdateTrackerPersistentStoreTest.VIEW_ANGLE,
+        when(fcmock.calcViewBundle(eq(pid), Matchers.eq(UpdateTrackerBackendTest.VIEW_ANGLE), any(Date.class))).thenReturn(new ViewBundle(pid,
+                                                                                                                                          UpdateTrackerBackendTest.VIEW_ANGLE,
                                                                                                                                                   objects));
     }
 }

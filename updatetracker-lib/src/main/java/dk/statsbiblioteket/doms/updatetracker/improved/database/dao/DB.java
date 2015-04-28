@@ -72,7 +72,6 @@ public class DB implements Closeable{
         final Query query = session.getNamedQuery("UpdateDates");
         query.setParameter("pid", pid);
         query.setParameter("timestamp", timestamp);
-        query.setParameter("now", new Date());
         query.executeUpdate();
     }
 

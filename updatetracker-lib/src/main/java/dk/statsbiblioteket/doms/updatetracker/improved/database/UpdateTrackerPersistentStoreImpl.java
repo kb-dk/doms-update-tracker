@@ -300,7 +300,6 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             throw new UpdateTrackerStorageException("Failed to query for since='"+since.getTime()+"', viewAngle='"+viewAngle+"', offset='"+offset+"', limit="+limit+"', state='"+state+"', collection='"+collection+"'", e);
         } finally {
             transaction.commit();
-            db.close();
         }
     }
 
@@ -314,7 +313,6 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             throw new UpdateTrackerStorageException("Failed to query for last changed object", e);
         } finally {
             transaction.commit();
-            db.close();
         }
     }
 
@@ -331,7 +329,6 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             return db.getLatestKey();
         } finally {
             transaction.commit();
-            db.close();
         }
     }
 

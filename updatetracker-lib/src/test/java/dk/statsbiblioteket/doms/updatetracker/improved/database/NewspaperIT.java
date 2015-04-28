@@ -1,5 +1,7 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
+import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DBFactory;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import org.junit.After;
@@ -11,7 +13,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerDAO.asSet;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.ACTIVE;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.GUI;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.SBOI;
@@ -45,12 +46,13 @@ public class NewspaperIT {
 
         fcmock = mock(FedoraForUpdateTracker.class);
         final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L);
-        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings,fcmock, updateTrackerBackend);
+        db = new UpdateTrackerPersistentStoreImpl(fcmock, updateTrackerBackend, new DBFactory(configFile, mappings));
         tearDown();
-        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings, fcmock, updateTrackerBackend);
+        db = new UpdateTrackerPersistentStoreImpl(fcmock, updateTrackerBackend,
+                                                  new DBFactory(configFile, mappings));
 
         //Collections for everybody
-        when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(asSet(COLLECTION));
+        when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(Utils.asSet(COLLECTION));
 
         //No entry objects or view stuff until initialised
         when(fcmock.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptyList());
