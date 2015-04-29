@@ -47,11 +47,12 @@ public class UpdateTrackerPersistentStoreTest {
         when(fedora.getCollections(anyString(), any(Date.class))).thenReturn(asSet(collection));
         //No entry objects or view stuff until initialised
         when(fedora.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptyList());
-        final ExecutorService threadPool = Executors.newCachedThreadPool();
+        final ExecutorService threadPool1 = Executors.newSingleThreadExecutor();
+        final ExecutorService threadPool2 = Executors.newSingleThreadExecutor();
         final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fedora,10000L,
-                                                                                   threadPool);
+                                                                                   threadPool1);
         db = new UpdateTrackerPersistentStoreImpl(configFile, mappings, fedora, updateTrackerBackend,
-                                                  threadPool);
+                                                  threadPool2);
     }
 
 
