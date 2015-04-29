@@ -24,9 +24,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadFactory;
 
 
 /**
@@ -162,37 +160,7 @@ public class UpdateTrackerBackend implements Closeable{
                                            Set<Record> records) throws FedoraFailedException {
         Set<Future<Record>> recordsToSave = new HashSet<>();
         for (final Record record : records) {
-            Callable<Record> reconnector = new Callable<Record>() {
-                @Override
-                public Record call() throws Exception {
-                    if (record.getState() != State.DELETED) {
-                        Set<String> before = new HashSet<>(record.getObjects());
-                        Set<String> after = new HashSet<>();
-                        ViewBundle bundle = getViewBundle(timestamp, record);
-                        for (String viewObject : bundle.getContained()) {
-                            log.debug("Marking object {} as part of record {},{},{}",
-                                      viewObject,
-                                      record.getEntryPid(),
-                                      record.getViewAngle(),
-                                      record.getCollection());
-                            after.add(viewObject);
-                        }
-
-                        if (!before.equals(after)) {
-                            record.getObjects().clear();
-                            record.getObjects().addAll(after);
-                            if (record.getInactive() != null &&
-                                record.getActive() != null &&
-                                record.getInactive().equals(record.getActive())) {
-                                record.setActive(timestamp);
-                            }
-                            record.setInactive(timestamp);
-                            return record;
-                        }
-                    }
-                    return null;//This marks that no update should be done
-                }
-            };
+            Callable<Record> reconnector = new RecordReconnector(record, timestamp);
             recordsToSave.add(viewBundleThreadPool.submit(reconnector));
         }
         Set<Record> result = new HashSet<>();
@@ -235,7 +203,7 @@ public class UpdateTrackerBackend implements Closeable{
                                              Collection<String> collections) throws
                                                                  FedoraFailedException,
                                                                  UpdateTrackerStorageException {
-        HashSet<Record> result = new HashSet<>();
+        Set<Record> result = new HashSet<>();
         /*
         Get the view Information about this object (Which viewAngles is this object entry for)
         get the Collection information about this object (which collections is it in)
@@ -361,5 +329,45 @@ public class UpdateTrackerBackend implements Closeable{
     @Override
     public void close() throws IOException {
         viewBundleThreadPool.shutdown();
+    }
+
+    private class RecordReconnector implements Callable<Record> {
+        private final Record record;
+        private final Date timestamp;
+
+        public RecordReconnector(Record record, Date timestamp) {
+            this.record = record;
+            this.timestamp = timestamp;
+        }
+
+        @Override
+        public Record call() throws Exception {
+            if (record.getState() != State.DELETED) {
+                Set<String> before = new HashSet<>(record.getObjects());
+                Set<String> after = new HashSet<>();
+                ViewBundle bundle = getViewBundle(timestamp, record);
+                for (String viewObject : bundle.getContained()) {
+                    log.debug("Marking object {} as part of record {},{},{}",
+                              viewObject,
+                              record.getEntryPid(),
+                              record.getViewAngle(),
+                              record.getCollection());
+                    after.add(viewObject);
+                }
+
+                if (!before.equals(after)) {
+                    record.getObjects().clear();
+                    record.getObjects().addAll(after);
+                    if (record.getInactive() != null &&
+                        record.getActive() != null &&
+                        record.getInactive().equals(record.getActive())) {
+                        record.setActive(timestamp);
+                    }
+                    record.setInactive(timestamp);
+                    return record;
+                }
+            }
+            return null;//This marks that no update should be done
+        }
     }
 }

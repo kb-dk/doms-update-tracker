@@ -26,7 +26,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State.DELETED;
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State.INACTIVE;
 
 /**
  * This class correspond the the operations detailed in <a href="https://sbforge.org/display/DOMS/Update+Tracking#UpdateTracking-HighLevelChanges">https://sbforge.org/display/DOMS/Update+Tracking#UpdateTracking-HighLevelChanges</a>
@@ -240,29 +239,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         Set<Future<Set<Record>>> results = new HashSet<>(objectsOfThisContentModel.size());
 
         for (final String object : objectsOfThisContentModel) {
-            Callable<Set<Record>> reconnector = new Callable<Set<Record>>() {
-                @Override
-                public Set<Record> call() throws Exception {
-                    Session session = getSession();
-                    //This is a threadlocal session. It will not see the uncommitted changes from the parent session
-                    //but there should be none at this point
-                    session.beginTransaction();
-                    session.setDefaultReadOnly(true);
-                    Set<Record> changedRecords = null;
-                    try {
-                        Set<String> collections = fedora.getCollections(object, timestamp);
-                        changedRecords = backend.recalculateThisRecord(object,
-                                                                       timestamp,
-                                                                       session,
-                                                                       collections);
-                    } catch (FedoraFailedException | UpdateTrackerStorageException e) {
-                        session.getTransaction().rollback(); //I do not know if readonly transactions should be rolled back
-                        throw e;//yes, rethrow. I do not want to lose the type
-                    }
-                    session.getTransaction().commit();
-                    return changedRecords;
-                }
-            };
+            Callable<Set<Record>> reconnector = new objectOfContentModelReconnector(object, timestamp);
             results.add(progressTracker.submit(reconnector));
         }
         int records = 0;
@@ -428,5 +405,37 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
 
     private void setLatestKey(Long latestKey, Session session) throws UpdateTrackerStorageException {
         session.saveOrUpdate(new LatestKey(latestKey));
+    }
+
+    private class objectOfContentModelReconnector implements Callable<Set<Record>> {
+        private final String object;
+        private final Date timestamp;
+
+        public objectOfContentModelReconnector(String object, Date timestamp) {
+            this.object = object;
+            this.timestamp = timestamp;
+        }
+
+        @Override
+        public Set<Record> call() throws Exception {
+            Session session = getSession();
+            //This is a threadlocal session. It will not see the uncommitted changes from the parent session
+            //but there should be none at this point
+            session.beginTransaction();
+            session.setDefaultReadOnly(true);
+            Set<Record> changedRecords = null;
+            try {
+                Set<String> collections = fedora.getCollections(object, timestamp);
+                changedRecords = backend.recalculateThisRecord(object,
+                                                               timestamp,
+                                                               session,
+                                                               collections);
+            } catch (FedoraFailedException | UpdateTrackerStorageException e) {
+                session.getTransaction().rollback(); //I do not know if readonly transactions should be rolled back
+                throw e;//yes, rethrow. I do not want to lose the type
+            }
+            session.getTransaction().commit();
+            return changedRecords;
+        }
     }
 }
