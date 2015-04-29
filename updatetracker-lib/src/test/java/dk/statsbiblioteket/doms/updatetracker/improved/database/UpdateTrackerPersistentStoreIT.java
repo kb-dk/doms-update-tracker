@@ -7,6 +7,7 @@ import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedExcept
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.Predicate;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -17,6 +18,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.asSet;
 import static junit.framework.Assert.assertEquals;
@@ -47,14 +49,37 @@ public class UpdateTrackerPersistentStoreIT {
         when(fedora.getCollections(anyString(), any(Date.class))).thenReturn(asSet(collection));
         //No entry objects or view stuff until initialised
         when(fedora.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptyList());
-        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fedora, 10000L);
-        db = new UpdateTrackerPersistentStoreImpl(fedora, updateTrackerBackend, new DBFactory(configFile,mappings));
+        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fedora, 10000L,Executors.newSingleThreadExecutor());
+        db = new UpdateTrackerPersistentStoreImpl(fedora, updateTrackerBackend, new DBFactory(configFile,mappings),
+                                                  Executors.newSingleThreadExecutor());
     }
 
 
     @After
     public void tearDown() throws Exception {
         db.close();
+    }
+
+    @Test
+    public void testContentModelRebuild() throws Exception {
+        Date start = new Date();
+        addEntry("doms:test1");
+        db.objectCreated("doms:test1", new Date(), 1);
+
+        addEntry("doms:test2");
+        db.objectCreated("doms:test2", new Date(), 2);
+
+        List<Record> list = db.lookup(new Date(1), "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        final String cmPid = "doms:cm1";
+        addEntry("doms:test1", "doms:child1");
+        addEntry("doms:test2", "doms:child2");
+        final Date cmUpdate = new Date();
+        when(fedora.isCurrentlyContentModel(cmPid, cmUpdate)).thenReturn(true);
+        when(fedora.getObjectsOfThisContentModel(cmPid)).thenReturn(asSet("doms:test1", "doms:test2"));
+        db.objectRelationsChanged(cmPid, cmUpdate, 3);
+        list = db.lookup(new Date(1), "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        Assert.assertEquals(list.get(0).getInactive(), list.get(1).getInactive());
+        Assert.assertEquals(list.get(0).getInactive().getTime(), cmUpdate.getTime());
     }
 
     @Test

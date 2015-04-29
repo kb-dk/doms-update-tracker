@@ -6,15 +6,15 @@ import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.R
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import org.hibernate.Transaction;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InOrder;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
-import java.util.List;
+import java.util.Set;
+import java.util.concurrent.Executors;
 
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State.ACTIVE;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State.DELETED;
@@ -46,7 +46,7 @@ public class UpdateTrackerBackendTest {
         when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(TestHelpers.asSet(COLLECTION));
         //No entry objects or view stuff until initialised
         when(fcmock.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptySet());
-        uptrack = new UpdateTrackerBackend(fcmock, 10000L);
+        uptrack = new UpdateTrackerBackend(fcmock, 10000L, Executors.newSingleThreadExecutor());
 
         DBFactory dbfac = mock(DBFactory.class);
         dbSession = mock(DB.class);
@@ -213,7 +213,11 @@ public class UpdateTrackerBackendTest {
                 .thenReturn(recordBefore);
         when(dbSession.getRecordsContainingThisPid(pid)).thenReturn(TestHelpers.asSet(recordBefore));
 
-        uptrack.reconnectObjects(pid, now, dbSession, TestHelpers.asSet(COLLECTION), DELETED);
+        Set<Record> changedRecords = uptrack.recalculateRecordsBasedOnThisPid(pid,
+                                                                              now,
+                                                                              dbSession,
+                                                                              TestHelpers.asSet(COLLECTION),
+                                                                              DELETED);
 
         InOrder mocks = inOrder(dbSession, fcmock);
 
@@ -231,7 +235,7 @@ public class UpdateTrackerBackendTest {
         //Save a new version with updated timestamp and another object in the objects list
         final Record newRecord = new Record(pid, VIEW_ANGLE, COLLECTION, null, now, null, null, TestHelpers.asSet(pid,
                                                                                                                   "doms:pid2"));
-        mocks.verify(dbSession).saveRecord(newRecord);
+        Assert.assertEquals("Wrong list of changed objects",changedRecords,TestHelpers.asSet(newRecord));
         verifyNoMoreInteractions(dbSession, fcmock);
     }
 
@@ -255,7 +259,11 @@ public class UpdateTrackerBackendTest {
                 .thenReturn(recordBefore);
         when(dbSession.getRecordsContainingThisPid(pid)).thenReturn(TestHelpers.asSet(recordBefore));
 
-        uptrack.reconnectObjects(pid, now, dbSession, TestHelpers.asSet(COLLECTION), DELETED);
+        Set<Record> changedRecords = uptrack.recalculateRecordsBasedOnThisPid(pid,
+                                                                              now,
+                                                                              dbSession,
+                                                                              TestHelpers.asSet(COLLECTION),
+                                                                              DELETED);
 
         InOrder mocks = inOrder(dbSession, fcmock);
         mocks.verify(fcmock).getEntryAngles(pid, now);
@@ -266,7 +274,7 @@ public class UpdateTrackerBackendTest {
         mocks.verify(fcmock).calcViewBundle(pid, VIEW_ANGLE, now);
         //Now the bundle have just one object
         final Record newRecord = new Record(pid, VIEW_ANGLE, COLLECTION, null, now, null, null, TestHelpers.asSet(pid));
-        mocks.verify(dbSession).saveRecord(newRecord);
+        Assert.assertEquals("Wrong list of changed objects", changedRecords, TestHelpers.asSet(newRecord));
         verifyNoMoreInteractions(dbSession, fcmock);
     }
 
@@ -301,7 +309,11 @@ public class UpdateTrackerBackendTest {
                 .thenReturn(record1Before);
         when(dbSession.getRecordsContainingThisPid(child1)).thenReturn(TestHelpers.asSet(record1Before, record2Before));
 
-        uptrack.reconnectObjects(pid1, now, dbSession, TestHelpers.asSet(COLLECTION), DELETED);
+        Set<Record> changedRecords = uptrack.recalculateRecordsBasedOnThisPid(pid1,
+                                                                              now,
+                                                                              dbSession,
+                                                                              TestHelpers.asSet(COLLECTION),
+                                                                              DELETED);
 
         InOrder mocks = inOrder(dbSession, fcmock);
         //Get the entry angles, in this case just one
@@ -318,7 +330,7 @@ public class UpdateTrackerBackendTest {
         //If changed, save
         final Record newRecord = new Record(pid1, VIEW_ANGLE, COLLECTION, null, now, null, null, TestHelpers.asSet(pid1,
                                                                                                                    child1));
-        mocks.verify(dbSession).saveRecord(newRecord);
+        Assert.assertEquals("Wrong list of changed objects", changedRecords, TestHelpers.asSet(newRecord));
 
         //Notice that record 2 is not affected at all
         verifyNoMoreInteractions(dbSession, fcmock);
@@ -360,7 +372,11 @@ public class UpdateTrackerBackendTest {
                 .thenReturn(null);
         when(dbSession.getRecordsContainingThisPid(child1)).thenReturn(TestHelpers.asSet(record1Before, record2Before));
 
-        uptrack.reconnectObjects(child1, now, dbSession, TestHelpers.asSet(COLLECTION), DELETED);
+        Set<Record> changedRecords = uptrack.recalculateRecordsBasedOnThisPid(child1,
+                                                                              now,
+                                                                              dbSession,
+                                                                              TestHelpers.asSet(COLLECTION),
+                                                                              DELETED);
 
         InOrder mocks = inOrder(dbSession, fcmock);
         //Check for entry angles, there are none
@@ -381,19 +397,12 @@ public class UpdateTrackerBackendTest {
         //pid 1 bundle changed, so save
         final Record newRecord = new Record(pid1, VIEW_ANGLE, COLLECTION, null, now, null, null, TestHelpers.asSet(pid1,
                                                                                                                    child1));
-        mocks.verify(dbSession).saveRecord(newRecord);
-
+        Assert.assertEquals("Wrong list of changed objects", changedRecords, TestHelpers.asSet(newRecord));
         verifyNoMoreInteractions(dbSession, fcmock);
     }
 
 
     private void addEntry(String pid, String... contained) throws FedoraFailedException {
-        when(fcmock.getEntryAngles(eq(pid), any(Date.class))).thenReturn(TestHelpers.asSet(VIEW_ANGLE));
-        when(fcmock.getState(eq(pid), any(Date.class))).thenReturn(Record.State.INACTIVE);
-        List<String> objects = new ArrayList<String>(Arrays.asList(contained));
-        objects.add(pid);
-        when(fcmock.calcViewBundle(eq(pid), eq(VIEW_ANGLE), any(Date.class))).thenReturn(new ViewBundle(pid,
-                                                                                                        VIEW_ANGLE,
-                                                                                                        objects));
+        TestHelpers.addEntry(pid,fcmock,contained);
     }
 }

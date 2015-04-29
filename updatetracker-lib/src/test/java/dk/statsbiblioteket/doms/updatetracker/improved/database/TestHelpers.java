@@ -3,10 +3,9 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
-import org.mockito.Matchers;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -560,9 +559,9 @@ public class TestHelpers {
     static void addEntry(String pid, FedoraForUpdateTracker fcmock, String... contained) throws FedoraFailedException {
         when(fcmock.getEntryAngles(eq(pid), any(Date.class))).thenReturn(asSet(UpdateTrackerBackendTest.VIEW_ANGLE));
         when(fcmock.getState(eq(pid), any(Date.class))).thenReturn(Record.State.INACTIVE);
-        List< String > objects = new ArrayList<String>(asList(contained));
+        Collection<String> objects = asSet(contained);
         objects.add(pid);
-        when(fcmock.calcViewBundle(eq(pid), Matchers.eq(UpdateTrackerBackendTest.VIEW_ANGLE), any(Date.class))).thenReturn(new ViewBundle(pid,
+        when(fcmock.calcViewBundle(eq(pid), eq(UpdateTrackerBackendTest.VIEW_ANGLE), any(Date.class))).thenReturn(new ViewBundle(pid,
                                                                                                                                           UpdateTrackerBackendTest.VIEW_ANGLE,
                                                                                                                                                   objects));
     }

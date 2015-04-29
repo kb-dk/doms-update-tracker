@@ -22,7 +22,6 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State.DELETED;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State.DELETED;
 
 /**
@@ -49,20 +48,13 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
 
 
     public UpdateTrackerPersistentStoreImpl(FedoraForUpdateTracker fedora,
-                                            UpdateTrackerBackend backend, DBFactory dbfac) {
-    public UpdateTrackerPersistentStoreImpl(File configFile, File hibernateMappings, FedoraForUpdateTracker fedora,
-                                            UpdateTrackerBackend backend, ExecutorService threadPool) {
+                                            UpdateTrackerBackend backend,
+                                            DBFactory dbfac,
+                                            ExecutorService threadPool) {
         this.fedora = fedora;
         this.backend = backend;
         this.threadPool = threadPool;
-        // A SessionFactory is set up once for an application
-        final Configuration configuration = new Configuration()
-                                                .configure(configFile);
-        if (hibernateMappings != null) {
-            configuration.addFile(hibernateMappings);
-        }
-        configuration.setInterceptor(new SetLastModifiedInterceptor());
-        sessionFactory = configuration.buildSessionFactory();
+        this.dbfac = dbfac;
 
     }
 
@@ -92,11 +84,15 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             for (String collection : collections) {
                 backend.modifyState(pid, timestamp, collection, ingestState, db);
             }
-            Set<Record> changedRecords = backend.recalculateThisRecord(pid, timestamp, session, collections);
+            Set<Record> changedRecords = backend.recalculateRecordsBasedOnThisPid(pid,
+                                                                                  timestamp,
+                                                                                  db,
+                                                                                  collections,
+                                                                                  ingestState);
             for (Record changedRecord : changedRecords) {
-                session.saveOrUpdate(changedRecord);
+                db.saveRecord(changedRecord);
             }
-            backend.updateDates(pid, timestamp, session);
+            backend.updateDates(pid, timestamp, db);
 
             db.setLatestKey(key);
             transaction.commit();
@@ -197,12 +193,17 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             if (dsid != null) {
                 if ((dsid.equals("VIEW") || dsid.equals("RELS-EXT"))) {
                     if (fedora.isCurrentlyContentModel(pid, timestamp)) {
-                        contentModelChanged(pid, timestamp, session);
+                        contentModelChanged(pid, timestamp, db);
                     } else if (dsid.equals("RELS-EXT")) {
                         Set<String> collections = fedora.getCollections(pid, timestamp);
-                        Set<Record> changedRecords = backend.recalculateThisRecord(pid, timestamp, session, collections);
+                        State state = fedora.getState(pid, timestamp);
+                        Set<Record> changedRecords = backend.recalculateRecordsBasedOnThisPid(pid,
+                                                                                              timestamp,
+                                                                                              db,
+                                                                                              collections,
+                                                                                              state);
                         for (Record changedRecord : changedRecords) {
-                            session.saveOrUpdate(changedRecord);
+                            db.saveRecord(changedRecord);
                         }
                     }
                 }
@@ -222,7 +223,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         }
     }
 
-    private void contentModelChanged(String contentModel, final Date timestamp, Session session) throws
+    private void contentModelChanged(String contentModel, final Date timestamp, DB db) throws
                                                                                                  FedoraFailedException
     {
         fedora.invalidateContentModel(contentModel);
@@ -233,7 +234,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         Set<Future<Set<Record>>> results = new HashSet<>(objectsOfThisContentModel.size());
 
         for (final String object : objectsOfThisContentModel) {
-            Callable<Set<Record>> reconnector = new objectOfContentModelReconnector(object, timestamp);
+            Callable<Set<Record>> reconnector = new ObjectOfContentModelReconnector(object, timestamp, dbfac);
             results.add(progressTracker.submit(reconnector));
         }
         int records = 0;
@@ -246,8 +247,8 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                           records++,
                           objectsOfThisContentModel.size(),
                           contentModel);
-                session.merge(changedRecord);//Merge them to this session, and since they are changed, they will be changed in the commit
-                backend.updateDates(changedRecord.getEntryPid(), timestamp, session);
+                db.saveRecord(changedRecord);//Merge them to this session, and since they are changed, they will be changed in the commit
+                backend.updateDates(changedRecord.getEntryPid(), timestamp, db);
             }
 
         }
@@ -376,39 +377,37 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         }
     }
 
-
-    private void setLatestKey(Long latestKey, Session session) throws UpdateTrackerStorageException {
-        session.saveOrUpdate(new LatestKey(latestKey));
-    }
-
-    private class objectOfContentModelReconnector implements Callable<Set<Record>> {
+    private class ObjectOfContentModelReconnector implements Callable<Set<Record>> {
         private final String object;
         private final Date timestamp;
+        private final DBFactory dbfac;
 
-        public objectOfContentModelReconnector(String object, Date timestamp) {
+        public ObjectOfContentModelReconnector(String object, Date timestamp, DBFactory dbfac) {
             this.object = object;
             this.timestamp = timestamp;
+            this.dbfac = dbfac;
         }
 
         @Override
         public Set<Record> call() throws Exception {
-            Session session = getSession();
+            DB session = dbfac.createReadonlyDBConnection();
             //This is a threadlocal session. It will not see the uncommitted changes from the parent session
             //but there should be none at this point
-            session.beginTransaction();
-            session.setDefaultReadOnly(true);
+            Transaction transaction = session.beginTransaction();
             Set<Record> changedRecords = null;
             try {
                 Set<String> collections = fedora.getCollections(object, timestamp);
-                changedRecords = backend.recalculateThisRecord(object,
-                                                               timestamp,
-                                                               session,
-                                                               collections);
+                State state = fedora.getState(object, timestamp);
+                changedRecords = backend.recalculateRecordsBasedOnThisPid(object,
+                                                                          timestamp,
+                                                                          session,
+                                                                          collections,
+                                                                          state);
             } catch (FedoraFailedException | UpdateTrackerStorageException e) {
-                session.getTransaction().rollback(); //I do not know if readonly transactions should be rolled back
+                transaction.rollback(); //I do not know if readonly transactions should be rolled back
                 throw e;//yes, rethrow. I do not want to lose the type
             }
-            session.getTransaction().commit();
+            transaction.commit();
             return changedRecords;
         }
     }

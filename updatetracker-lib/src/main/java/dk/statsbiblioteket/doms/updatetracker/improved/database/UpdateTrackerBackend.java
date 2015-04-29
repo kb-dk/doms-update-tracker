@@ -3,7 +3,6 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DB;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State;
-import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.util.Pair;
@@ -13,8 +12,6 @@ import org.apache.commons.collections4.Predicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
@@ -38,7 +35,7 @@ import java.util.concurrent.Future;
  *
  */
 //TODO test if these operations are idempotent. Can we replay the same set of operations for the same result?
-public class UpdateTrackerBackend implements Closeable{
+public class UpdateTrackerBackend {
     private final ExecutorService viewBundleThreadPool;
     private FedoraForUpdateTracker fedora;
     private Logger log = LoggerFactory.getLogger(UpdateTrackerBackend.class);
@@ -123,17 +120,10 @@ public class UpdateTrackerBackend implements Closeable{
 
             final Collection<Record> records = db.getRecordsContainingThisPid(pid);
 
-            Set<Record> otherRecordsThanThisWhichThisObjectIsPart = recordsWithoutThisPidAsEntry(pid, records);
-
-
-            for (Record otherRecord : otherRecordsThanThisWhichThisObjectIsPart) {
-                if (otherRecord.getState() != State.DELETED) {
-                    reconnectObjectsInRecord(timestamp, db, otherRecord);
-                }
             Set<Record> otherRecordsThanThisWhichThisObjectIsPart = getRecordsWithoutThisPidAsEntry(pid, records);
             Set<Record> changes = recalculateRecords(timestamp, otherRecordsThanThisWhichThisObjectIsPart);
             for (Record change : changes) {
-                session.saveOrUpdate(change);
+                db.saveRecord(change);
             }
             Set<Record> recordsWhichThisObjectIsEntry = getRecordWithThisPidAsEntry(pid, records);
 
@@ -148,7 +138,7 @@ public class UpdateTrackerBackend implements Closeable{
 
     }
 
-    private Set<Record> recordWithThisPidAsEntry(final String pid, Collection<Record> records) {
+    private Set<Record> getRecordWithThisPidAsEntry(final String pid, Collection<Record> records) {
         final Set<Record> coll = new HashSet<>(records);
         CollectionUtils.filter(coll, new Predicate<Record>() {
             @Override
@@ -203,14 +193,14 @@ public class UpdateTrackerBackend implements Closeable{
      * This methods returns a set of record objects that should be changed when this pid have changed
      * @param pid the pid that changed
      * @param timestamp the timestamp
-     * @param session the database session
+     * @param db the database db
      * @param collections collections which this pid belongs to
      * @return a set of records to save
      * @throws FedoraFailedException
      * @throws UpdateTrackerStorageException
      */
-    public Set<Record> recalculateThisRecord(String pid, Date timestamp, Session session,
-                                             Collection<String> collections) throws
+    public Set<Record> recalculateRecordsBasedOnThisPid(String pid, Date timestamp, DB db,
+                                                        Collection<String> collections, State state) throws
                                                                  FedoraFailedException,
                                                                  UpdateTrackerStorageException {
         Set<Record> result = new HashSet<>();
@@ -245,7 +235,6 @@ public class UpdateTrackerBackend implements Closeable{
                     if (state == State.ACTIVE) {
                         record.setActive(timestamp);
                     }
-                    db.saveRecord(record);
                 }
                 newRecords.add(record);
             }

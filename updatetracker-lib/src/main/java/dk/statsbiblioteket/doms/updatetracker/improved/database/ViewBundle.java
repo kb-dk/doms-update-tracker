@@ -1,7 +1,7 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 
 public class ViewBundle {
 
@@ -9,10 +9,10 @@ public class ViewBundle {
 
     private String viewAngle;
 
-    private List<String> contained;
+    private Collection<String> contained;
 
 
-    public ViewBundle(String entry, String viewAngle, List<String> contained) {
+    public ViewBundle(String entry, String viewAngle, Collection<String> contained) {
         this.entry = entry;
         this.viewAngle = viewAngle;
         this.contained = contained;
@@ -41,11 +41,11 @@ public class ViewBundle {
         this.viewAngle = viewAngle;
     }
 
-    public List<String> getContained() {
+    public Collection<String> getContained() {
         return contained;
     }
 
-    public void setContained(List<String> contained) {
+    public void setContained(Collection<String> contained) {
         this.contained = contained;
     }
 }

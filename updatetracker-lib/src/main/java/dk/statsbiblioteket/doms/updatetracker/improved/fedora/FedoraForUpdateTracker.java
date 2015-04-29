@@ -78,7 +78,7 @@ public class FedoraForUpdateTracker {
                     entryAngles.addAll(getEntryAnglesForContentModel(contentmodelPid, date));
                 }
             }
-            return new ArrayList<>(entryAngles);
+            return entryAngles;
         } catch (BackendInvalidCredsException | BackendMethodFailedException | BackendInvalidResourceException | JAXBException e) {
             throw new FedoraFailedException("Failed to get view info from Fedora for pid " + pid, e);
         }

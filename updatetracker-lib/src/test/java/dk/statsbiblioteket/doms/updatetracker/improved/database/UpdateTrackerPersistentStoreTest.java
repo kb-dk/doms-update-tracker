@@ -5,14 +5,17 @@ import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DBFactory;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import org.hibernate.Transaction;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InOrder;
 
 import java.util.Collections;
 import java.util.Date;
+import java.util.concurrent.Executors;
 
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.addEntry;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.asSet;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.emptySet;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
@@ -39,10 +42,10 @@ public class UpdateTrackerPersistentStoreTest {
     public void setUp() throws Exception {
         fcmock = mock(FedoraForUpdateTracker.class);
         //Collections for everybody
-        when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(TestHelpers.asSet(COLLECTION));
+        when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(asSet(COLLECTION));
         //No entry objects or view stuff until initialised
         when(fcmock.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptySet());
-        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L);
+        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L,Executors.newSingleThreadExecutor());
 
         DBFactory dbfac = mock(DBFactory.class);
         dbSession = mock(DB.class);
@@ -51,44 +54,14 @@ public class UpdateTrackerPersistentStoreTest {
         when(dbfac.createReadonlyDBConnection()).thenReturn(dbSession);
         when(dbSession.beginTransaction()).thenReturn(transaction);
 
-        store = new UpdateTrackerPersistentStoreImpl(fcmock, updateTrackerBackend, dbfac);
-        when(fedora.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptyList());
-        final ExecutorService threadPool1 = Executors.newSingleThreadExecutor();
-        final ExecutorService threadPool2 = Executors.newSingleThreadExecutor();
-        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fedora,10000L,
-                                                                                   threadPool1);
-        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings, fedora, updateTrackerBackend,
-                                                  threadPool2);
+        store = new UpdateTrackerPersistentStoreImpl(fcmock, updateTrackerBackend, dbfac,Executors.newSingleThreadExecutor());
+        when(fcmock.getEntryAngles(anyString(), any(Date.class))).thenReturn(emptySet(String.class));
     }
 
 
-    @After
-    public void tearDown() throws Exception {
-        db.close();
-    }
 
-    @Test
-    public void testContentModelRebuild() throws Exception {
-        init();
-        Date start = new Date();
-        addEntry("doms:test1");
-        db.objectCreated("doms:test1", new Date(), 1);
 
-        addEntry("doms:test2");
-        db.objectCreated("doms:test2", new Date(), 2);
 
-        List<Record> list = db.lookup(new Date(1), "SummaVisible", 0, 100, null, "doms:Root_Collection");
-        final String cmPid = "doms:cm1";
-        addEntry("doms:test1","doms:child1");
-        addEntry("doms:test2","doms:child2");
-        final Date cmUpdate = new Date();
-        when(fedora.isCurrentlyContentModel(cmPid,cmUpdate)).thenReturn(true);
-        when(fedora.getObjectsOfThisContentModel(cmPid)).thenReturn(asSet("doms:test1", "doms:test2"));
-        db.objectRelationsChanged(cmPid, cmUpdate, 3);
-        list = db.lookup(new Date(1), "SummaVisible", 0, 100, null, "doms:Root_Collection");
-        assertEquals(list.get(0).getInactive(),list.get(1).getInactive());
-        assertEquals(list.get(0).getInactive().getTime(), cmUpdate.getTime());
-    }
 
     /**
      * Simulates the process when we receive a ingest event from the worklog. As can be seen from the code, we run

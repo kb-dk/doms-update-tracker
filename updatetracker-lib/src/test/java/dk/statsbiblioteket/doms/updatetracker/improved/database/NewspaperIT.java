@@ -49,15 +49,15 @@ public class NewspaperIT {
         fcmock = mock(FedoraForUpdateTracker.class);
         final ExecutorService threadPool = Executors.newCachedThreadPool();
         final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L,threadPool);
-        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings,fcmock, updateTrackerBackend,
+        db = new UpdateTrackerPersistentStoreImpl(fcmock,
+                                                  updateTrackerBackend,
+                                                  new DBFactory(configFile,mappings),
                                                   threadPool);
-        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L);
-        db = new UpdateTrackerPersistentStoreImpl(fcmock, updateTrackerBackend, new DBFactory(configFile, mappings));
         tearDown();
-        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings, fcmock, updateTrackerBackend,
+        db = new UpdateTrackerPersistentStoreImpl(fcmock,
+                                                  updateTrackerBackend,
+                                                  new DBFactory(configFile, mappings),
                                                   threadPool);
-        db = new UpdateTrackerPersistentStoreImpl(fcmock, updateTrackerBackend,
-                                                  new DBFactory(configFile, mappings));
 
         //Collections for everybody
         when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(TestHelpers.asSet(COLLECTION));
