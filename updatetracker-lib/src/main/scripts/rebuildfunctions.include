@@ -13,7 +13,7 @@ function addRecordsForContentModel {
     local cm=$1
     local collection=$2
     local view=$3
-    echo $(date) "Get all objects of cm + their last modified date & status"
+    echo $(date) "Get all objects of $cm + their last modified date & status"
 
     psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (
         select
@@ -22,6 +22,7 @@ function addRecordsForContentModel {
             '$collection',
             null,
             CASE when $statetable.o='<info:fedora/fedora-system:def/model#Active>' then split_part($lastmodifiedtable.o, '\"', 2) else null end,
+            split_part($lastmodifiedtable.o, '\"', 2),
             split_part($lastmodifiedtable.o, '\"', 2)
         from
             $lastmodifiedtable, $statetable, $modeltable
@@ -31,9 +32,9 @@ function addRecordsForContentModel {
             and $modeltable.o='<info:fedora/$cm>'
     ) TO STDOUT" > $cm.records
 
-    echo $(date) "Add to records with $view view, the found entrypids, $collection collection, no deleted timestamp, possibly active timestamp if record is active, and inactive timestamp"
+    echo $(date) "Add to records with $view view, the found entrypids, $collection collection, no deleted timestamp, possibly active timestamp if record is active, inactive timestamp and lastmodified"
 
-    psql "$DOMSUPDATETRACKERDBNAME" -c "\copy records (viewangle, entrypid, collection, deleted, active, inactive) FROM STDIN" < $cm.records
+    psql "$DOMSUPDATETRACKERDBNAME" -c "\copy records (viewangle, entrypid, collection, deleted, active, inactive, lastmodified) FROM STDIN" < $cm.records
 }
 
 # Given a content model and a view,
@@ -50,6 +51,7 @@ function addRecordsForContentModelUnknownCollection {
             substring(trim('<>' from $collectiontable.o), 13),
             null,
             CASE when $statetable.o='<info:fedora/fedora-system:def/model#Active>' then split_part($lastmodifiedtable.o, '\"', 2) else null end,
+            split_part($lastmodifiedtable.o, '\"', 2),
             split_part($lastmodifiedtable.o, '\"', 2)
         from
             $lastmodifiedtable, $statetable, $modeltable, $collectiontable
@@ -60,9 +62,9 @@ function addRecordsForContentModelUnknownCollection {
             and $modeltable.o='<info:fedora/$cm>'
     ) TO STDOUT" > $cm.records
 
-    echo $(date) "Add to records with $view view, the found entrypids, the found collection, no deleted timestamp, possibly active timestamp if record is active, and inactive timestamp"
+    echo $(date) "Add to records with $view view, the found entrypids, the found collection, no deleted timestamp, possibly active timestamp if record is active, inactive timestamp and lastmodified"
 
-    psql "$DOMSUPDATETRACKERDBNAME" -c "\copy records (viewangle, entrypid, collection, deleted, active, inactive) FROM STDIN" < $cm.records
+    psql "$DOMSUPDATETRACKERDBNAME" -c "\copy records (viewangle, entrypid, collection, deleted, active, inactive, lastmodified) FROM STDIN" < $cm.records
 }
 
 # List all objects in records and add them to memberships.
