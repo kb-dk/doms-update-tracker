@@ -1,11 +1,14 @@
 # MPT-store contains a table for each relationship. The tables are name t1, t2, t3 etc.
 # A table "tmap" contains the table number for each relation.
 
+domstriplestoredbname=$DOMSTRIPLESTOREDBNAME
+domsupdatetrackerdbname=$DOMSUPDATETRACKERDBNAME
+
 # Get the table name for common relations used in methods.
-lastmodifiedtable=t$(psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (SELECT pkey FROM tmap WHERE p='<info:fedora/fedora-system:def/view#lastModifiedDate>')                       TO STDOUT")
-statetable=t$(       psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (SELECT pkey FROM tmap WHERE p='<info:fedora/fedora-system:def/model#state>')                                 TO STDOUT")
-modeltable=t$(       psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (SELECT pkey FROM tmap WHERE p='<info:fedora/fedora-system:def/model#hasModel>')                              TO STDOUT")
-collectiontable=t$(  psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (SELECT pkey FROM tmap WHERE p='<http://doms.statsbiblioteket.dk/relations/default/0/1/#isPartOfCollection>') TO STDOUT")
+lastmodifiedtable=t$(psql "$domstriplestoredbname" -c "\copy (SELECT pkey FROM tmap WHERE p='<info:fedora/fedora-system:def/view#lastModifiedDate>')                       TO STDOUT")
+statetable=t$(       psql "$domstriplestoredbname" -c "\copy (SELECT pkey FROM tmap WHERE p='<info:fedora/fedora-system:def/model#state>')                                 TO STDOUT")
+modeltable=t$(       psql "$domstriplestoredbname" -c "\copy (SELECT pkey FROM tmap WHERE p='<info:fedora/fedora-system:def/model#hasModel>')                              TO STDOUT")
+collectiontable=t$(  psql "$domstriplestoredbname" -c "\copy (SELECT pkey FROM tmap WHERE p='<http://doms.statsbiblioteket.dk/relations/default/0/1/#isPartOfCollection>') TO STDOUT")
 
 # Given a content model, a collection and a view,
 # insert all objects of that content model into records for the given collection and view
@@ -15,7 +18,7 @@ function addRecordsForContentModel {
     local view=$3
     echo $(date) "Get all objects of $cm + their last modified date & status"
 
-    psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (
+    psql "$domstriplestoredbname" -c "\copy (
         select
             '$view',
             substring(trim('<>' from $lastmodifiedtable.s), 13),
@@ -30,11 +33,11 @@ function addRecordsForContentModel {
             $lastmodifiedtable.s=$statetable.s
             and $lastmodifiedtable.s=$modeltable.s
             and $modeltable.o='<info:fedora/$cm>'
-    ) TO STDOUT" > $cm.records
+    ) TO STDOUT" > "$cm.records"
 
     echo $(date) "Add to records with $view view, the found entrypids, $collection collection, no deleted timestamp, possibly active timestamp if record is active, inactive timestamp and lastmodified"
 
-    psql "$DOMSUPDATETRACKERDBNAME" -c "\copy records (viewangle, entrypid, collection, deleted, active, inactive, lastmodified) FROM STDIN" < $cm.records
+    psql "$domsupdatetrackerdbname" -c "\copy records (viewangle, entrypid, collection, deleted, active, inactive, lastmodified) FROM STDIN" < "$cm.records"
 }
 
 # Given a content model and a view,
@@ -44,7 +47,7 @@ function addRecordsForContentModelUnknownCollection {
     local view=$2
     echo $(date) "Get all objects of $cm + their last modified date & status"
 
-    psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (
+    psql "$domstriplestoredbname" -c "\copy (
         select
             '$view',
             substring(trim('<>' from $lastmodifiedtable.s), 13),
@@ -60,52 +63,26 @@ function addRecordsForContentModelUnknownCollection {
             and $lastmodifiedtable.s=$modeltable.s
             and $lastmodifiedtable.s=$collectiontable.s
             and $modeltable.o='<info:fedora/$cm>'
-    ) TO STDOUT" > $cm.records
+    ) TO STDOUT" > "$cm.records"
 
     echo $(date) "Add to records with $view view, the found entrypids, the found collection, no deleted timestamp, possibly active timestamp if record is active, inactive timestamp and lastmodified"
 
-    psql "$DOMSUPDATETRACKERDBNAME" -c "\copy records (viewangle, entrypid, collection, deleted, active, inactive, lastmodified) FROM STDIN" < $cm.records
+    psql "$domsupdatetrackerdbname" -c "\copy records (viewangle, entrypid, collection, deleted, active, inactive, lastmodified) FROM STDIN" < "$cm.records"
 }
 
 # List all objects in records and add them to memberships.
 function addMembershipsForAllRecords {
     echo $(date) "Add all records to have memberships of themselves"
 
-    psql "$DOMSUPDATETRACKERDBNAME" -c "insert into memberships (viewangle, entrypid, collection, objectpid)
+    psql "$domsupdatetrackerdbname" -c "insert into memberships (viewangle, entrypid, collection, objectpid)
         select viewangle, entrypid, collection, entrypid
         from records"
-}
-
-# Given a relationname, a collection and a view,
-# insert all objects with that relation into memberships, for the given source object, collection and view
-function addMembershipsForRelations {
-    local relation=$1
-    local collection=$2
-    local view=$3
-
-    echo $(date) "Get all $relation relations"
-
-    relationtable2=t$(psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (SELECT pkey FROM tmap WHERE p='<$relation>') TO STDOUT")
-
-    psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (
-        select
-            '$view',
-            substring(trim('<>' from $relationtable2.s), 13),
-            '$collection',
-            substring(trim('<>' from $relationtable2.o), 13)
-        from
-            $relationtable2
-    ) TO STDOUT" > relation-"${relation//\//_}"
-
-    echo $(date) "Add to memberships for collection $collection and view $view"
-
-    psql "$DOMSUPDATETRACKERDBNAME" -c "\copy memberships (viewangle, entrypid, collection, objectpid) FROM STDIN" < relation-"${relation//\//_}"
 }
 
 # Given a relationname, a collection, a view and a content model,
 # insert all objects with that relation into memberships, for the given source object, collection and view
 # but only if the source objects are of a specific content model
-function addMembershipsForRelationsAndContentModel {
+function addMembershipsForRelation {
     local relation=$1
     local collection=$2
     local view=$3
@@ -113,9 +90,9 @@ function addMembershipsForRelationsAndContentModel {
 
     echo $(date) "Get all $relation relations"
 
-    relationtable2=t$(psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (SELECT pkey FROM tmap WHERE p='<$relation>') TO STDOUT")
+    relationtable2=t$(psql "$domstriplestoredbname" -c "\copy (SELECT pkey FROM tmap WHERE p='<$relation>') TO STDOUT")
 
-    psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (
+    psql "$domstriplestoredbname" -c "\copy (
         select
             '$view',
             substring(trim('<>' from $relationtable2.s), 13),
@@ -130,69 +107,46 @@ function addMembershipsForRelationsAndContentModel {
 
     echo $(date) "Add to memberships for collection $collection and view $view"
 
-    psql "$DOMSUPDATETRACKERDBNAME" -c "\copy memberships (viewangle, entrypid, collection, objectpid) FROM STDIN" < relation-"${relation//\//_}"
+    psql "$domsupdatetrackerdbname" -c "\copy memberships (viewangle, entrypid, collection, objectpid) FROM STDIN" < relation-"${relation//\//_}"
 }
 
-# Given two relationnames, a collection and a view
+# Given two relationnames, a collection a view, and a content model
 # insert all objects connected by the two relations into memberships, for the given source object, collection and view
 function addMembershipsForCombinedRelations {
     local relation1=$1
     local relation2=$2
     local collection=$3
     local view=$4
+    local cm=$5
 
     echo $(date) "Get all $relation1 -> $relation2 relations"
 
-    relationtable1=t$(psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (SELECT pkey FROM tmap WHERE p='<$relation1>') TO STDOUT")
-    relationtable2=t$(psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (SELECT pkey FROM tmap WHERE p='<$relation2>') TO STDOUT")
+    relationtable1=t$(psql "$domstriplestoredbname" -c "\copy (SELECT pkey FROM tmap WHERE p='<$relation1>') TO STDOUT")
+    relationtable2=t$(psql "$domstriplestoredbname" -c "\copy (SELECT pkey FROM tmap WHERE p='<$relation2>') TO STDOUT")
 
-    psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (
+    psql "$domstriplestoredbname" -c "\copy (
         select
             '$view',
             substring(trim('<>' from $relationtable1.s), 13),
             '$collection',
             substring(trim('<>' from $relationtable2.o), 13)
         from
-            $relationtable1,$relationtable2
+            $relationtable1,$relationtable2,$modeltable
         where
             $relationtable1.o=$relationtable2.s
+            and $relationtable1.s=$modeltable.s
+            and $modeltable.o='<info:fedora/$cm>'
     ) TO STDOUT" > relation-"${relation1//\//_}"-"${relation2//\//_}"
 
     echo $(date) "Add to memberships for collection $collection and view $view"
 
-    psql "$DOMSUPDATETRACKERDBNAME" -c "\copy memberships (viewangle, entrypid, collection, objectpid) FROM STDIN" < relation-"${relation1//\//_}"-"${relation2//\//_}"
-}
-
-# Given a relationname, a collection and a view,
-# insert all objects with that relation into memberships, for the given target object, collection and view
-function addMembershipsForInverseRelations {
-    local relation=$1
-    local collection=$2
-    local view=$3
-
-    echo $(date) "Get all $relation relations"
-
-    relationtable2=t$(psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (SELECT pkey FROM tmap WHERE p='<$relation>') TO STDOUT")
-
-    psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (
-        select
-            '$view',
-            substring(trim('<>' from $relationtable2.o), 13),
-            '$collection',
-            substring(trim('<>' from $relationtable2.s), 13)
-        from
-            $relationtable2
-    ) TO STDOUT" > inverserelation-"${relation//\//_}"
-
-    echo $(date) "Add to memberships for collection $collection and view $view"
-
-    psql "$DOMSUPDATETRACKERDBNAME" -c "\copy memberships (viewangle, entrypid, collection, objectpid) FROM STDIN" < inverserelation-"${relation//\//_}"
+    psql "$domsupdatetrackerdbname" -c "\copy memberships (viewangle, entrypid, collection, objectpid) FROM STDIN" < relation-"${relation1//\//_}"-"${relation2//\//_}"
 }
 
 # Given a relationname, a collection, a view and a content model,
 # insert all objects with that relation into memberships, for the given target object, collection and view,
 # but only if the object of the relation are of a specific content model
-function addMembershipsForInverseRelationsAndContentModel {
+function addMembershipsForInverseRelation {
     local relation=$1
     local collection=$2
     local view=$3
@@ -200,9 +154,9 @@ function addMembershipsForInverseRelationsAndContentModel {
 
     echo $(date) "Get all $relation relations to contentmodel $contentmodel"
 
-    relationtable2=t$(psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (SELECT pkey FROM tmap WHERE p='<$relation>') TO STDOUT")
+    relationtable2=t$(psql "$domstriplestoredbname" -c "\copy (SELECT pkey FROM tmap WHERE p='<$relation>') TO STDOUT")
 
-    psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (
+    psql "$domstriplestoredbname" -c "\copy (
         select
             '$view',
             substring(trim('<>' from $relationtable2.o), 13),
@@ -217,25 +171,30 @@ function addMembershipsForInverseRelationsAndContentModel {
 
     echo $(date) "Add the batches to memberships"
 
-    psql "$DOMSUPDATETRACKERDBNAME" -c "\copy memberships (viewangle, entrypid, collection, objectpid) FROM STDIN" < inverserelation-"${relation//\//_}"
+    psql "$domsupdatetrackerdbname" -c "\copy memberships (viewangle, entrypid, collection, objectpid) FROM STDIN" < inverserelation-"${relation//\//_}"
 }
 
-# Given a relation of objects referring to each other in a linked list, a collection and a view,
+# Given a relation of objects referring to each other in a linked list, a content model these linked objects have,
+# a collection and a view,
 # calculate all objects that are connected by that relation, and add those to memberships for all connected objects.
 function addLinkedListRelations {
     local linkedlistrelation=$1
-    local view=$2
-    local collection=$3
+    local linkedlistcm=$2
+    local view=$3
+    local collection=$4
 
     echo $(date) "Get linked list relation $linkedlistrelation"
 
-    linkedlistrelationtable=t$(psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (SELECT pkey FROM tmap WHERE p='<$linkedlistrelation>') TO STDOUT")
+    linkedlistrelationtable=t$(psql "$domstriplestoredbname" -c "\copy (SELECT pkey FROM tmap WHERE p='<$linkedlistrelation>') TO STDOUT")
 
-    psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (
+    psql "$domstriplestoredbname" -c "\copy (
         select
-            substring(trim('<>' from s), 13), substring(trim('<>' from o), 13)
+            substring(trim('<>' from $linkedlistrelationtable.s), 13), substring(trim('<>' from $linkedlistrelationtable.o), 13)
         from
-            $linkedlistrelationtable
+            $linkedlistrelationtable,$modeltable
+        where
+            $linkedlistrelationtable.s=$modeltable.s
+            and $modeltable.o='<info:fedora/$linkedlistcm>'
     ) TO STDOUT" > linkedlist-"${linkedlistrelation//\//_}"
 
     echo $(date) "Calculate memberships"
@@ -244,42 +203,50 @@ function addLinkedListRelations {
 
     echo $(date) "Insert into memberships"
 
-    psql "$DOMSUPDATETRACKERDBNAME" -c "\copy memberships (viewangle, entrypid, collection, objectpid) FROM STDIN" < results-"${linkedlistrelation//\//_}"
+    psql "$domsupdatetrackerdbname" -c "\copy memberships (viewangle, entrypid, collection, objectpid) FROM STDIN" < results-"${linkedlistrelation//\//_}"
 }
 
-# Given a relation of objects referring to each other in a linked list, an inverse relation and a relation pointing to objects in this linked list plus a collection and a view,
+# Given a relation of objects referring to each other in a linked list, a content model these linked objects have,
+# an inverse relation and a relation pointing to objects in this linked list plus a collection and a view,
 # calculate all objects that are connected by the linked list relation,
 # and add those to memberships for all objects connected to it by the inverse and normal relations.
 function addLinkedListRelationsFromInverseForwardCombinedRelations {
     local linkedlistrelation=$1
-    local inverserelation=$2
-    local relation=$3
-    local view=$4
-    local collection=$5
+    local linkedlistcm=$2
+    local inverserelation=$3
+    local relation=$4
+    local view=$5
+    local collection=$6
+    local cm=$7
 
     echo $(date) "Get linked list relation $linkedlistrelation"
 
-    linkedlistrelationtable=t$(psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (SELECT pkey FROM tmap WHERE p='<$linkedlistrelation>') TO STDOUT")
+    linkedlistrelationtable=t$(psql "$domstriplestoredbname" -c "\copy (SELECT pkey FROM tmap WHERE p='<$linkedlistrelation>') TO STDOUT")
 
-    psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (
+    psql "$domstriplestoredbname" -c "\copy (
         select
-            substring(trim('<>' from s), 13), substring(trim('<>' from o), 13)
+            substring(trim('<>' from $linkedlistrelationtable.s), 13), substring(trim('<>' from $linkedlistrelationtable.o), 13)
         from
-            $linkedlistrelationtable
+            $linkedlistrelationtable,$modeltable
+        where
+            $linkedlistrelationtable.s=$modeltable.s
+            and $modeltable.o='<info:fedora/$linkedlistcm>'
     ) TO STDOUT" > linkedlist-"${linkedlistrelation//\//_}"
 
     echo $(date) "Get relations $relation to linkedlist relation $inverserelation"
 
-    relationtable1=t$(psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (SELECT pkey FROM tmap WHERE p='<$inverserelation>') TO STDOUT")
-    relationtable2=t$(psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (SELECT pkey FROM tmap WHERE p='<$relation>') TO STDOUT")
+    relationtable1=t$(psql "$domstriplestoredbname" -c "\copy (SELECT pkey FROM tmap WHERE p='<$inverserelation>') TO STDOUT")
+    relationtable2=t$(psql "$domstriplestoredbname" -c "\copy (SELECT pkey FROM tmap WHERE p='<$relation>') TO STDOUT")
 
-    psql "$DOMSTRIPLESTOREDBNAME" -c "\copy (
+    psql "$domstriplestoredbname" -c "\copy (
         select
             substring(trim('<>' from $relationtable1.o), 13), substring(trim('<>' from $relationtable2.o), 13)
         from
-            $relationtable2, $relationtable1
+            $relationtable2, $relationtable1, $modeltable
         where
-            $relationtable2.s=$relationtable1.s
+            $modeltable.s=$relationtable1.o
+            and $modeltable.o='<info:fedora/$cm>'
+            and $relationtable2.s=$relationtable1.s
     ) TO STDOUT" > linkedlist-"${relation//\//_}"
 
     echo $(date) "Calculate memberships"
@@ -288,5 +255,5 @@ function addLinkedListRelationsFromInverseForwardCombinedRelations {
 
     echo $(date) "Insert into memberships"
 
-    psql "$DOMSUPDATETRACKERDBNAME" -c "\copy memberships (viewangle, entrypid, collection, objectpid) FROM STDIN" < results-"${relation//\//_}"
+    psql "$domsupdatetrackerdbname" -c "\copy memberships (viewangle, entrypid, collection, objectpid) FROM STDIN" < results-"${relation//\//_}"
 }
