@@ -4,6 +4,7 @@ import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.NamedNativeQueries;
@@ -33,7 +34,7 @@ import java.util.Set;
                                         "       OR DELETED is not NULL " +
                                         "   )" +
                                         "ORDER BY LASTMODIFIED, ENTRYPID " +
-                                        "LIMIT :limit "),
+                                        "LIMIT :maxResults "),
                             @NamedNativeQuery(
                                       resultClass = Record.class,
                                       name = "InactiveOrDeleted",
@@ -49,7 +50,7 @@ import java.util.Set;
                                         "       OR DELETED is not NULL " +
                                         "   )" +
                                         "ORDER BY LASTMODIFIED, ENTRYPID " +
-                                        "LIMIT :limit "),
+                                        "LIMIT :maxResults "),
                             @NamedNativeQuery(
                                       resultClass = Record.class,
                                       name = "Deleted",
@@ -62,7 +63,7 @@ import java.util.Set;
                                         "   AND COLLECTION = :collection " +
                                         "   AND DELETED is not NULL " +
                                         "ORDER BY LASTMODIFIED, ENTRYPID " +
-                                        "LIMIT :limit "),
+                                        "LIMIT :maxResults "),
                             @NamedNativeQuery(
                                       resultClass = Record.class,
                                       name = "All",
@@ -74,7 +75,7 @@ import java.util.Set;
                                         "   AND VIEWANGLE = :viewAngle " +
                                         "   AND COLLECTION = :collection " +
                                         "ORDER BY LASTMODIFIED, ENTRYPID " +
-                                        "LIMIT :limit"),
+                                        "LIMIT :maxResults"),
                             @NamedNativeQuery(
                                       name = "UpdateDates",
                                       query =
@@ -183,7 +184,7 @@ public class Record extends LastModifiable implements Serializable {
     @Column(name = "DELETED", columnDefinition = "timestamp with time zone", nullable = true)
     private Date deleted = null;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "MEMBERSHIPS",
                             joinColumns = {
                                                   @JoinColumn(referencedColumnName = "VIEWANGLE", name = "VIEWANGLE"),

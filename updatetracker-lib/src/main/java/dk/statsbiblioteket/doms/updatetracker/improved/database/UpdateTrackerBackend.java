@@ -3,6 +3,7 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DB;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.util.Pair;
@@ -12,12 +13,18 @@ import org.apache.commons.collections4.Predicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 
 /**
@@ -31,13 +38,15 @@ import java.util.Set;
  *
  */
 //TODO test if these operations are idempotent. Can we replay the same set of operations for the same result?
-public class UpdateTrackerBackend {
+public class UpdateTrackerBackend implements Closeable{
+    private final ExecutorService viewBundleThreadPool;
     private FedoraForUpdateTracker fedora;
     private Logger log = LoggerFactory.getLogger(UpdateTrackerBackend.class);
 
     private final Map<Pair<Record,Date>,ViewBundle> viewBundleCache;
 
-    public UpdateTrackerBackend(FedoraForUpdateTracker fedora, Long viewBundleCacheTime) {
+    public UpdateTrackerBackend(FedoraForUpdateTracker fedora, Long viewBundleCacheTime, ExecutorService viewBundleThreadPool) {
+        this.viewBundleThreadPool = viewBundleThreadPool;
         viewBundleCache = new TimeSensitiveCache<>(viewBundleCacheTime, true);
         this.fedora = fedora;
     }
@@ -121,9 +130,12 @@ public class UpdateTrackerBackend {
                 if (otherRecord.getState() != State.DELETED) {
                     reconnectObjectsInRecord(timestamp, db, otherRecord);
                 }
+            Set<Record> otherRecordsThanThisWhichThisObjectIsPart = getRecordsWithoutThisPidAsEntry(pid, records);
+            Set<Record> changes = recalculateRecords(timestamp, otherRecordsThanThisWhichThisObjectIsPart);
+            for (Record change : changes) {
+                session.saveOrUpdate(change);
             }
-
-            Set<Record> recordsWhichThisObjectIsEntry = recordWithThisPidAsEntry(pid, records);
+            Set<Record> recordsWhichThisObjectIsEntry = getRecordWithThisPidAsEntry(pid, records);
 
             for (Record record : recordsWhichThisObjectIsEntry) {
                 record.getObjects().clear();
@@ -145,7 +157,7 @@ public class UpdateTrackerBackend {
         return coll;
     }
 
-    private Set<Record> recordsWithoutThisPidAsEntry(final String pid, Collection<Record> records) {
+    private Set<Record> getRecordsWithoutThisPidAsEntry(final String pid, Collection<Record> records) {
         final Set<Record> coll = new HashSet<>(records);
         CollectionUtils.filter(coll, new Predicate<Record>() {
             @Override
@@ -154,30 +166,26 @@ public class UpdateTrackerBackend {
         return coll;
     }
 
-    private void reconnectObjectsInRecord(Date timestamp, DB db, Record record) throws FedoraFailedException {
-        Set<String> before = new HashSet<>(record.getObjects());
-        Set<String> after = new HashSet<>();
-        ViewBundle bundle = getViewBundle(timestamp, record);
-        for (String viewObject : bundle.getContained()) {
-            log.debug("Marking object {} as part of record {},{},{}",
-                      viewObject,
-                      record.getEntryPid(),
-                      record.getViewAngle(),
-                      record.getCollection());
-            after.add(viewObject);
+    private Set<Record> recalculateRecords(final Date timestamp,
+                                           Set<Record> records) throws FedoraFailedException {
+        Set<Future<Record>> recordsToSave = new HashSet<>();
+        for (final Record record : records) {
+            Callable<Record> reconnector = new RecordReconnector(record, timestamp);
+            recordsToSave.add(viewBundleThreadPool.submit(reconnector));
         }
-
-        if (!before.equals(after)) {
-            record.getObjects().clear();
-            record.getObjects().addAll(after);
-            if (record.getInactive() != null &&
-                record.getActive() != null &&
-                record.getInactive().equals(record.getActive())) {
-                record.setActive(timestamp);
+        Set<Record> result = new HashSet<>();
+        for (Future<Record> recordFuture : recordsToSave) {
+            Record record;
+            try {
+                record = recordFuture.get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new FedoraFailedException("Failed while getting view bundles", e);
             }
-            record.setInactive(timestamp);
-            db.saveRecord(record);
+            if (record != null) {
+                result.add(record);
+            }
         }
+        return result;
     }
 
     private ViewBundle getViewBundle(Date timestamp, Record otherRecord) throws FedoraFailedException {
@@ -191,9 +199,21 @@ public class UpdateTrackerBackend {
     }
 
 
-    public void reconnectObjects(String pid, Date timestamp, DB db, Collection<String> collections, State state) throws
+    /**
+     * This methods returns a set of record objects that should be changed when this pid have changed
+     * @param pid the pid that changed
+     * @param timestamp the timestamp
+     * @param session the database session
+     * @param collections collections which this pid belongs to
+     * @return a set of records to save
+     * @throws FedoraFailedException
+     * @throws UpdateTrackerStorageException
+     */
+    public Set<Record> recalculateThisRecord(String pid, Date timestamp, Session session,
+                                             Collection<String> collections) throws
                                                                  FedoraFailedException,
                                                                  UpdateTrackerStorageException {
+        Set<Record> result = new HashSet<>();
         /*
         Get the view Information about this object (Which viewAngles is this object entry for)
         get the Collection information about this object (which collections is it in)
@@ -221,11 +241,11 @@ public class UpdateTrackerBackend {
                     record = new Record(pid, entryViewAngle, collection);
                     record.getObjects().add(pid);
                     record.setInactive(timestamp);
+                    result.add(record);
                     if (state == State.ACTIVE) {
                         record.setActive(timestamp);
                     }
                     db.saveRecord(record);
-                   newRecords.add(record);
                 }
                 newRecords.add(record);
             }
@@ -239,7 +259,7 @@ public class UpdateTrackerBackend {
             previousRecord.setInactive(null);
             previousRecord.setActive(null);
             previousRecord.getObjects().clear();
-            db.saveRecord(previousRecord);
+            result.add(previousRecord);
         }
 
         log.debug("Recalculating view for {}", pid);
@@ -255,11 +275,8 @@ public class UpdateTrackerBackend {
         //Since the database connection have not been flushed, the newly created records will not be found, so add them
         records.addAll(newRecords);
         log.debug("Find all records {} containing {} ", records, pid);
-        for (Record otherRecord : records) {
-            if (otherRecord.getState() != State.DELETED) {
-                reconnectObjectsInRecord(timestamp, db, otherRecord);
-            }
-        }
+        result.addAll(recalculateRecords(timestamp, records));
+        return result;
     }
 
     public void updateDates(String pid, Date timestamp, DB db) {
@@ -273,5 +290,45 @@ public class UpdateTrackerBackend {
 
     public Date lastChanged(DB db) {
         return db.getLastChangedTimestamp();
+    }
+
+    private class RecordReconnector implements Callable<Record> {
+        private final Record record;
+        private final Date timestamp;
+
+        public RecordReconnector(Record record, Date timestamp) {
+            this.record = record;
+            this.timestamp = timestamp;
+        }
+
+        @Override
+        public Record call() throws Exception {
+            if (record.getState() != State.DELETED) {
+                Set<String> before = new HashSet<>(record.getObjects());
+                Set<String> after = new HashSet<>();
+                ViewBundle bundle = getViewBundle(timestamp, record);
+                for (String viewObject : bundle.getContained()) {
+                    log.debug("Marking object {} as part of record {},{},{}",
+                              viewObject,
+                              record.getEntryPid(),
+                              record.getViewAngle(),
+                              record.getCollection());
+                    after.add(viewObject);
+                }
+
+                if (!before.equals(after)) {
+                    record.getObjects().clear();
+                    record.getObjects().addAll(after);
+                    if (record.getInactive() != null &&
+                        record.getActive() != null &&
+                        record.getInactive().equals(record.getActive())) {
+                        record.setActive(timestamp);
+                    }
+                    record.setInactive(timestamp);
+                    return record;
+                }
+            }
+            return null;//This marks that no update should be done
+        }
     }
 }

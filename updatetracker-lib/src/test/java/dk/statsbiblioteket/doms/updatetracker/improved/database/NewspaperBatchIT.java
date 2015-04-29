@@ -13,6 +13,8 @@ import java.io.File;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.ALTO;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.EDITION;
@@ -48,9 +50,11 @@ public class NewspaperBatchIT {
                                          .toURI());
         File mappings = new File(Thread.currentThread().getContextClassLoader().getResource("updateTrapperMappings.xml")
                                        .toURI());
+        final ExecutorService threadPool = Executors.newCachedThreadPool();
 
-        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L);
-        db = new UpdateTrackerPersistentStoreImpl(fcmock, updateTrackerBackend,new DBFactory(configFile, mappings));
+        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L,threadPool);
+        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings,fcmock, updateTrackerBackend,
+                                                  threadPool);
     }
 
     @After

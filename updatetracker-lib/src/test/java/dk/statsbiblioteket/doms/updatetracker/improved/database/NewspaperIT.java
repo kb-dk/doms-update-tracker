@@ -12,6 +12,8 @@ import java.io.File;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.ACTIVE;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.GUI;
@@ -45,9 +47,15 @@ public class NewspaperIT {
                                        .toURI());
 
         fcmock = mock(FedoraForUpdateTracker.class);
+        final ExecutorService threadPool = Executors.newCachedThreadPool();
+        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L,threadPool);
+        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings,fcmock, updateTrackerBackend,
+                                                  threadPool);
         final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L);
         db = new UpdateTrackerPersistentStoreImpl(fcmock, updateTrackerBackend, new DBFactory(configFile, mappings));
         tearDown();
+        db = new UpdateTrackerPersistentStoreImpl(configFile, mappings, fcmock, updateTrackerBackend,
+                                                  threadPool);
         db = new UpdateTrackerPersistentStoreImpl(fcmock, updateTrackerBackend,
                                                   new DBFactory(configFile, mappings));
 

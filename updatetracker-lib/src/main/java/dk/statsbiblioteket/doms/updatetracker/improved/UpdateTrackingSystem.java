@@ -16,6 +16,9 @@ import dk.statsbiblioteket.sbutil.webservices.authentication.Credentials;
 
 import java.io.Closeable;
 import java.util.Timer;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 /**
  * This is the system that starts the persistent store and the jms listener and ties them together
@@ -41,16 +44,20 @@ public class UpdateTrackingSystem implements Closeable {
             ViewsImpl views = new ViewsImpl(tripleStoreRest, fedoraRest);
 
 
+            //This thread pool is the number of records we can recalculate simultaneously when a content model change
+            final ExecutorService contentModelRecalcThreadPool = initialiseThreadPool(updateTrackingConfig.getViewBundleMaxThreads());
+            //This thread pool is the number of records we can recalculate simultaneously when an common object (part of all their bundles) change
+            final ExecutorService viewBundleRecalcThreadPool = initialiseThreadPool(updateTrackingConfig.getContentModelRecalcMaxThreads());
             //Start up the fedora connection
             FedoraForUpdateTracker fedora = new FedoraForUpdateTracker(cmCache, fedoraRest, tripleStoreRest, views);
 
             //Start up the database
-            final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fedora, updateTrackingConfig.getViewBundleCacheTime());
-            DBFactory dbFactory = new DBFactory(updateTrackingConfig.getUpdatetrackerHibernateConfig(),
-                                                updateTrackingConfig.getUpdatetrackerHibernateMappings());
-            store = new UpdateTrackerPersistentStoreImpl(fedora,
+            final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fedora, updateTrackingConfig.getViewBundleCacheTime(), viewBundleRecalcThreadPool);
+
+            store = new UpdateTrackerPersistentStoreImpl(updateTrackingConfig.getUpdatetrackerHibernateConfig(),
+                                                         updateTrackingConfig.getUpdatetrackerHibernateMappings(), fedora,
                                                          updateTrackerBackend,
-                                                         dbFactory);
+                                                         contentModelRecalcThreadPool);
 
 
             //initialise the connection to the work log
@@ -64,6 +71,25 @@ public class UpdateTrackingSystem implements Closeable {
             throw new RuntimeException(e);
         }
     }
+
+    private ExecutorService initialiseThreadPool(Integer viewBundleThreadCount) {
+        final ThreadFactory threadFactory = new ThreadFactory() {
+            @Override //Hack to make the threads daemon threads so they do not block shutdown
+            public Thread newThread(Runnable r) {
+                ThreadFactory fac = Executors.defaultThreadFactory();
+                Thread thread = fac.newThread(r);
+                thread.setDaemon(true);
+                return thread;
+            }
+        };
+        //If thread count not correctly specified, make a cached thread pool (creates up to infinity threads as required, and kills them after 60 seconds of idle)
+        if (viewBundleThreadCount == null || viewBundleThreadCount <= 0) {
+            return Executors.newCachedThreadPool(threadFactory);
+        } else {
+            return Executors.newFixedThreadPool(viewBundleThreadCount, threadFactory);
+        }
+    }
+
 
     private void startWorkLogTimerTask(UpdateTrackingConfig updateTrackingConfig) {
         final boolean isDaemon = false;

@@ -10,20 +10,20 @@ public class EntryAngleCache {
     private static final TimeSensitiveCache<String, Set<String>> cache = new TimeSensitiveCache<>(ONE_DAY_IN_MILLISECONDS, true);
 
 
-    public boolean isCachedContentModel(String pid){
+    public synchronized boolean isCachedContentModel(String pid){
         return cache.containsKey(pid);
     }
 
-    public void invalidateContentModel(String pid){
+    public synchronized void invalidateContentModel(String pid){
         cache.remove(pid);
     }
 
 
-    public Set<String> getCachedEntryAngles(String contentmodel) {
+    public synchronized Set<String> getCachedEntryAngles(String contentmodel) {
         return cache.get(contentmodel);
     }
 
-    public void setEntryViewAngles(String contentmodel, Set<String> entryAngles) {
+    public synchronized void setEntryViewAngles(String contentmodel, Set<String> entryAngles) {
         cache.put(contentmodel,entryAngles);
     }
 

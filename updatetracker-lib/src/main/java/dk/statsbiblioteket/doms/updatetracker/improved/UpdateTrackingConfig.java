@@ -65,6 +65,18 @@ public class UpdateTrackingConfig {
      */
     private static final java.lang.String FEDORA_UPDATETRACKER_HIBERNATE_MAPPINGS_FILE
             = "fedora.updatetracker.hibernateMappingsFile";
+    /**
+     * The max number of threads to use when recalculating views.
+     */
+    private static final java.lang.String FEDORA_UPDATETRACKER_VIEWBUNDLE_MAXTHREADS
+            = "fedora.updatetracker.viewbundleMaxThreads";
+
+    /**
+     * The max number of threads to use when recalculating views when a content model have changed
+     */
+    private static final java.lang.String FEDORA_UPDATETRACKER_CMCHANGE_MAXTHREADS
+            = "fedora.updatetracker.contentModelMaxThreads";
+
     private final String fedoraWebUrl;
     private final String fedoraWebUsername;
     private final String fedoraWebPassword;
@@ -80,6 +92,8 @@ public class UpdateTrackingConfig {
     private final File updatetrackerHibernateConfig;
     private final long viewBundleCacheTime;
     private final File updatetrackerHibernateMappings;
+    private Integer viewBundleMaxThreads;
+    private Integer contentModelRecalcMaxThreads;
 
 
     /**
@@ -115,6 +129,8 @@ public class UpdateTrackingConfig {
         this.updatetrackerHibernateMappings = new File(properties
                                                              .getProperty(FEDORA_UPDATETRACKER_HIBERNATE_MAPPINGS_FILE));
         this.viewBundleCacheTime = Long.parseLong(properties.getProperty(FEDORA_UPDATETRACKER_VIEWBUNDLE_CACHETIME,"10000"));
+        this.viewBundleMaxThreads = Integer.parseInt(properties.getProperty(FEDORA_UPDATETRACKER_VIEWBUNDLE_MAXTHREADS));
+        this.contentModelRecalcMaxThreads = Integer.parseInt(properties.getProperty(FEDORA_UPDATETRACKER_CMCHANGE_MAXTHREADS));
     }
 
 
@@ -169,4 +185,13 @@ public class UpdateTrackingConfig {
     public File getUpdatetrackerHibernateMappings() {
         return updatetrackerHibernateMappings;
     }
+
+    public Integer getViewBundleMaxThreads() {
+        return viewBundleMaxThreads;
+    }
+
+    public Integer getContentModelRecalcMaxThreads() {
+        return contentModelRecalcMaxThreads;
+    }
+
 }
