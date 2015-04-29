@@ -51,10 +51,6 @@ public class UpdateTrackingConfig {
      */
     protected static final String FEDORA_UPDATETRACKER_LIMIT = "fedora.updatetracker.limit";
     /**
-     * Address of the file to store progress information, i.e. the worklog latest key
-     */
-    protected static final String FEDORA_UPDATETRACKER_PROGRESS_FILE = "fedora.updatetracker.progressFile";
-    /**
      * The hibernate config file for the update tracker database
      */
     protected static final String FEDORA_UPDATETRACKER_HIBERNATE_CONFIG_FILE

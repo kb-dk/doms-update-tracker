@@ -69,7 +69,7 @@ public class WorkLogPollTask extends TimerTask {
 
 
     private List<WorkLogUnit> getEvents(Long lastRegisteredKey) {
-        List<WorkLogUnit> events = new ArrayList<WorkLogUnit>();
+        List<WorkLogUnit> events = new ArrayList<>();
         try {
             log.debug("Starting query for events since '{}'", lastRegisteredKey);
             events = workLogPollDAO.getFedoraEvents(lastRegisteredKey, limit);
@@ -88,33 +88,44 @@ public class WorkLogPollTask extends TimerTask {
             final String method = event.getMethod();
             log.debug("Registering the event '{}'", event);
 
-            if (method.equals("ingest")) {
+        switch (method) {
+            case "ingest":
                 updateTrackerPersistentStore.objectCreated(pid, date, key);
-            } else if (method.equals("modifyObject")) {
+                break;
+            case "modifyObject":
                 updateTrackerPersistentStore.objectStateChanged(pid, date, param, key);
-            } else if (method.equals("purgeObject")) {
+                break;
+            case "purgeObject":
                 updateTrackerPersistentStore.objectDeleted(pid, date, key);
-            } else if (method.equals("addDatastream") ||
-                       method.equals("modifyDatastreamByReference") ||
-                       method.equals("modifyDatastreamByValue") ||
-                       method.equals("purgeDatastream") ||
-                       method.equals("setDatastreamState") ||
-                       method.equals("setDatastreamVersionable")) {
+                break;
+            case "addDatastream":
+            case "modifyDatastreamByReference":
+            case "modifyDatastreamByValue":
+            case "purgeDatastream":
+            case "setDatastreamState":
+            case "setDatastreamVersionable":
                 updateTrackerPersistentStore.datastreamChanged(pid, date, param, key);
-            } else if (method.equals("addRelationship") || method.equals("purgeRelationship")) {
+                break;
+            case "addRelationship":
+            case "purgeRelationship":
                 updateTrackerPersistentStore.objectRelationsChanged(pid, date, key);
-            } else if (method.equals("getObjectXML") || method.equals("export") ||
-                       method.equals("getDatastream") ||
-                       method.equals("getDatastreams") ||
-                       method.equals("getDatastreamHistory") ||
-                       method.equals("putTempStream") ||
-                       method.equals("getTempStream") ||
-                       method.equals("compareDatastreamChecksum") ||
-                       method.equals("getNextPID") || method.equals("getRelationships") ||
-                       method.equals("validate")) {// Nothing to do
+                break;
+            case "getObjectXML":
+            case "export":
+            case "getDatastream":
+            case "getDatastreams":
+            case "getDatastreamHistory":
+            case "putTempStream":
+            case "getTempStream":
+            case "compareDatastreamChecksum":
+            case "getNextPID":
+            case "getRelationships":
+            case "validate": // Nothing to do
                 log.debug("Got nonchanging event '{}' from worklog", event);
-            } else {
+                break;
+            default:
                 log.warn("Got unknown event '{}' from worklog", event);
-            }
+                break;
+        }
     }
 }

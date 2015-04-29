@@ -110,13 +110,20 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
         final String methodName = method.getName();
 
 
-        if (methodName.equals("getObjectXML") || methodName.equals("export") ||
-            methodName.equals("getDatastream") || methodName.equals("getDatastreams") ||
-            methodName.equals("getDatastreamHistory") || methodName.equals("compareDatastreamChecksum") ||
-            methodName.equals("getNextPID") || methodName.equals("getRelationships") ||
-            methodName.equals("validate") || methodName.equals("getTempStream") || methodName.equals("putTempStream")){
-            //These methods should not be hooked, so go on immediately
-            return method.invoke(target, args);
+        switch (methodName) {
+            case "getObjectXML":
+            case "export":
+            case "getDatastream":
+            case "getDatastreams":
+            case "getDatastreamHistory":
+            case "compareDatastreamChecksum":
+            case "getNextPID":
+            case "getRelationships":
+            case "validate":
+            case "getTempStream":
+            case "putTempStream":
+                //These methods should not be hooked, so go on immediately
+                return method.invoke(target, args);
         }
 
         String pid;
@@ -137,23 +144,29 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
             throw new InvocationTargetException(e, message);
         }
 
-        if (methodName.equals("ingest")) {
-            param = null;
-            pid = invokeIngestHook(method, args, now);
-            replayableLog.info("Method: " + methodName + "(" + pid + ", " + now.getTime() + ", " + param + ")");
-            return pid;
-        } else if (methodName.equals("modifyObject") || methodName.equals("purgeObject") ||
-                   methodName.equals("addDatastream") || methodName.equals("modifyDatastreamByReference") ||
-                   methodName.equals("modifyDatastreamByValue") || methodName.equals("purgeDatastream") ||
-                   methodName.equals("setDatastreamState") || methodName.equals("setDatastreamVersionable") ||
-                   methodName.equals("addRelationship") || methodName.equals("purgeRelationship")) {
-            replayableLog.info("Method: " + methodName + "(" + pid + ", " + now.getTime() + ", " + param + ")");
-            return invokeHook(method, args, methodName, pid, now, param);
-        } else {
-            logger.warn("Unknown method invoked: " + methodName + "(" + pid + ", " + now.getTime() + ", " +
-                        param +
-                        ")");
-            return method.invoke(target, args);
+        switch (methodName) {
+            case "ingest":
+                param = null;
+                pid = invokeIngestHook(method, args, now);
+                replayableLog.info("Method: " + methodName + "(" + pid + ", " + now.getTime() + ", " + param + ")");
+                return pid;
+            case "modifyObject":
+            case "purgeObject":
+            case "addDatastream":
+            case "modifyDatastreamByReference":
+            case "modifyDatastreamByValue":
+            case "purgeDatastream":
+            case "setDatastreamState":
+            case "setDatastreamVersionable":
+            case "addRelationship":
+            case "purgeRelationship":
+                replayableLog.info("Method: " + methodName + "(" + pid + ", " + now.getTime() + ", " + param + ")");
+                return invokeHook(method, args, methodName, pid, now, param);
+            default:
+                logger.warn("Unknown method invoked: " + methodName + "(" + pid + ", " + now.getTime() + ", " +
+                            param +
+                            ")");
+                return method.invoke(target, args);
         }
     }
 
@@ -199,14 +212,14 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
 
         try {
             return method.invoke(target, args);
-        } catch (RuntimeException ie) {
+        } catch (RuntimeException rte) {
             logger.info("Caught exception while invoking method " + methodName + "(" + pid + ", " + now.getTime() +
                         ", " +
                         param +
-                        ")" + " . Now attempting to remove log entry from database", ie);
+                        ")" + " . Now attempting to remove log entry from database", rte);
 
             removeLogEntry(methodName, pid, now, param, logkey);
-            throw ie;
+            throw rte;
         } catch (InvocationTargetException ie) {
             logger.info("Caught exception while invoking method " + methodName + "(" + pid + ", " + now.getTime() +
                         ", " +
