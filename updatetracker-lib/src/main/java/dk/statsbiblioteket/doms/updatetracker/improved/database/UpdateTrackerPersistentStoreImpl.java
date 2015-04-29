@@ -1,6 +1,5 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
-import dk.statsbiblioteket.doms.updatetracker.improved.Utils;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.Record.State;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
@@ -21,6 +20,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -245,7 +245,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         int records = 0;
         for (int futureCount = 0; futureCount < objectsOfThisContentModel.size(); futureCount++) {
             Set<Record> changedRecords;
-            changedRecords = Utils.getCompleted(contentModel, results, progressTracker);
+            changedRecords = getCompleted(contentModel, results, progressTracker);
 
             for (Record changedRecord : changedRecords) { //We log progress on merge back, not on calc of view
                 log.debug("Working on object nr {} out of {} of content model {}",
@@ -436,6 +436,31 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             }
             session.getTransaction().commit();
             return changedRecords;
+        }
+    }
+
+    public static <T> T getCompleted(String contentModel, Set<Future<T>> results,
+                                     ExecutorCompletionService<T> progressTracker) throws
+                                                                                   FedoraFailedException {
+        T changedRecords;
+        try {
+            Future<T> future = progressTracker.take();
+            changedRecords = future.get();
+        } catch (ExecutionException e) {
+            cancelPendingTasks(results);
+            throw new FedoraFailedException("Failed to calculate the changes caused by a change to content model '" +
+                                            contentModel + "'", e);
+        } catch (InterruptedException e) {
+            cancelPendingTasks(results);
+            throw new RuntimeException("Interrupted while waiting for results for recalculation of objects of '" +
+                                       contentModel + "'", e);
+        }
+        return changedRecords;
+    }
+
+    public static <T> void cancelPendingTasks(Set<Future<T>> results) {
+        for (Future<T> result : results) {
+            result.cancel(true);
         }
     }
 }
