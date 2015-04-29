@@ -1,10 +1,10 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
+import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DB;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State;
-import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DB;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.util.Pair;
 import dk.statsbiblioteket.util.caching.TimeSensitiveCache;
 import org.apache.commons.collections4.CollectionUtils;
@@ -46,9 +46,9 @@ public class UpdateTrackerBackend {
      * Modify the persistent storage regarding a change.
      * @param pid     the pid of the object that was changed
      * @param timestamp    the timestamp of the change
-     * @param collection
+     * @param collection the collection of the object
      * @param state   the state of the entries that should be updated
-     * @param db
+     * @param db the database access object
      */
     public void modifyState(String pid, Date timestamp, String collection, State state, DB db) throws
                                                                            UpdateTrackerStorageException,
@@ -137,7 +137,7 @@ public class UpdateTrackerBackend {
     }
 
     private Set<Record> recordWithThisPidAsEntry(final String pid, Collection<Record> records) {
-        final Set<Record> coll = new HashSet<Record>(records);
+        final Set<Record> coll = new HashSet<>(records);
         CollectionUtils.filter(coll, new Predicate<Record>() {
             @Override
             public boolean evaluate(Record object) { return object.getEntryPid().equals(pid); }
@@ -155,8 +155,8 @@ public class UpdateTrackerBackend {
     }
 
     private void reconnectObjectsInRecord(Date timestamp, DB db, Record record) throws FedoraFailedException {
-        Set<String> before = new HashSet<String>(record.getObjects());
-        Set<String> after = new HashSet<String>();
+        Set<String> before = new HashSet<>(record.getObjects());
+        Set<String> after = new HashSet<>();
         ViewBundle bundle = getViewBundle(timestamp, record);
         for (String viewObject : bundle.getContained()) {
             log.debug("Marking object {} as part of record {},{},{}",

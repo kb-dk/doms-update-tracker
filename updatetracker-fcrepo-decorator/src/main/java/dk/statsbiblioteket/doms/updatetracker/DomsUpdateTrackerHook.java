@@ -53,7 +53,7 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
 
 
         String cPoolName = managementModule.getParameter("updateTrackerPoolName");
-        ConnectionPool cPool = null;
+        ConnectionPool cPool;
         try {
             if (cPoolName == null) {
                 logger.debug("connectionPool unspecified; using default from ConnectionPoolManager.");
@@ -173,11 +173,11 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
     /**
      * For ingest, we do not know the pid until after the operation completes
      *
-     * @param method
-     * @param args
-     * @param now
+     * @param method the method to invoke
+     * @param args the args for the method
+     * @param now the timestamp of this operation
      *
-     * @return
+     * @return the result of the ingest operation
      * @throws InvocationTargetException
      * @throws IllegalAccessException
      */
@@ -212,7 +212,7 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
 
         try {
             return method.invoke(target, args);
-        } catch (RuntimeException rte) {
+        } catch (RuntimeException | InvocationTargetException rte) {
             logger.info("Caught exception while invoking method " + methodName + "(" + pid + ", " + now.getTime() +
                         ", " +
                         param +
@@ -220,14 +220,6 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
 
             removeLogEntry(methodName, pid, now, param, logkey);
             throw rte;
-        } catch (InvocationTargetException ie) {
-            logger.info("Caught exception while invoking method " + methodName + "(" + pid + ", " + now.getTime() +
-                        ", " +
-                        param +
-                        ")" + " . Now attempting to remove log entry from database", ie);
-
-            removeLogEntry(methodName, pid, now, param, logkey);
-            throw ie;
         }
     }
 

@@ -5,12 +5,7 @@ import dk.statsbiblioteket.doms.updatetracker.improved.UpdateTrackingSystem;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.FileInputStream;
-import java.util.Date;
-import java.util.List;
 import java.util.Properties;
-
-import static org.junit.Assert.*;
 
 /**
  * This is an forever test, used to see if the worklog can actually be replayed.

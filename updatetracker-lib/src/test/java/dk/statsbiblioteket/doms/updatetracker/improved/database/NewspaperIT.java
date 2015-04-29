@@ -2,8 +2,8 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DBFactory;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,7 +52,7 @@ public class NewspaperIT {
                                                   new DBFactory(configFile, mappings));
 
         //Collections for everybody
-        when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(Utils.asSet(COLLECTION));
+        when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(TestHelpers.asSet(COLLECTION));
 
         //No entry objects or view stuff until initialised
         when(fcmock.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptyList());

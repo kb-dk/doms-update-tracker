@@ -15,4 +15,11 @@ public class FedoraFailedException extends Exception{
     public FedoraFailedException(String message, Throwable cause) {
         super(message, cause);
     }
+
+    public FedoraFailedException(Throwable cause) {
+        super(cause);
+    }
+
+    public FedoraFailedException() {
+    }
 }

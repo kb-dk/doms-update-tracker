@@ -1,9 +1,6 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures;
 
 import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Inheritance;
-import javax.persistence.InheritanceType;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;

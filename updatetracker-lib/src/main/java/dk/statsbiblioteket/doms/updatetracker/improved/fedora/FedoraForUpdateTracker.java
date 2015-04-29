@@ -11,16 +11,14 @@ import dk.statsbiblioteket.doms.central.connectors.fedora.structures.ObjectType;
 import dk.statsbiblioteket.doms.central.connectors.fedora.tripleStore.TripleStoreRest;
 import dk.statsbiblioteket.doms.central.connectors.fedora.views.Views;
 import dk.statsbiblioteket.doms.central.connectors.fedora.views.ViewsImpl;
-import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.ViewBundle;
+import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
 import dk.statsbiblioteket.util.Pair;
 import dk.statsbiblioteket.util.caching.TimeSensitiveCache;
-import org.apache.commons.collections4.Transformer;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.Transformer;
 
 import javax.xml.bind.JAXBException;
-import java.lang.String;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
@@ -79,7 +77,7 @@ public class FedoraForUpdateTracker {
                 entryAngles.addAll(getEntryAnglesForContentModel(contentmodelPid, date));
             }
             return entryAngles;
-        } catch (BackendInvalidCredsException e) {
+        } catch (BackendInvalidCredsException | BackendInvalidResourceException | BackendMethodFailedException | JAXBException e) {
             throw new FedoraFailedException("Failed to get view info from Fedora for pid " + pid, e);
         }
     }
@@ -175,9 +173,9 @@ public class FedoraForUpdateTracker {
 
     /**
      * Check if this object is a content model at the given date
-     * @param pid
-     * @param date
-     * @return
+     * @param pid the pid of the object
+     * @param date check the object as it was as this timestamp
+     * @return true if the object is a content model at the given date
      * @throws FedoraFailedException
      */
     public boolean isCurrentlyContentModel(String pid, Date date) throws FedoraFailedException {

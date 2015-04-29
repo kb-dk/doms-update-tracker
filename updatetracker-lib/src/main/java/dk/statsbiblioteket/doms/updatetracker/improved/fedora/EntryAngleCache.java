@@ -2,7 +2,6 @@ package dk.statsbiblioteket.doms.updatetracker.improved.fedora;
 
 import dk.statsbiblioteket.util.caching.TimeSensitiveCache;
 
-import java.util.Map;
 import java.util.Set;
 
 public class EntryAngleCache {

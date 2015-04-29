@@ -8,4 +8,11 @@ public class UpdateTrackerStorageException extends Exception{
     public UpdateTrackerStorageException(String message, Throwable cause) {
         super(message, cause);
     }
+
+    public UpdateTrackerStorageException(Throwable cause) {
+        super(cause);
+    }
+
+    public UpdateTrackerStorageException() {
+    }
 }

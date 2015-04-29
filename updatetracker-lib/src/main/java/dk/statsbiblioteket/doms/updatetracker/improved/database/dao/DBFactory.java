@@ -2,7 +2,6 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database.dao;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.database.SetLastModifiedInterceptor;
 import org.hibernate.SessionFactory;
-import org.hibernate.StatelessSession;
 import org.hibernate.cfg.Configuration;
 
 import java.io.Closeable;

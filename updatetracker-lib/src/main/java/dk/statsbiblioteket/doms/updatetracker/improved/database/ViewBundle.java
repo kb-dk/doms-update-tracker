@@ -21,7 +21,7 @@ public class ViewBundle {
     public ViewBundle(String entry, String viewAngle) {
         this.entry = entry;
         this.viewAngle = viewAngle;
-        this.contained = new ArrayList<String>();
+        this.contained = new ArrayList<>();
         contained.add(entry);
     }
 

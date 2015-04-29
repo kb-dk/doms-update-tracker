@@ -1,8 +1,8 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.worklog;
 
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerPersistentStore;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.UpdateTrackerStorageException;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

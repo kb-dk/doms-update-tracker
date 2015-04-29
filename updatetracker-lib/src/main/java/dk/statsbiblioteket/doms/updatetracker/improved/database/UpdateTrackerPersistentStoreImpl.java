@@ -157,9 +157,9 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      *                     reconnectObjects(object)
      *                     updateDate(object)
      fi
-     * @param pid
-     * @param timestamp
-     * @param dsid
+     * @param pid the pid of the object
+     * @param timestamp the timestamp of the event
+     * @param dsid the id of the datastream that changed
      * @param key the key from the work log table, that defined this operation.
      * @throws UpdateTrackerStorageException
      * @throws FedoraFailedException
@@ -252,9 +252,9 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      *            modifyState(state)
      *            updateDate()
      *
-     * @param pid
-     * @param timestamp
-     * @param newstate
+     * @param pid the pid of the object
+     * @param timestamp the timestamp of the event
+     * @param newstate the new state of the object
      * @param key the key from the work log table, that defined this operation.
      * @throws UpdateTrackerStorageException
      * @throws FedoraFailedException

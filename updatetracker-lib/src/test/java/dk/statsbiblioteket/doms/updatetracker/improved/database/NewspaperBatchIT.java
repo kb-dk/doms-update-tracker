@@ -3,8 +3,8 @@ package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
 import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DBFactory;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
-import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -71,7 +71,7 @@ public class NewspaperBatchIT {
         final String collection = "doms:Root_Collection";
         String viewAngle = SBOI;
 
-        when(fcmock.getCollections(eq(roundTrip), any(Date.class))).thenReturn(Utils.asSet(collection));
+        when(fcmock.getCollections(eq(roundTrip), any(Date.class))).thenReturn(TestHelpers.asSet(collection));
         when(fcmock.calcViewBundle(eq(roundTrip), eq(viewAngle), any(Date.class))).thenReturn(new ViewBundle(roundTrip,
                                                                                                                     viewAngle));
         when(fcmock.getEntryAngles(eq(roundTrip), any(Date.class))).thenReturn(asList(viewAngle));
@@ -116,7 +116,7 @@ public class NewspaperBatchIT {
         final String collection = "doms:Root_Collection";
         String viewAngle = SBOI;
 
-        when(fcmock.getCollections(eq(roundTrip), any(Date.class))).thenReturn(Utils.asSet(collection));
+        when(fcmock.getCollections(eq(roundTrip), any(Date.class))).thenReturn(TestHelpers.asSet(collection));
         when(fcmock.calcViewBundle(eq(roundTrip), eq(viewAngle), any(Date.class))).thenReturn(new ViewBundle(roundTrip,
                                                                                                                     viewAngle));
         //Not a entry object before this time
@@ -173,7 +173,7 @@ public class NewspaperBatchIT {
         final String collection = "doms:Root_Collection";
 
         //Collections for everybody
-        when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(Utils.asSet(collection));
+        when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(TestHelpers.asSet(collection));
 
         //No entry objects or view stuff until initialised
         when(fcmock.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptyList());
