@@ -1,350 +1,611 @@
 package dk.statsbiblioteket.doms.updatetracker.improved.database;
 
-import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DB;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.dao.DBFactory;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraForUpdateTracker;
-import org.hibernate.Transaction;
+import dk.statsbiblioteket.doms.updatetracker.improved.fedora.FedoraFailedException;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.Predicate;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.InOrder;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.Utils.asSet;
+import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.asSet;
+import static junit.framework.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-/**
- * These tests mock up doms, but use the dockerized postgres to test the update tracker with a real database
- */
 public class UpdateTrackerPersistentStoreIT {
 
-    //TODO make tests that use a mocked UpdateTrackerBackend
-
-    protected static final String COLLECTION = "doms:Root_Collection";
-    UpdateTrackerPersistentStore store;
-    FedoraForUpdateTracker fcmock;
-    private DB dbSession;
-    protected static final String VIEW_ANGLE = "SummaVisible";
+    private final String collection = "doms:Root_Collection";
+    UpdateTrackerPersistentStore db;
+    FedoraForUpdateTracker fedora;
 
     @Before
     public void setUp() throws Exception {
-        fcmock = mock(FedoraForUpdateTracker.class);
+        File configFile = new File(Thread.currentThread()
+                                         .getContextClassLoader()
+                                         .getResource("hibernate.cfg.xml")
+                                         .toURI());
+        File mappings = new File(Thread.currentThread().getContextClassLoader().getResource("updateTrapperMappings.xml")
+                                       .toURI());
+
+
+        fedora = mock(FedoraForUpdateTracker.class);
         //Collections for everybody
-        when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(asSet(COLLECTION));
+        when(fedora.getCollections(anyString(), any(Date.class))).thenReturn(asSet(collection));
         //No entry objects or view stuff until initialised
-        when(fcmock.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptySet());
-        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L);
-
-        DBFactory dbfac = mock(DBFactory.class);
-        dbSession = mock(DB.class);
-        Transaction transaction = mock(Transaction.class);
-        when(dbfac.createDBConnection()).thenReturn(dbSession);
-        when(dbfac.createReadonlyDBConnection()).thenReturn(dbSession);
-        when(dbSession.beginTransaction()).thenReturn(transaction);
-
-        store = new UpdateTrackerPersistentStoreImpl(fcmock, updateTrackerBackend, dbfac);
+        when(fedora.getEntryAngles(anyString(), any(Date.class))).thenReturn(Collections.<String>emptyList());
+        final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fedora, 10000L);
+        db = new UpdateTrackerPersistentStoreImpl(fedora, updateTrackerBackend, new DBFactory(configFile,mappings));
     }
 
 
     @After
     public void tearDown() throws Exception {
-        store.close();
+        db.close();
     }
 
-    /**
-     * Simulates the process when we receive a ingest event from the worklog. As can be seen from the code, we run
-     * modifyState, reconnectObjects and updateDates
-     * @throws Exception
-     */
     @Test
     public void testObjectCreatedBasic() throws Exception {
+        init();
         Date now = new Date();
         final String pid = "doms:test1";
-        Utils.addEntry(pid, fcmock);
-        final int key = 1;
-        final Record newRecord = new Record(pid, VIEW_ANGLE, COLLECTION, null, now, null, null, asSet(pid));
-        when(dbSession.getPersistentRecord(eq(new Record(pid, VIEW_ANGLE, COLLECTION))))
-                .thenReturn(null)
-                .thenReturn(newRecord);
-        store.objectCreated(pid, now, key);
+        addEntry(pid);
+        db.objectCreated(pid, now, 1);
+        List<Record> list = db.lookup(now, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals("To many objects, some should have been deleted", 1, list.size());
 
-        InOrder mocks = inOrder(dbSession, fcmock);
+        list = db.lookup(new Date(), "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals("To many objects, some should have been deleted", 0, list.size());
+    }
 
-        //ObjectCreated
-        mocks.verify(dbSession).beginTransaction();
-        mocks.verify(fcmock).getCollections(pid, now);
-        mocks.verify(fcmock).getState(pid, now);
+    private void init() throws Exception {
+        //tearDown();
+        //setUp();
+    }
 
-        //ModifyState
-        mocks.verify(dbSession).getAllRecordsWithThisEntryPid(pid);
-        mocks.verify(fcmock).getEntryAngles(pid, now);
-        mocks.verify(dbSession).getPersistentRecord(new Record(pid, VIEW_ANGLE, COLLECTION));
-        mocks.verify(dbSession).saveRecord(newRecord);  //Because RecordExists give null in the first call
+    @Test
+    public void testIdempotency() throws Exception {
 
-        //Reconnect Objects
-        mocks.verify(fcmock).getEntryAngles(pid, now);
-        mocks.verify(dbSession).getPersistentRecord(new Record(pid, VIEW_ANGLE, COLLECTION)); //This does not give null, so no saveAndUpdate
-        mocks.verify(dbSession).getRecordsNotInTheseCollectionsAndViewAngles(pid, asSet(VIEW_ANGLE), asSet(COLLECTION));//Will be empty set
-        mocks.verify(dbSession).getRecordsContainingThisPid(pid);  //Should return empty due to not flushed yet
-        mocks.verify(fcmock).calcViewBundle(pid,VIEW_ANGLE,now);
-        //No saveAndUpdate as the contained objects have not changed
+        //This test tries to ingest and publish and delete an object. Then it does it again, with the same timestamps
+        //and the same asserts, to see if the system ends up in the same state
+        init();
+        Date test1Create = new Date(1);
+        addEntry("doms:test1");
+        db.objectCreated("doms:test1", test1Create, 1);
 
-        //Update Dates
-        mocks.verify(dbSession).updateDates(pid,now);
+        List<Record> list;
 
-        //Latest key
-        mocks.verify(dbSession).setLatestKey(key);
+        final Date test1Published = new Date();
+        db.objectStateChanged("doms:test1", test1Published, "A", 1);
 
-        verifyNoMoreInteractions(dbSession,fcmock);
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        assertEquals("Object not Active at the right timestamp",
+                     test1Published.getTime(),
+                     list.get(0).getActive().getTime());
 
+        //After publish, the object still exist as Inactive
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "I", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        //And with the published timestamp, even
+        assertEquals("Object not changed at published timestamp",
+                     test1Published.getTime(),
+                     list.get(0).getInactive().getTime());
+
+        final Date test1Deleted = new Date();
+        db.objectStateChanged("doms:test1", test1Deleted, "D", 1);
+
+        //After delete, the object is no longer published
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", 1, list.size());
+        assertEquals("Object not deleted", list.get(0).getState(), Record.State.DELETED);
+
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        assertEquals("Object not marked as deleted at the right time",
+                     test1Deleted.getTime(),
+                     list.get(0).getDeleted().getTime());
+
+        //This was the first pass, now do it again
+
+        db.objectCreated("doms:test1", test1Create, 1);
+        db.objectStateChanged("doms:test1", test1Published, "A", 1);
+
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        assertEquals("Object not Active at the right timestamp",
+                     test1Published.getTime(),
+                     list.get(0).getActive().getTime());
+
+        //After publish, the object still exist as Inactive
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "I", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        //And with the published timestamp, even
+        assertEquals("Object not changed at published timestamp",
+                     test1Published.getTime(),
+                     list.get(0).getInactive().getTime());
+
+        db.objectStateChanged("doms:test1", test1Deleted, "D", 1);
+
+        //After delete, the object is no longer published
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", 1, list.size());
+        assertEquals("Object not deleted", list.get(0).getState(), Record.State.DELETED);
+
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        assertEquals("Object not marked as deleted at the right time",
+                     test1Deleted.getTime(),
+                     list.get(0).getDeleted().getTime());
+    }
+
+    private void addEntry(String pid, String... contained) throws FedoraFailedException {
+        final String viewAngle = "SummaVisible";
+        when(fedora.getEntryAngles(eq(pid), any(Date.class))).thenReturn(Arrays.asList(viewAngle));
+        List<String> objects = new ArrayList<String>(Arrays.asList(contained));
+        objects.add(pid);
+        when(fedora.calcViewBundle(eq(pid), eq(viewAngle), any(Date.class))).thenReturn(new ViewBundle(pid,
+                                                                                                       viewAngle,
+                                                                                                       objects));
+    }
+
+    private void removeEntry(String pid) throws FedoraFailedException {
+        final String viewAngle = "SummaVisible";
+        when(fedora.getEntryAngles(eq(pid), any(Date.class))).thenThrow(new FedoraFailedException("Object not found"));
+        when(fedora.calcViewBundle(eq(pid), eq(viewAngle), any(Date.class))).thenThrow(
+                                                                                              new FedoraFailedException("Object not found"));
     }
 
 
-    /**
-     * Simulates the process when we receive an object purged or object changed state to deleted from the worklog
-     * @throws Exception
-     */
+    @Test
+    public void testObjectCreatedBeforeAndAfter() throws Exception {
+        init();
+        Date start = new Date();
+        addEntry("doms:test1");
+        db.objectCreated("doms:test1", start, 1);
+        List<Record> list = db.lookup(start, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals("To many objects, some should have been deleted", 1, list.size());
+
+        List<Record> list2 = db.lookup(new Date(list.get(0).getLastModified().getTime() - 1),
+                                       "SummaVisible",
+                                       0,
+                                       100,
+                                       null,
+                                       "doms:Root_Collection");
+        assertEquals("To many objects, some should have been deleted", 1, list2.size());
+
+        List<Record> list3 = db.lookup(new Date(list.get(0).getLastModified().getTime() + 1),
+                                       "SummaVisible",
+                                       0,
+                                       100,
+                                       null,
+                                       "doms:Root_Collection");
+        assertEquals("To many objects, some should have been deleted", 0, list3.size());
+    }
+
+    @Test
+    public void testObjectCreatedMany() throws Exception {
+        init();
+        Date start = new Date();
+        addEntry("doms:test1");
+        db.objectCreated("doms:test1", start, 1);
+
+
+        List<Record> list = db.lookup(start, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals("To many objects, some should have been deleted", 1, list.size());
+
+        Date test3 = new Date();
+        addEntry("doms:test3");
+        db.objectCreated("doms:test3", test3, 1);
+
+        List<Record> list2 = db.lookup(start, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals("To many objects, some should have been deleted", 2, list2.size());
+    }
+
+
     @Test
     public void testObjectDeletedBasic() throws Exception {
-        Date now = new Date();
-        final String pid = "doms:test1";
-        int key = 1;
+        init();
+        Date test1Create = new Date();
+        addEntry("doms:test1");
+        db.objectCreated("doms:test1", test1Create, 1);
 
-        final Record newRecord = new Record(pid, VIEW_ANGLE, COLLECTION, null, now, null, null, asSet(pid));
+        List<Record> list = db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals("To many objects", 1, list.size());
 
-        when(dbSession.getPersistentRecord(eq(new Record(pid, VIEW_ANGLE, COLLECTION))))
-                .thenReturn(newRecord);
-        when(dbSession.getRecordsContainingThisPid(pid)).thenReturn(asSet(newRecord));
-        store.objectDeleted(pid, now, ++key);
+        Date test1Delete = new Date();
+        db.objectDeleted("doms:test1", test1Delete, 1);
 
-        InOrder mocks = inOrder(dbSession, fcmock);
-        //ObjectDeleted
-        mocks.verify(dbSession).beginTransaction();
-        //ModifyStates
-        mocks.verify(dbSession).getRecordsContainingThisPid(pid);
-        mocks.verify(dbSession).saveRecord(newRecord);
-        //UpdateDAtes
-        mocks.verify(dbSession).updateDates(pid, now);
-        //LatestKey
-        mocks.verify(dbSession).setLatestKey(key);
+        list = db.lookup(test1Delete, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals("To many objects", 1, list.size());
 
-        verifyNoMoreInteractions(dbSession, fcmock);
+        list = db.lookup(new Date(list.get(0).getLastModified().getTime() + 1),
+                         "SummaVisible",
+                         0,
+                         100,
+                         null,
+                         "doms:Root_Collection");
+        assertEquals("To many objects", 0, list.size());
     }
 
-    /**
-     * Simulates the process when we receive a object changed state to active from the worklog
-     * @throws Exception
-     */
+    @Test
+    public void testObjectPurgedBasic() throws Exception {
+        init();
+        Date test1Create = new Date();
+        addEntry("doms:test1");
+        db.objectCreated("doms:test1", test1Create, 1);
+
+        List<Record> list = db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals("To many objects", 1, list.size());
+
+        Date test1Delete = new Date();
+        removeEntry("doms:test1");
+        db.objectDeleted("doms:test1", test1Delete, 1);
+
+        list = db.lookup(test1Delete, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals("To many objects", 1, list.size());
+
+        list = db.lookup(new Date(list.get(0).getLastModified().getTime() + 1),
+                         "SummaVisible",
+                         0,
+                         100,
+                         null,
+                         "doms:Root_Collection");
+        assertEquals("To many objects", 0, list.size());
+    }
+
+
+    @Test
+    public void testObjectDeletedMultiple() throws Exception {
+        init();
+        Date test1Create = new Date();
+        addEntry("doms:test1");
+        db.objectCreated("doms:test1", test1Create, 1);
+        assertEquals("To many objects", 1, db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection")
+                                             .size());
+
+        Date test2Create = new Date();
+        addEntry("doms:test2");
+        db.objectCreated("doms:test2", test2Create, 1);
+        assertEquals("To many objects", 2,
+                     db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection").size());
+        assertEquals("To many objects", 1,
+                     db.lookup(test2Create, "SummaVisible", 0, 100, null, "doms:Root_Collection").size());
+
+        Date test1Delete = new Date();
+        db.objectDeleted("doms:test1", test1Delete, 1);
+
+        //Test how many Inactive objects there are
+        final List<Record> inactive = db.lookup(test1Create, "SummaVisible", 0, 100, "I", "doms:Root_Collection");
+        assertEquals("To many objects", 2, inactive.size());
+        assertEquals("doms:test2", inactive.get(0).getEntryPid());
+        assertEquals("doms:test1", inactive.get(1).getEntryPid());
+        assertEquals(Record.State.DELETED, inactive.get(1).getState());
+
+        final List<Record> deleted = db.lookup(test1Delete, "SummaVisible", 0, 100, "D", "doms:Root_Collection");
+        assertEquals("To many objects", 1, deleted.size());
+        assertEquals(test1Delete.getTime(), deleted.get(0).getDeleted().getTime());
+        assertEquals("doms:test1", deleted.get(0).getEntryPid());
+        assertEquals(Record.State.DELETED, deleted.get(0).getState());
+    }
+
+    @Test
+    public void testObjectRessurection() throws Exception {
+        init();
+        Date test1Create = new Date();
+        addEntry("doms:test1");
+        db.objectCreated("doms:test1", test1Create, 1);
+        assertEquals("To many objects", 1, db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection")
+                                             .size());
+
+        Date test1Delete = new Date();
+        db.objectDeleted("doms:test1", test1Delete, 1);
+
+        //Test how many Inactive objects there are
+        final List<Record> inactive = db.lookup(test1Create, "SummaVisible", 0, 100, "I", "doms:Root_Collection");
+        assertEquals("To many objects", 0, filter(inactive).size());
+        final List<Record> deleted = db.lookup(test1Delete, "SummaVisible", 0, 100, "D", "doms:Root_Collection");
+        assertEquals("To many objects", 1, deleted.size());
+        assertEquals(test1Delete.getTime(), deleted.get(0).getDeleted().getTime());
+        assertEquals("doms:test1", deleted.get(0).getEntryPid());
+
+        Date test1CreateAgain = new Date();
+        addEntry("doms:test1");
+        db.objectCreated("doms:test1", test1CreateAgain, 1);
+        assertEquals("To many objects", 1, db.lookup(test1Create, "SummaVisible", 0, 100, null,
+                                                     "doms:Root_Collection").size());
+        assertEquals("To many objects", 1, db.lookup(test1CreateAgain, "SummaVisible", 0, 100, null,
+                                                     "doms:Root_Collection").size());
+        assertEquals("To many objects", 1, db.lookup(test1Create, "SummaVisible", 0, 100, "I",
+                                                     "doms:Root_Collection").size());
+    }
+
+    private Collection<Record> filter(List<Record> inactive) {
+        Collection<Record> result = new ArrayList<>(inactive);
+        CollectionUtils.filter(result, new Predicate<Record>() {
+            @Override
+            public boolean evaluate(Record record) {
+                return record.getState() != Record.State.DELETED;
+            }
+        });
+        return result;
+    }
+
     @Test
     public void testObjectPublished() throws Exception {
-        Date now = new Date();
-        final String pid = "doms:test1";
-        int key = 1;
+        init();
+        Date test1Create = new Date(1);
+        addEntry("doms:test1");
+        db.objectCreated("doms:test1", test1Create, 1);
 
-        final Record keyedRecord = new Record(pid, VIEW_ANGLE, COLLECTION);
-        final Record newRecord = new Record(pid, VIEW_ANGLE, COLLECTION, null, now, null, null, asSet(pid));
-        Utils.addEntry("doms:test1", fcmock);
+        List<Record> list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 0);
 
+        final Date test1Published = new Date();
+        db.objectStateChanged("doms:test1", test1Published, "A", 1);
 
-        when(dbSession.getPersistentRecord(eq(keyedRecord)))
-                .thenReturn(newRecord);
-        when(dbSession.getRecordsContainingThisPid(pid)).thenReturn(asSet(newRecord));
-        store.objectStateChanged("doms:test1", now, "A", 1);
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        assertEquals(test1Published.getTime(), list.get(0).getActive().getTime());
 
-        InOrder mocks = inOrder(dbSession, fcmock);
-        //ObjectStateChanged
-        mocks.verify(dbSession).beginTransaction();
-        mocks.verify(fcmock).getCollections(pid, now);
-
-        //ModifyStates
-        mocks.verify(dbSession).getAllRecordsWithThisEntryPid(pid);
-        mocks.verify(fcmock).getEntryAngles(pid,now);
-        mocks.verify(dbSession).getPersistentRecord(keyedRecord);
-        mocks.verify(dbSession).saveRecord(newRecord);
-        //UpdateDAtes
-        mocks.verify(dbSession).updateDates(pid, now);
-        //LatestKey
-        mocks.verify(dbSession).setLatestKey(key);
-
-        verifyNoMoreInteractions(dbSession, fcmock);
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "I", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        assertEquals(test1Published.getTime(), list.get(0).getInactive().getTime());
     }
 
-    /**
-     * Simulates the process when an object's relations change, but this does not change the view bundle, ie. when
-     * a non-view relation change
-     * @throws Exception
-     */
+
     @Test
-    public void testObjectRelationsChangedSameBundle() throws Exception {
-        final String pid = "doms:test1";
-        final int key = 1;
+    public void testObjectPublishedAndUnpublished() throws Exception {
+        init();
+        Date test1Create = new Date(1);
+        addEntry("doms:test1");
+        db.objectCreated("doms:test1", test1Create, 1);
 
-        final String child = "doms:test2";
-        Utils.addEntry(pid, fcmock, child);
-        Date now = new Date();
-        final Record keyedRecord = new Record(pid, VIEW_ANGLE, COLLECTION);
-        final Record newRecord = new Record(pid, VIEW_ANGLE, COLLECTION, null, now, null, null, asSet(pid, child));
-        when(dbSession.getPersistentRecord(eq(keyedRecord)))
-                .thenReturn(newRecord);
-        when(dbSession.getRecordsContainingThisPid(pid)).thenReturn(asSet(newRecord));
+        List<Record> list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 0);
 
-        store.objectRelationsChanged(pid, now, key);
+        final Date test1Published = new Date();
+        db.objectStateChanged("doms:test1", test1Published, "A", 1);
 
-        InOrder mocks = inOrder(dbSession, fcmock);
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        assertEquals(test1Published.getTime(), list.get(0).getActive().getTime());
 
-        mocks.verify(dbSession).beginTransaction();
+        //After publish, the object still exist as Inactive
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "I", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        //And with the published timestamp, even
+        assertEquals(test1Published.getTime(), list.get(0).getInactive().getTime());
 
-        mocks.verify(fcmock).isCurrentlyContentModel(pid, now);
-        mocks.verify(fcmock).getCollections(pid, now);
-        mocks.verify(fcmock).getState(pid,now);
+        final Date test1Unpublished = new Date();
+        db.objectStateChanged("doms:test1", test1Unpublished, "I", 1);
 
-        mocks.verify(fcmock).getEntryAngles(pid, now);
-        mocks.verify(dbSession).getPersistentRecord(keyedRecord);
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        assertEquals(test1Published.getTime(), list.get(0).getActive().getTime());
 
-        mocks.verify(dbSession).getRecordsNotInTheseCollectionsAndViewAngles(pid, asSet(VIEW_ANGLE), asSet(COLLECTION));
-        mocks.verify(dbSession).getRecordsContainingThisPid(pid);
-
-        mocks.verify(fcmock).calcViewBundle(pid, VIEW_ANGLE, now);
-
-        //UpdateDAtes
-        mocks.verify(dbSession).updateDates(pid, now);
-        //LatestKey
-        mocks.verify(dbSession).setLatestKey(key);
-
-        verifyNoMoreInteractions(dbSession, fcmock);
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "I", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        assertEquals(test1Unpublished.getTime(), list.get(0).getInactive().getTime());
     }
 
 
-    /**
-     * Simulates the process when an object's relations change, so that an additional object becomes part of the view bundle
-     * @throws Exception
-     */
     @Test
-    public void testObjectRelationsChangedChangedBundle() throws Exception {
-        final String pid = "doms:test1";
-        final String child = "doms:test2";
-        final int key = 1;
+    public void testObjectPublishedAndDeleted() throws Exception {
+        init();
+        Date test1Create = new Date(1);
+        addEntry("doms:test1");
+        db.objectCreated("doms:test1", test1Create, 1);
 
-        Utils.addEntry(pid, fcmock, child);
+        List<Record> list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 0);
 
-        Date now = new Date();
-        final Record recordToLookup = new Record(pid, VIEW_ANGLE, COLLECTION);
+        final Date test1Published = new Date();
+        db.objectStateChanged("doms:test1", test1Published, "A", 1);
 
-        final Record recordBefore = new Record(pid, VIEW_ANGLE, COLLECTION, null, new Date(1), null, null, asSet(pid));
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        assertEquals(test1Published.getTime(), list.get(0).getActive().getTime());
 
-        final Record recordToSave = new Record(pid, VIEW_ANGLE, COLLECTION, null, now, null, null, asSet(pid,
-                                                                                                         child));
+        //After publish, the object still exist as Inactive
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "I", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        //And with the published timestamp, even
+        assertEquals(test1Published.getTime(), list.get(0).getInactive().getTime());
 
-        when(dbSession.getPersistentRecord(eq(recordToLookup)))
-                .thenReturn(recordBefore);
-        when(dbSession.getRecordsContainingThisPid(pid)).thenReturn(asSet(recordBefore));
+        final Date test1Deleted = new Date();
+        db.objectStateChanged("doms:test1", test1Deleted, "D", 1);
 
+        //After delete, the object is no longer published
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
+        assertEquals("Wrong number of objects", 1, list.size());
+        assertEquals(list.get(0).getState(), Record.State.DELETED);
 
-        store.objectRelationsChanged(pid, now, key);
-
-        InOrder mocks = inOrder(dbSession, fcmock);
-
-
-        mocks.verify(dbSession).beginTransaction();
-
-        //Datastream RELSEXT changed
-        mocks.verify(fcmock).isCurrentlyContentModel(pid, now);
-        mocks.verify(fcmock).getCollections(pid, now);
-        mocks.verify(fcmock).getState(pid,now);
-
-        //backend.reconnectObjects
-        mocks.verify(fcmock).getEntryAngles(pid, now);
-        mocks.verify(dbSession).getPersistentRecord(recordToLookup); //This returns true, so no save yet
-
-        //Check for any old records which should be unlinked. There are none
-        mocks.verify(dbSession).getRecordsNotInTheseCollectionsAndViewAngles(pid, asSet(VIEW_ANGLE), asSet(COLLECTION));
-        //Find all the records affected by this change
-        mocks.verify(dbSession).getRecordsContainingThisPid(pid);
-        //Calc the new viewbundle for each of these
-        mocks.verify(fcmock).calcViewBundle(pid, VIEW_ANGLE, now);
-        //Save the change
-        mocks.verify(dbSession).saveRecord(recordToSave);
-
-
-        //UpdateDAtes
-        mocks.verify(dbSession).updateDates(pid, now);
-        //LatestKey
-        mocks.verify(dbSession).setLatestKey(key);
-
-        verifyNoMoreInteractions(dbSession, fcmock);
+        list = db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals("Wrong number of objects", list.size(), 1);
+        assertEquals(test1Deleted.getTime(), list.get(0).getDeleted().getTime());
     }
 
 
-    /**
-     * Simulates the process when an object's relation change (the child object). The child object is not an entry object
-     * The change connects it to another object, which have this relation as an inverse view relation.
-     * While this does put the child in a record, this is not reflected in the database, as we do not check what the
-     * relation points to.
-     * @throws Exception
-     */
     @Test
-    public void testObjectRelationsChangedChildChanged() throws Exception {
-        final String pid = "doms:test1";
-        final String child = "doms:test2";
-        final int key = 1;
+    public void testObjectRelationsChangedBasic() throws Exception {
+        init();
+        Date frozen = new Date(1);
+        addEntry("doms:test1");
+        db.objectCreated("doms:test1", frozen, 1);
+        db.objectCreated("doms:test2", frozen, 1);
+        addEntry("doms:test1", "doms:test2");
 
-        Utils.addEntry(pid, fcmock, child);
+        List<Record> list = db.lookup(frozen, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals(1, list.size());
+        assertEquals(list.get(0).getInactive().getTime(), frozen.getTime());
 
-        Date now = new Date();
-        final Record recordToLookup = new Record(child, VIEW_ANGLE, COLLECTION);
+        Date flow = new Date();
+        db.objectRelationsChanged("doms:test1", flow, 1);
 
-        final Record recordBefore = new Record(pid, VIEW_ANGLE, COLLECTION, null, new Date(1), null, null, asSet(pid));
+        list = db.lookup(frozen, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals(1, list.size());
+        assertEquals(flow.getTime(), list.get(0).getInactive().getTime());
 
+        Thread.sleep(1000);
+        Date flow2 = new Date();
 
-        when(dbSession.getPersistentRecord(eq(recordToLookup)))
-                .thenReturn(recordBefore);
-        when(dbSession.getRecordsContainingThisPid(pid)).thenReturn(asSet(recordBefore));
-        when(dbSession.getRecordsContainingThisPid(child)).thenReturn(asSet(Record.class));
+        db.datastreamChanged("doms:test2", flow2, "Something", 1);
 
-        store.objectRelationsChanged(child, now, key);
+        list = db.lookup(frozen, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals(1, list.size());
+        assertEquals(flow2.getTime(), list.get(0).getInactive().getTime());
 
-        InOrder mocks = inOrder(dbSession, fcmock);
+        Date flow3 = new Date();
 
-        mocks.verify(dbSession).beginTransaction();
-
-        //Datastream RELSEXT changed
-        mocks.verify(fcmock).isCurrentlyContentModel(child, now);
-        mocks.verify(fcmock).getCollections(child, now);
-        mocks.verify(fcmock).getState(child, now);
-
-
-        //backend.reconnectObjects
-        mocks.verify(fcmock).getEntryAngles(child, now);
-
-        //Check for any old records which should be unlinked. There are none
-        mocks.verify(dbSession).getRecordsNotInTheseCollectionsAndViewAngles(child, asSet(String.class), asSet(COLLECTION));
-        //Find all the records affected by this change
-        mocks.verify(dbSession).getRecordsContainingThisPid(child);
-
-        //UpdateDAtes
-        mocks.verify(dbSession).updateDates(child, now);
-        //LatestKey
-        mocks.verify(dbSession).setLatestKey(key);
-
-        verifyNoMoreInteractions(dbSession, fcmock);
+        db.objectStateChanged("doms:test1", flow3, "A", 1);
+        list = db.lookup(frozen, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals(1, list.size());
+        assertEquals(list.get(0).getInactive().getTime(), flow3.getTime());
+        assertEquals(list.get(0).getActive().getTime(), flow3.getTime());
     }
 
+
+    @Test
+    public void testObjectRelationsChangedDeep() throws Exception {
+        init();
+        Date ingest1 = new Date(1);
+        Date ingest2 = new Date(10);
+        Date ingest3 = new Date(20);
+        db.objectCreated("doms:test1", ingest1, 1);
+        db.objectCreated("doms:test2", ingest2, 1);
+        db.objectCreated("doms:test3", ingest3, 1);
+        addEntry("doms:test1", "doms:test2", "doms:test3");
+
+        //The entry was added after ingest, so the objects should not be in the index
+        List<Record> list = db.lookup(ingest1, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals(0, list.size());
+
+        Date test1RelChange = new Date();
+        db.objectRelationsChanged("doms:test1", test1RelChange, 1);
+
+        list = db.lookup(ingest1, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals(1, list.size());
+        assertEquals(test1RelChange.getTime(), list.get(0).getInactive().getTime());
+
+        Date test3RelChange = new Date();
+
+        db.datastreamChanged("doms:test3", test3RelChange, "DSID", 1);
+
+        list = db.lookup(ingest1, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals(1, list.size());
+        assertEquals(test3RelChange.getTime(), list.get(0).getInactive().getTime());
+    }
+
+    @Test
+    public void testObjectRelationsChangedPublished() throws Exception {
+        init();
+        Date ingest1 = new Date(1);
+        Date ingest2 = new Date(10);
+        Date ingest3 = new Date(20);
+        db.objectCreated("doms:test1", ingest1, 1);
+        db.objectCreated("doms:test2", ingest2, 1);
+        db.objectCreated("doms:test3", ingest3, 1);
+        addEntry("doms:test1", "doms:test2", "doms:test3");
+
+        //The entry was added after ingest, so the objects should not be in the index
+        List<Record> list = db.lookup(ingest1, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals(0, list.size());
+
+        Date test1RelChange = new Date();
+        db.objectRelationsChanged("doms:test1", test1RelChange, 1);
+
+        list = db.lookup(ingest1, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals(1, list.size());
+        assertEquals(test1RelChange.getTime(), list.get(0).getInactive().getTime());
+
+        Date test1Publish = new Date();
+        db.objectStateChanged("doms:test1", test1Publish, "A", 1);
+        list = db.lookup(ingest1, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
+        assertEquals(1, list.size());
+        assertEquals(test1Publish.getTime(), list.get(0).getActive().getTime());
+
+        Date test2Publish = new Date();
+        db.objectStateChanged("doms:test2", test2Publish, "A", 1);
+        list = db.lookup(ingest1, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
+        assertEquals(1, list.size());
+        assertEquals(test2Publish.getTime(), list.get(0).getActive().getTime());
+
+        //As long as the entry is published, the state of the minors do not matter
+        Date test2unPublish = new Date();
+        db.objectStateChanged("doms:test2", test2unPublish, "I", 1);
+        list = db.lookup(ingest1, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
+        assertEquals(1, list.size());
+        assertEquals(test2unPublish.getTime(), list.get(0).getInactive().getTime());
+
+        Date test1unPublish = new Date();
+        db.objectStateChanged("doms:test1", test1unPublish, "I", 1);
+        list = db.lookup(ingest1, "SummaVisible", 0, 100, "A", "doms:Root_Collection");
+        assertEquals(1, list.size());
+        assertEquals(test1unPublish.getTime(), list.get(0).getInactive().getTime());
+        assertEquals(test2unPublish.getTime(), list.get(0).getActive().getTime());
+        list = db.lookup(ingest1, "SummaVisible", 0, 100, "I", "doms:Root_Collection");
+        assertEquals(1, list.size());
+        assertEquals(test1unPublish.getTime(), list.get(0).getInactive().getTime());
+    }
+
+
+    @Test
+    public void testObjectRelationsChangedDeepMultiple() throws Exception {
+        init();
+        Date ingest1 = new Date(1);
+        Date ingest2 = new Date(10);
+        Date ingest3 = new Date(20);
+        db.objectCreated("doms:test1", ingest1, 1);
+        db.objectCreated("doms:test2", ingest2, 1);
+        db.objectCreated("doms:test3", ingest3, 1);
+        addEntry("doms:test4", "doms:test5", "doms:test6");
+        db.objectCreated("doms:test4", ingest1, 1);
+        db.objectCreated("doms:test5", ingest2, 1);
+        db.objectCreated("doms:test6", ingest3, 1);
+
+        addEntry("doms:test1", "doms:test2", "doms:test3");
+
+
+        //The entry was added after ingest, so the objects should not be in the index
+        List<Record> list = db.lookup(ingest1, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals(1, list.size());
+
+        Date test1RelChange = new Date();
+        db.objectRelationsChanged("doms:test1", test1RelChange, 1);
+
+        list = db.lookup(ingest1, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals(2, list.size());
+        assertEquals(test1RelChange.getTime(), list.get(1).getInactive().getTime());
+
+        Date test3DatastreamChange = new Date();
+
+        db.datastreamChanged("doms:test3", test3DatastreamChange, "DSID", 1);
+
+        list = db.lookup(ingest1, "SummaVisible", 0, 100, null, "doms:Root_Collection");
+        assertEquals(2, list.size());
+        assertEquals(test3DatastreamChange.getTime(), list.get(1).getInactive().getTime());
+    }
 
     @Test
     public void testLatestKeyInserted() throws Exception {
-        long latestKey = store.getLatestKey();
+        init();
+        long latestKey = db.getLatestKey();
         long newLatestKey = latestKey + 42;
-        store.objectCreated("doms:test1", new Date(0L), newLatestKey);
-        verify(dbSession).setLatestKey(newLatestKey);
+        db.objectCreated("doms:test1", new Date(0L), newLatestKey);
+        assertEquals("Should have updated the latest key", newLatestKey, db.getLatestKey());
     }
 }
