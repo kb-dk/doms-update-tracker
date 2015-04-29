@@ -5,7 +5,6 @@ import dk.statsbiblioteket.doms.central.connectors.BackendInvalidResourceExcepti
 import dk.statsbiblioteket.doms.central.connectors.BackendMethodFailedException;
 import dk.statsbiblioteket.doms.central.connectors.Connector;
 import dk.statsbiblioteket.doms.central.connectors.fedora.Fedora;
-import dk.statsbiblioteket.doms.central.connectors.fedora.FedoraRest;
 import dk.statsbiblioteket.doms.central.connectors.fedora.structures.FedoraRelation;
 import dk.statsbiblioteket.doms.central.connectors.fedora.structures.ObjectProfile;
 import dk.statsbiblioteket.doms.central.connectors.fedora.structures.ObjectType;
@@ -16,11 +15,10 @@ import dk.statsbiblioteket.doms.updatetracker.improved.database.Record;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.ViewBundle;
 import dk.statsbiblioteket.util.Pair;
 import dk.statsbiblioteket.util.caching.TimeSensitiveCache;
-import org.apache.commons.collections4.Transformer;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.Transformer;
 
 import javax.xml.bind.JAXBException;
-import java.lang.String;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
@@ -43,7 +41,7 @@ public class FedoraForUpdateTracker {
     private final Views views;
     private final TripleStoreRest tripleStoreRest;
     private final Fedora fedoraRest;
-    private final EntryAngleCache cmCache;
+    private final EntryAngleCache entryAngleCache;
 
 
     private static final int ONE_MINUTE_IN_MILLISECONDS = 60 * 1000;
@@ -59,10 +57,10 @@ public class FedoraForUpdateTracker {
 
 
 
-    public FedoraForUpdateTracker(EntryAngleCache cmCache, Fedora fedoraRest, TripleStoreRest tripleStoreRest,
+    public FedoraForUpdateTracker(EntryAngleCache entryAngleCache, Fedora fedoraRest, TripleStoreRest tripleStoreRest,
                                   ViewsImpl views) {
 
-        this.cmCache = cmCache;
+        this.entryAngleCache = entryAngleCache;
         this.fedoraRest = fedoraRest;
         this.tripleStoreRest = tripleStoreRest;
         this.views = views;
@@ -72,9 +70,9 @@ public class FedoraForUpdateTracker {
         try {
             Set<String> entryAngles = new HashSet<>();
             ObjectProfile profile = getObjectProfile(pid, date);
-            synchronized (cmCache) {
+            synchronized (entryAngleCache) {
                 if (profile.getType() == ObjectType.CONTENT_MODEL){
-                    cmCache.setEntryViewAngles(pid, getEntryAnglesForContentModel(pid, date) );
+                    entryAngleCache.setEntryViewAngles(pid, getEntryAnglesForContentModel(pid, date));
                 }
                 for (String contentmodelPid : profile.getContentModels()) {
                     entryAngles.addAll(getEntryAnglesForContentModel(contentmodelPid, date));
@@ -91,7 +89,7 @@ public class FedoraForUpdateTracker {
                                                            BackendInvalidCredsException,
                                                            BackendInvalidResourceException,
                                                            JAXBException {
-        Set<String> entryAngles = cmCache.getCachedEntryAngles(contentmodel);
+        Set<String> entryAngles = entryAngleCache.getCachedEntryAngles(contentmodel);
         if (entryAngles == null) {
             try {
                 List<FedoraRelation> entryRelations = fedoraRest.getNamedRelations(contentmodel, ENTRY_RELATION, date.getTime());
@@ -101,7 +99,7 @@ public class FedoraForUpdateTracker {
             } catch (BackendInvalidResourceException e) {
                 entryAngles = new HashSet<>();
             }
-            cmCache.setEntryViewAngles(contentmodel,entryAngles);
+            entryAngleCache.setEntryViewAngles(contentmodel, entryAngles);
         }
         return entryAngles;
    }
@@ -183,7 +181,7 @@ public class FedoraForUpdateTracker {
      * @throws FedoraFailedException
      */
     public boolean isCurrentlyContentModel(String pid, Date date) throws FedoraFailedException {
-        if (cmCache.isCachedContentModel(pid)){
+        if (entryAngleCache.isCachedContentModel(pid)){
             return true;
         }
         try {
@@ -208,7 +206,7 @@ public class FedoraForUpdateTracker {
     }
 
     public void invalidateContentModel(String pid) {
-        cmCache.invalidateContentModel(pid);
+        entryAngleCache.invalidateContentModel(pid);
     }
 
     public Record.State getState(String pid, Date date) throws FedoraFailedException {
