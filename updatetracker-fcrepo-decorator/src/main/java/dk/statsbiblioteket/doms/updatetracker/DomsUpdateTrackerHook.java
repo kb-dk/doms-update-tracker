@@ -211,14 +211,14 @@ public class DomsUpdateTrackerHook extends AbstractInvocationHandler implements 
 
         try {
             return method.invoke(target, args);
-        } catch (RuntimeException | InvocationTargetException rte) {
+        } catch (RuntimeException | InvocationTargetException e) {
             logger.info("Caught exception while invoking method " + methodName + "(" + pid + ", " + now.getTime() +
                         ", " +
                         param +
-                        ")" + " . Now attempting to remove log entry from database", rte);
+                        ")" + " . Now attempting to remove log entry from database", e);
 
             removeLogEntry(methodName, pid, now, param, logkey);
-            throw rte;
+            throw e;
         }
     }
 
