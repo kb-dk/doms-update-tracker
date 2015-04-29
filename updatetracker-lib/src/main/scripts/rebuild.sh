@@ -55,27 +55,27 @@ addMembershipsForAllRecords
 
 ## SummaVisible newspaper memberships
 
-addMembershipsForInverseRelations "http://doms.statsbiblioteket.dk/relations/default/0/1/#hasEditionPage" "doms:Newspaper_Collection" "SummaVisible"
-addLinkedListRelationsFromInverseForwardCombinedRelations "http://www.loc.gov/mods/rdf/v1#relatedSucceeding" "http://doms.statsbiblioteket.dk/relations/default/0/1/#hasEditionPage" "http://doms.statsbiblioteket.dk/relations/default/0/1/#isPartOfNewspaper" "SummaVisible" "doms:Newspaper_Collection"
+addMembershipsForInverseRelation "http://doms.statsbiblioteket.dk/relations/default/0/1/#hasEditionPage" "doms:Newspaper_Collection" "SummaVisible" "doms:ContentModel_EditionPage"
+addLinkedListRelationsFromInverseForwardCombinedRelations "http://www.loc.gov/mods/rdf/v1#relatedSucceeding" "doms:ContentModel_Newspaper" "http://doms.statsbiblioteket.dk/relations/default/0/1/#hasEditionPage" "http://doms.statsbiblioteket.dk/relations/default/0/1/#isPartOfNewspaper" "SummaVisible" "doms:Newspaper_Collection" "doms:ContentModel_EditionPage"
 
 ## SummaAuthority newspaper memberships
 
-addLinkedListRelations "http://www.loc.gov/mods/rdf/v1#relatedSucceeding" "SummaAuthority" "doms:Newspaper_Collection"
+addLinkedListRelations "http://www.loc.gov/mods/rdf/v1#relatedSucceeding" "doms:ContentModel_Newspaper" "SummaAuthority" "doms:Newspaper_Collection"
 
 ## SBOI memberships
 
-addMembershipsForInverseRelationsAndContentModel "info:fedora/fedora-system:def/relations-external#hasPart" "doms:Newspaper_Collection" "SBOI" "doms:ContentModel_RoundTrip"
+addMembershipsForInverseRelation "info:fedora/fedora-system:def/relations-external#hasPart" "doms:Newspaper_Collection" "SBOI" "doms:ContentModel_RoundTrip"
 
 ## GUI memberships for newspapers
 
-addMembershipsForRelations "http://doms.statsbiblioteket.dk/relations/default/0/1/#hasEditionPage" "doms:Newspaper_Collection" "GUI"
-addMembershipsForRelations "http://doms.statsbiblioteket.dk/relations/default/0/1/#hasBrik" "doms:Newspaper_Collection" "GUI"
-addMembershipsForCombinedRelations "http://doms.statsbiblioteket.dk/relations/default/0/1/#hasEditionPage" "http://doms.statsbiblioteket.dk/relations/default/0/1/#hasFile" "doms:Newspaper_Collection" "GUI"
-addMembershipsForCombinedRelations "http://doms.statsbiblioteket.dk/relations/default/0/1/#hasBrik" "http://doms.statsbiblioteket.dk/relations/default/0/1/#hasFile" "doms:Newspaper_Collection" "GUI"
+addMembershipsForRelation "http://doms.statsbiblioteket.dk/relations/default/0/1/#hasEditionPage" "doms:Newspaper_Collection" "GUI" "doms:ContentModel_Edition"
+addMembershipsForRelation "http://doms.statsbiblioteket.dk/relations/default/0/1/#hasBrik" "doms:Newspaper_Collection" "GUI" "doms:ContentModel_Edition"
+addMembershipsForCombinedRelations "http://doms.statsbiblioteket.dk/relations/default/0/1/#hasEditionPage" "http://doms.statsbiblioteket.dk/relations/default/0/1/#hasFile" "doms:Newspaper_Collection" "GUI"  "doms:ContentModel_Edition"
+addMembershipsForCombinedRelations "http://doms.statsbiblioteket.dk/relations/default/0/1/#hasBrik" "http://doms.statsbiblioteket.dk/relations/default/0/1/#hasFile" "doms:Newspaper_Collection" "GUI"  "doms:ContentModel_Edition"
 
 ## GUI memberships for radiotv
 
-addMembershipsForRelationsAndContentModel "http://doms.statsbiblioteket.dk/relations/default/0/1/#hasFile" "doms:RadioTV_Collection" "GUI" "doms:ContentModel_Program"
-addMembershipsForRelationsAndContentModel "http://doms.statsbiblioteket.dk/relations/default/0/1/#hasFile" "doms:Collection_Reklamefilm" "GUI" "doms:ContentModel_Reklamefilm"
+addMembershipsForRelation "http://doms.statsbiblioteket.dk/relations/default/0/1/#hasFile" "doms:RadioTV_Collection" "GUI" "doms:ContentModel_Program"
+addMembershipsForRelation "http://doms.statsbiblioteket.dk/relations/default/0/1/#hasFile" "doms:Collection_Reklamefilm" "GUI" "doms:ContentModel_Reklamefilm"
 
 echo $(date) "Done"
