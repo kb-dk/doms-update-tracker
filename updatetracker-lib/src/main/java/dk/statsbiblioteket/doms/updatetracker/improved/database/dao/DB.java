@@ -180,7 +180,7 @@ public class DB implements Closeable{
         query.setTimestamp("since", since)
              .setString("collection", collection)
              .setString("viewAngle", viewAngle)
-             .setLong("limit", limit);
+             .setLong("maxResults", limit);
 
         return listRecords(query);
     }
