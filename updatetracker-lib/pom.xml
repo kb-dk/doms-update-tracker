@@ -81,6 +81,9 @@
                             <goal>integration-test</goal>
                             <goal>verify</goal>
                         </goals>
+                        <configuration>
+                            <forkMode>never</forkMode>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -199,6 +202,15 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
         </dependency>
+        <dependency>
+            <groupId>javax.mail</groupId>
+            <artifactId>mail</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>javax.activation</groupId>
+            <artifactId>activation</artifactId>
+        </dependency>
+
 
         <dependency>
             <groupId>org.postgresql</groupId>
