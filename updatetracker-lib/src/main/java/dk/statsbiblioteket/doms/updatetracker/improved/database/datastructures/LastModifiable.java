@@ -20,10 +20,10 @@ public abstract class LastModifiable {
         this.lastModified = lastModified;
     }
 
-    private Date lastModified;
-
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "LASTMODIFIED", columnDefinition = "timestamp with time zone", nullable = true)
+    protected Date lastModified;
+
     public Date getLastModified() {
         return lastModified;
     }
