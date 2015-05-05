@@ -192,9 +192,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         try {
             if (dsid != null) {
                 if ((dsid.equals("VIEW") || dsid.equals("RELS-EXT"))) {
-                    if (fedora.isCurrentlyContentModel(pid, timestamp)) {
-                        contentModelChanged(pid, timestamp, db);
-                    } else if (dsid.equals("RELS-EXT")) {
+                    if (dsid.equals("RELS-EXT")) {
                         Set<String> collections = fedora.getCollections(pid, timestamp);
                         State state = fedora.getState(pid, timestamp);
                         Set<Record> changedRecords = backend.recalculateRecordsBasedOnThisPid(pid,

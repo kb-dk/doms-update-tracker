@@ -208,7 +208,7 @@ public class UpdateTrackerPersistentStoreTest {
 
         mocks.verify(dbSession).beginTransaction();
 
-        mocks.verify(fcmock).isCurrentlyContentModel(pid, now);
+//        mocks.verify(fcmock).isCurrentlyContentModel(pid, now);
         mocks.verify(fcmock).getCollections(pid, now);
         mocks.verify(fcmock).getState(pid,now);
 
@@ -265,7 +265,7 @@ public class UpdateTrackerPersistentStoreTest {
         mocks.verify(dbSession).beginTransaction();
 
         //Datastream RELSEXT changed
-        mocks.verify(fcmock).isCurrentlyContentModel(pid, now);
+//        mocks.verify(fcmock).isCurrentlyContentModel(pid, now);
         mocks.verify(fcmock).getCollections(pid, now);
         mocks.verify(fcmock).getState(pid,now);
 
@@ -327,7 +327,7 @@ public class UpdateTrackerPersistentStoreTest {
         mocks.verify(dbSession).beginTransaction();
 
         //Datastream RELSEXT changed
-        mocks.verify(fcmock).isCurrentlyContentModel(child, now);
+//        mocks.verify(fcmock).isCurrentlyContentModel(child, now);
         mocks.verify(fcmock).getCollections(child, now);
         mocks.verify(fcmock).getState(child, now);
 

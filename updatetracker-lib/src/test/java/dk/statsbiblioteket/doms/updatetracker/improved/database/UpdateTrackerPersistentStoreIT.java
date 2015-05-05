@@ -9,6 +9,7 @@ import org.apache.commons.collections4.Predicate;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -61,6 +62,7 @@ public class UpdateTrackerPersistentStoreIT {
     }
 
     @Test
+    @Ignore("We do no longer update content models through the update tracker")
     public void testContentModelRebuild() throws Exception {
         Date start = new Date();
         addEntry("doms:test1");
