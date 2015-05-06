@@ -13,6 +13,10 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -184,16 +188,15 @@ public class UpdateTrackerPersistentStoreIT {
         when(fedora.getEntryAngles(eq(pid), any(Date.class))).thenReturn(Arrays.asList(viewAngle));
         List<String> objects = new ArrayList<String>(Arrays.asList(contained));
         objects.add(pid);
-        when(fedora.calcViewBundle(eq(pid), eq(viewAngle), any(Date.class))).thenReturn(new ViewBundle(pid,
-                                                                                                       viewAngle,
-                                                                                                       objects));
+        when(fedora.calcViewBundle(eq(pid), eq(viewAngle), any(Date.class))).thenReturn(
+                new ViewBundle(pid, viewAngle, objects));
     }
 
     private void removeEntry(String pid) throws FedoraFailedException {
         final String viewAngle = "SummaVisible";
         when(fedora.getEntryAngles(eq(pid), any(Date.class))).thenThrow(new FedoraFailedException("Object not found"));
         when(fedora.calcViewBundle(eq(pid), eq(viewAngle), any(Date.class))).thenThrow(
-                                                                                              new FedoraFailedException("Object not found"));
+                new FedoraFailedException("Object not found"));
     }
 
 
@@ -301,8 +304,8 @@ public class UpdateTrackerPersistentStoreIT {
         Date test1Create = new Date();
         addEntry("doms:test1");
         db.objectCreated("doms:test1", test1Create, 1);
-        assertEquals("To many objects", 1, db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection")
-                                             .size());
+        assertEquals("To many objects", 1,
+                     db.lookup(test1Create, "SummaVisible", 0, 100, null, "doms:Root_Collection").size());
 
         Date test2Create = new Date();
         addEntry("doms:test2");
@@ -634,5 +637,73 @@ public class UpdateTrackerPersistentStoreIT {
         long newLatestKey = latestKey + 42;
         db.objectCreated("doms:test1", new Date(0L), newLatestKey);
         assertEquals("Should have updated the latest key", newLatestKey, db.getLatestKey());
+    }
+
+    @Test
+    public void testDaylightSaving() throws Exception {
+        init();
+        //Forcibly create an entries in the database that happen before daylight savings hour,
+        //during daylight savings hour and after daylight savings hour.
+        Connection connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/docker?user=docker&password=docker");
+        connection.setAutoCommit(false);
+        PreparedStatement preparedStatement1 = connection.prepareStatement(
+                "INSERT INTO RECORDS (viewangle, entrypid, collection, lastmodified, active, deleted, inactive) VALUES(?, ?, ?, ?, ?, ?, ?)");
+        PreparedStatement preparedStatement2 = connection.prepareStatement(
+                "INSERT INTO MEMBERSHIPS (viewangle, entrypid, collection, objectpid) VALUES(?, ?, ?, ?)");
+        preparedStatement1.setString(1, "SBOI");
+        preparedStatement1.setString(3, "doms:Newspaper_Collection");
+        preparedStatement1.setTimestamp(5, null);
+        preparedStatement1.setTimestamp(6, null);
+        preparedStatement1.setTimestamp(7, new java.sql.Timestamp(0));
+        preparedStatement2.setString(1, "SBOI");
+        preparedStatement2.setString(3, "doms:Newspaper_Collection");
+
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+        Date before = simpleDateFormat.parse("2014-10-26T01:30:00.000+02:00");
+        Date during1 = simpleDateFormat.parse("2014-10-26T02:30:00.000+02:00");
+        Date during2 = simpleDateFormat.parse("2014-10-26T02:30:00.000+01:00");
+        Date after = simpleDateFormat.parse("2014-10-26T03:30:00.000+01:00");
+
+        preparedStatement1.setString(2, "doms:1");
+        preparedStatement1.setTimestamp(4, new java.sql.Timestamp(before.getTime()));
+        preparedStatement1.execute();
+        preparedStatement2.setString(2, "doms:1");
+        preparedStatement2.setString(4, "doms:1");
+        preparedStatement2.execute();
+
+        preparedStatement1.setString(2, "doms:2");
+        preparedStatement1.setTimestamp(4, new java.sql.Timestamp(during1.getTime()));
+        preparedStatement1.execute();
+        preparedStatement2.setString(2, "doms:2");
+        preparedStatement2.setString(4, "doms:2");
+        preparedStatement2.execute();
+
+        preparedStatement1.setString(2, "doms:3");
+        preparedStatement1.setTimestamp(4, new java.sql.Timestamp(during2.getTime()));
+        preparedStatement1.execute();
+        preparedStatement2.setString(2, "doms:3");
+        preparedStatement2.setString(4, "doms:3");
+        preparedStatement2.execute();
+
+        preparedStatement1.setString(2, "doms:4");
+        preparedStatement1.setTimestamp(4, new java.sql.Timestamp(after.getTime()));
+        preparedStatement1.execute();
+        preparedStatement2.setString(2, "doms:4");
+        preparedStatement2.setString(4, "doms:4");
+        preparedStatement2.execute();
+
+        connection.commit();
+        connection.close();
+
+        //Try to get objects
+        List<Record> list;
+        list = db.lookup(before, "SBOI", 0, 1000, "ActiveOrDeleted", "doms:Newspaper_Collection");
+        assertEquals(4, list.size());
+        list = db.lookup(during1, "SBOI", 0, 1000, "ActiveOrDeleted", "doms:Newspaper_Collection");
+        assertEquals(3, list.size());
+        list = db.lookup(during2, "SBOI", 0, 1000, "ActiveOrDeleted", "doms:Newspaper_Collection");
+        assertEquals(2, list.size());
+        list = db.lookup(after, "SBOI", 0, 1000, "ActiveOrDeleted", "doms:Newspaper_Collection");
+        assertEquals(1, list.size());
     }
 }
