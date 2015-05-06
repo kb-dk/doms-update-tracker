@@ -63,7 +63,8 @@ public class UpdateTrackerClient implements UpdateTrackerWebservice {
      *
      * @param collectionPid The PID of the collection in which we are looking
      *                      for the last change.
-     * @param viewAngle     ...TODO doc
+     * @param viewAngle     The name of the viewangle in which we are looking
+     *                      for the last change.
      *
      * @return The date/time of the last change.
      * @throws dk.statsbiblioteket.doms.updatetracker.webservice.InvalidCredentialsException
@@ -75,7 +76,7 @@ public class UpdateTrackerClient implements UpdateTrackerWebservice {
                                                                   MethodFailedException {
 
         try {
-            return updateTrackingSystem.getStore().lastChanged().getTime();
+            return updateTrackingSystem.getStore().lastChanged(viewAngle, collectionPid).getTime();
         } catch (UpdateTrackerStorageException e) {
             throw new MethodFailedException("Failed to query the persistent storage", "", e);
         }

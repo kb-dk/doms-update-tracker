@@ -352,11 +352,11 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     }
 
     @Override
-    public Date lastChanged() throws UpdateTrackerStorageException {
+    public Date lastChanged(String viewangle, String collection) throws UpdateTrackerStorageException {
         DB db = dbfac.createReadonlyDBConnection();
         Transaction transaction = db.beginTransaction();
         try {
-            return backend.lastChanged(db);
+            return backend.lastChanged(db, viewangle, collection);
         } catch (HibernateException e) {
             throw new UpdateTrackerStorageException("Failed to query for last changed object", e);
         } finally {

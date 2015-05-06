@@ -277,8 +277,8 @@ public class UpdateTrackerBackend {
         return db.lookup(since, viewAngle, offset, limit, state, collection);
     }
 
-    public Date lastChanged(DB db) {
-        return db.getLastChangedTimestamp();
+    public Date lastChanged(DB db, String viewangle, String collection) {
+        return db.getLastChangedTimestamp(viewangle, collection);
     }
 
     private class RecordReconnector implements Callable<Record> {

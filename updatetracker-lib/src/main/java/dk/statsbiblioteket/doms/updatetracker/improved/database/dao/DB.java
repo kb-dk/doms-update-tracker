@@ -199,11 +199,15 @@ public class DB implements Closeable{
     }
 
     /**
-     * Get the highest modification time in the entire database
+     * Get the highest modification time in the database for a given viewangle and collection.
      * @return the highest last modified timestamp in the database
+     * @param viewangle The viewangle to get modification time for
+     * @param collection The collection to get modification time for
      */
-    public Date getLastChangedTimestamp() {
-        final Query query = session.createQuery("select max(e.lastModified) from Record e");
+    public Date getLastChangedTimestamp(String viewangle, String collection) {
+        final Query query = session.createQuery("select max(e.lastModified) from Record e where collection=:collection and viewangle=:viewangle");
+        query.setString("viewangle", viewangle);
+        query.setString("collection", collection);
         query.setMaxResults(1);
         Object result = query.uniqueResult();
         if (result != null) {

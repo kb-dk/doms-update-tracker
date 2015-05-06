@@ -91,11 +91,14 @@ public interface UpdateTrackerPersistentStore extends Closeable {
 
 
     /**
-     * Get the timestamp of the last fedora operation that caused ANY change to the update tracker state
+     * Get the timestamp of the last fedora operation that caused a change to the update tracker state,
+     * for the given viewangle and collection.
      * @return the last timestamp of any change in the update tracker
      * @throws UpdateTrackerStorageException
+     * @param viewangle The viewangle to get changes for
+     * @param collection The collection to get changes for
      */
-    public Date lastChanged() throws UpdateTrackerStorageException;
+    public Date lastChanged(String viewangle, String collection) throws UpdateTrackerStorageException;
 
         @Override
     void close();
