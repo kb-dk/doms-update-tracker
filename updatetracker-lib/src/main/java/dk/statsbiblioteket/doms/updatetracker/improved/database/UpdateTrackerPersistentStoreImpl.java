@@ -39,6 +39,7 @@ import static dk.statsbiblioteket.doms.updatetracker.improved.database.datastruc
 public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistentStore, Closeable {
 
     private static Logger log = LoggerFactory.getLogger(UpdateTrackerPersistentStoreImpl.class);
+    private static Logger contentModelChangedLogging = LoggerFactory.getLogger(UpdateTrackerPersistentStoreImpl.class.getCanonicalName()+".ContentModelChangedLogging");
     private final DBFactory dbfac;
 
 
@@ -193,7 +194,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             if (dsid != null) {
                 if ((dsid.equals("VIEW") || dsid.equals("RELS-EXT"))) {
                     if (fedora.isCurrentlyContentModel(pid, timestamp)) {
-                        ContentModelChangedLogging.logContentModelChanged(pid);
+                        contentModelChangedLogging.warn("Content model {} changed, but records are not recalculated", pid);
                         //contentModelChanged(pid, timestamp, db);
                     }
                     if (dsid.equals("RELS-EXT")) {
