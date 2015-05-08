@@ -3,19 +3,20 @@
     <parent>
         <groupId>dk.statsbiblioteket.doms</groupId>
         <artifactId>doms</artifactId>
-        <version>1.2-SNAPSHOT</version>
+        <version>1.2</version>
     </parent>
 
     <groupId>dk.statsbiblioteket.doms.updatetracker</groupId>
     <artifactId>updatetracker</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.1</version>
     <packaging>pom</packaging>
 
     <scm>
         <connection>scm:git:git://github.com/statsbiblioteket/doms-update-tracker.git</connection>
         <developerConnection>scm:git:git@github.com:statsbiblioteket/doms-update-tracker.git</developerConnection>
         <url>https://github.com/statsbiblioteket/doms-update-tracker</url>
-    </scm>
+      <tag>updatetracker-1.1</tag>
+  </scm>
 
 
     <modules>
@@ -125,7 +126,7 @@
             <dependency>
                 <groupId>dk.statsbiblioteket.doms.central</groupId>
                 <artifactId>ecmViews</artifactId>
-                <version>1.8-SNAPSHOT</version>
+                <version>1.8</version>
             </dependency>
 
             <dependency>
