@@ -1,3 +1,9 @@
+1.1
+Completely rewritten updatetracker, based on a database index
+Will build an index of records for specific views, and maintain it during operations
+Requires a database initialised with a specific schema - see base-objects-ingest for that schema
+Requires and a hook inserted into the fedora configuration - see doms-installer for that configuration
+
 1.0
 Bumped the version number
 Updated jersey version to 1.17.1
