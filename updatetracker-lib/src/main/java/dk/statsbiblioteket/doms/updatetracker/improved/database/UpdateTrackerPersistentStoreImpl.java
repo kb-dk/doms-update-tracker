@@ -195,7 +195,9 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                 if ((dsid.equals("VIEW") || dsid.equals("RELS-EXT"))) {
                     if (fedora.isCurrentlyContentModel(pid, timestamp)) {
                         contentModelChangedLogging.warn("Content model {} changed, but records are not recalculated", pid);
+                        fedora.invalidateContentModel(pid);
                         //contentModelChanged(pid, timestamp, db);
+                        //TODO we should actually comment contentModelChanged in, and have the above lines (logging, invalidate) be done in this method
                     }
                     if (dsid.equals("RELS-EXT")) {
                         Set<String> collections = fedora.getCollections(pid, timestamp);
