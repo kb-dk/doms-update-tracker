@@ -17,7 +17,7 @@
         <dbspec:column name="method" type="varchar(64)" notNull="true" binary="true">
             <dbspec:comment>what method</dbspec:comment>
         </dbspec:column>
-        <dbspec:column name="param" type="varchar(64)" notNull="false" binary="true">
+        <dbspec:column name="param" type="varchar(255)" notNull="false" binary="true">
             <dbspec:comment>the relevant param, dsid or state</dbspec:comment>
         </dbspec:column>
     </dbspec:table>
