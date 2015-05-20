@@ -92,6 +92,7 @@
     <xs:complexType name="recordDescription">
         <xs:sequence>
             <xs:element name="pid" type="xs:string"/>
+            <xs:element name="recordTime" type="xs:long"/>
             <xs:element name="lastChangedTime" type="xs:long"/>
             <xs:element name="collectionPid" type="xs:string"/>
             <xs:element name="entryCMPid" type="xs:string"/>
