@@ -45,9 +45,9 @@ public class UpdateTrackingSystem implements Closeable {
 
 
             //This thread pool is the number of records we can recalculate simultaneously when a content model change
-            final ExecutorService contentModelRecalcThreadPool = initialiseThreadPool(updateTrackingConfig.getViewBundleMaxThreads());
+            final ExecutorService contentModelRecalcThreadPool = initialiseThreadPool(updateTrackingConfig.getContentModelRecalcMaxThreads());
             //This thread pool is the number of records we can recalculate simultaneously when an common object (part of all their bundles) change
-            final ExecutorService viewBundleRecalcThreadPool = initialiseThreadPool(updateTrackingConfig.getContentModelRecalcMaxThreads());
+            final ExecutorService viewBundleRecalcThreadPool = initialiseThreadPool(updateTrackingConfig.getViewBundleMaxThreads());
             //Start up the fedora connection
             FedoraForUpdateTracker fedora = new FedoraForUpdateTracker(cmCache, fedoraRest, tripleStoreRest, views);
 
