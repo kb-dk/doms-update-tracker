@@ -1,3 +1,8 @@
+1.2
+Use wider VARCHAR for parameters in worklog database
+Use correct lastModifiedDate on records
+Make sure the records are read from the correct date when iterating
+
 1.1
 Completely rewritten updatetracker, based on a database index
 Will build an index of records for specific views, and maintain it during operations
