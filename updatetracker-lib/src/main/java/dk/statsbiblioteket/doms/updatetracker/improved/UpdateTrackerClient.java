@@ -104,29 +104,36 @@ public class UpdateTrackerClient implements UpdateTrackerWebservice {
                 case ACTIVE:
                     if (active > deleted) {
                         thang.setState("A");
+                        thang.setRecordTime(active);
                     } else {
                         thang.setState("D");
+                        thang.setRecordTime(deleted);
                     }
                     break;
                 case INACTIVE:
                     if (inactive > deleted) {
                         thang.setState("I");
+                        thang.setRecordTime(inactive);
                     } else {
                         thang.setState("D");
+                        thang.setRecordTime(deleted);
                     }
                     break;
                 case DELETED:
-                    thang.setLastChangedTime(deleted);
                     thang.setState("D");
+                    thang.setRecordTime(deleted);
                     break;
             }
         } catch (IllegalArgumentException e) { //If you specified something else
             if (active >= inactive && active > deleted) {
                 thang.setState("A");
+                thang.setRecordTime(active);
             } else if (inactive > active && inactive > deleted) {
                 thang.setState("I");
+                thang.setRecordTime(inactive);
             } else if (deleted >= active && deleted >= inactive) {
                 thang.setState("D");
+                thang.setRecordTime(deleted);
             }
         }
         return thang;
