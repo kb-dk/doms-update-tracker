@@ -102,9 +102,12 @@ public class WorkLogPollTask extends TimerTask {
             case "modifyDatastreamByReference":
             case "modifyDatastreamByValue":
             case "purgeDatastream":
+                updateTrackerPersistentStore.datastreamChanged(pid, date, param, key);
+                break;
             case "setDatastreamState":
             case "setDatastreamVersionable":
-                updateTrackerPersistentStore.datastreamChanged(pid, date, param, key);
+                //Forget the datastream name, because VIEW and RELS-EXT should not trigger recalculation.
+                updateTrackerPersistentStore.datastreamChanged(pid, date, null, key);
                 break;
             case "addRelationship":
             case "purgeRelationship":
