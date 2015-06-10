@@ -51,13 +51,11 @@ public class NewspaperIT {
         final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L,threadPool);
         db = new UpdateTrackerPersistentStoreImpl(fcmock,
                                                   updateTrackerBackend,
-                                                  new DBFactory(configFile,mappings),
-                                                  threadPool);
+                                                  new DBFactory(configFile,mappings));
         tearDown();
         db = new UpdateTrackerPersistentStoreImpl(fcmock,
                                                   updateTrackerBackend,
-                                                  new DBFactory(configFile, mappings),
-                                                  threadPool);
+                                                  new DBFactory(configFile, mappings));
 
         //Collections for everybody
         when(fcmock.getCollections(anyString(), any(Date.class))).thenReturn(TestHelpers.asSet(COLLECTION));

@@ -55,8 +55,7 @@ public class NewspaperBatchIT {
         final UpdateTrackerBackend updateTrackerBackend = new UpdateTrackerBackend(fcmock,10000L,threadPool);
         db = new UpdateTrackerPersistentStoreImpl(fcmock,
                                                   updateTrackerBackend,
-                                                  new DBFactory(configFile,mappings),
-                                                  threadPool);
+                                                  new DBFactory(configFile,mappings));
     }
 
     @After

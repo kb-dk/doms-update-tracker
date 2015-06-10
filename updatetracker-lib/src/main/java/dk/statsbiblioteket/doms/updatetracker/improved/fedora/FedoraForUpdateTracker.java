@@ -8,7 +8,6 @@ import dk.statsbiblioteket.doms.central.connectors.fedora.Fedora;
 import dk.statsbiblioteket.doms.central.connectors.fedora.structures.FedoraRelation;
 import dk.statsbiblioteket.doms.central.connectors.fedora.structures.ObjectProfile;
 import dk.statsbiblioteket.doms.central.connectors.fedora.structures.ObjectType;
-import dk.statsbiblioteket.doms.central.connectors.fedora.tripleStore.TripleStoreRest;
 import dk.statsbiblioteket.doms.central.connectors.fedora.views.Views;
 import dk.statsbiblioteket.doms.central.connectors.fedora.views.ViewsImpl;
 import dk.statsbiblioteket.doms.updatetracker.improved.database.ViewBundle;
@@ -35,11 +34,8 @@ public class FedoraForUpdateTracker {
             = "http://doms.statsbiblioteket.dk/relations/default/0/1/#isEntryForViewAngle";
     protected static final String COLLECTION_RELATION
             = "http://doms.statsbiblioteket.dk/relations/default/0/1/#isPartOfCollection";
-    protected static final String HASMODEL_RELATION
-            = "info:fedora/fedora-system:def/model#hasModel";
 
     private final Views views;
-    private final TripleStoreRest tripleStoreRest;
     private final Fedora fedoraRest;
     private final EntryAngleCache entryAngleCache;
 
@@ -57,12 +53,10 @@ public class FedoraForUpdateTracker {
 
 
 
-    public FedoraForUpdateTracker(EntryAngleCache entryAngleCache, Fedora fedoraRest, TripleStoreRest tripleStoreRest,
-                                  ViewsImpl views) {
+    public FedoraForUpdateTracker(EntryAngleCache entryAngleCache, Fedora fedoraRest, ViewsImpl views) {
 
         this.entryAngleCache = entryAngleCache;
         this.fedoraRest = fedoraRest;
-        this.tripleStoreRest = tripleStoreRest;
         this.views = views;
     }
 
@@ -72,10 +66,10 @@ public class FedoraForUpdateTracker {
             ObjectProfile profile = getObjectProfile(pid, date);
             synchronized (entryAngleCache) {
                 if (profile.getType() == ObjectType.CONTENT_MODEL){
-                    entryAngleCache.setEntryViewAngles(pid, getEntryAnglesForContentModel(pid, date));
+                    getEntryAnglesForContentModel(pid);
                 }
                 for (String contentmodelPid : profile.getContentModels()) {
-                    entryAngles.addAll(getEntryAnglesForContentModel(contentmodelPid, date));
+                    entryAngles.addAll(getEntryAnglesForContentModel(contentmodelPid));
                 }
             }
             return entryAngles;
@@ -84,7 +78,7 @@ public class FedoraForUpdateTracker {
         }
     }
 
-    private Set<String> getEntryAnglesForContentModel(String contentmodel, Date date) throws
+    private Set<String> getEntryAnglesForContentModel(String contentmodel) throws
                                                            BackendMethodFailedException,
                                                            BackendInvalidCredsException,
                                                            BackendInvalidResourceException,
@@ -92,7 +86,7 @@ public class FedoraForUpdateTracker {
         Set<String> entryAngles = entryAngleCache.getCachedEntryAngles(contentmodel);
         if (entryAngles == null) {
             try {
-                List<FedoraRelation> entryRelations = fedoraRest.getNamedRelations(contentmodel, ENTRY_RELATION, date.getTime());
+                List<FedoraRelation> entryRelations = fedoraRest.getNamedRelations(contentmodel, ENTRY_RELATION, null);
 
                 entryAngles = getObject(entryRelations);
                 entryAngles = scrubViewAngles(entryAngles);
@@ -127,19 +121,6 @@ public class FedoraForUpdateTracker {
         return entryAngles;
     }
 
-    private Set<String> getSubject(List<FedoraRelation> entryRelations) {
-        Set<String> entryAngles;
-        entryAngles = new HashSet<>();
-        CollectionUtils.collect(entryRelations, new Transformer<FedoraRelation, String>() {
-            @Override
-            public String transform(FedoraRelation relation) {
-                return Connector.toPid(relation.getSubject());
-            }
-        }, entryAngles);
-        return entryAngles;
-    }
-
-
     public ViewBundle calcViewBundle(String entryPid, String viewAngle, Date date) throws FedoraFailedException {
         try {
             List<String> pids = views.getViewObjectsListForObject(entryPid, viewAngle, date.getTime());
@@ -162,33 +143,21 @@ public class FedoraForUpdateTracker {
         return getObject(collectionRelations);
     }
 
-    public Set<String> getObjectsOfThisContentModel(String contentModelPid) throws FedoraFailedException {
-
-        List<FedoraRelation> hasModelRelations;
-        try {
-            hasModelRelations = tripleStoreRest.getInverseRelations(contentModelPid, HASMODEL_RELATION);
-        } catch (BackendInvalidCredsException | BackendMethodFailedException | BackendInvalidResourceException e) {
-            throw new FedoraFailedException("Failed to get content model info from Fedora for pid " + contentModelPid, e);
-        }
-        return getSubject(hasModelRelations);
-    }
-
     /**
-     * Check if this object is a content model at the given date
+     * Check if this object is a content model.
      * @param pid the pid of the object
-     * @param date check the object as it was as this timestamp
-     * @return true if the object is a content model at the given date
+     * @return true if the object is a content model.
      * @throws FedoraFailedException
      */
-    public boolean isCurrentlyContentModel(String pid, Date date) throws FedoraFailedException {
+    public boolean isCurrentlyContentModel(String pid) throws FedoraFailedException {
         if (entryAngleCache.isCachedContentModel(pid)){
             return true;
         }
         try {
-            ObjectProfile profile = getObjectProfile(pid, date);
+            ObjectProfile profile = getObjectProfile(pid, null);
             return profile.getType() == ObjectType.CONTENT_MODEL;
         } catch (BackendInvalidCredsException | BackendInvalidResourceException | BackendMethodFailedException e) {
-            throw new FedoraFailedException("Failed to get profile of object '"+pid+"' at date '"+date.toString()+"'",e);
+            throw new FedoraFailedException("Failed to get profile of object '"+pid+"'",e);
         }
     }
 
@@ -199,7 +168,7 @@ public class FedoraForUpdateTracker {
         final Pair<String, Date> key = new Pair<>(pid, date);
         ObjectProfile cachedProfile = profileCache.get(key);
         if (cachedProfile == null){
-            cachedProfile = fedoraRest.getLimitedObjectProfile(pid, date.getTime());
+            cachedProfile = fedoraRest.getLimitedObjectProfile(pid, date == null ? null : date.getTime());
             profileCache.put(key,cachedProfile);
         }
         return cachedProfile;

@@ -13,7 +13,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.concurrent.Executors;
 
-import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.addEntry;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.asSet;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.TestHelpers.emptySet;
 import static org.mockito.Matchers.any;
@@ -54,7 +53,7 @@ public class UpdateTrackerPersistentStoreTest {
         when(dbfac.createReadonlyDBConnection()).thenReturn(dbSession);
         when(dbSession.beginTransaction()).thenReturn(transaction);
 
-        store = new UpdateTrackerPersistentStoreImpl(fcmock, updateTrackerBackend, dbfac,Executors.newSingleThreadExecutor());
+        store = new UpdateTrackerPersistentStoreImpl(fcmock, updateTrackerBackend, dbfac);
         when(fcmock.getEntryAngles(anyString(), any(Date.class))).thenReturn(emptySet(String.class));
     }
 
@@ -208,7 +207,7 @@ public class UpdateTrackerPersistentStoreTest {
 
         mocks.verify(dbSession).beginTransaction();
 
-        mocks.verify(fcmock).isCurrentlyContentModel(pid, now);
+        mocks.verify(fcmock).isCurrentlyContentModel(pid);
         mocks.verify(fcmock).getCollections(pid, now);
         mocks.verify(fcmock).getState(pid,now);
 
@@ -265,7 +264,7 @@ public class UpdateTrackerPersistentStoreTest {
         mocks.verify(dbSession).beginTransaction();
 
         //Datastream RELSEXT changed
-        mocks.verify(fcmock).isCurrentlyContentModel(pid, now);
+        mocks.verify(fcmock).isCurrentlyContentModel(pid);
         mocks.verify(fcmock).getCollections(pid, now);
         mocks.verify(fcmock).getState(pid,now);
 
@@ -327,7 +326,7 @@ public class UpdateTrackerPersistentStoreTest {
         mocks.verify(dbSession).beginTransaction();
 
         //Datastream RELSEXT changed
-        mocks.verify(fcmock).isCurrentlyContentModel(child, now);
+        mocks.verify(fcmock).isCurrentlyContentModel(child);
         mocks.verify(fcmock).getCollections(child, now);
         mocks.verify(fcmock).getState(child, now);
 

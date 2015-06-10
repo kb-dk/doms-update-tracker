@@ -53,15 +53,15 @@ public class ContentModelTest {
         FedoraRest fedoraRest = mock(FedoraRest.class);
         TripleStoreRest tripleStoreRest = mock(TripleStoreRest.class);
         ViewsImpl views = new ViewsImpl(tripleStoreRest, fedoraRest);
-        FedoraForUpdateTracker fedora = new FedoraForUpdateTracker(new EntryAngleCache(), fedoraRest, tripleStoreRest, views);
+        FedoraForUpdateTracker fedora = new FedoraForUpdateTracker(new EntryAngleCache(), fedoraRest, views);
 
         final ObjectProfile profile = new ObjectProfile();
         profile.setType(ObjectType.DATA_OBJECT);
         when(fedoraRest.getLimitedObjectProfile(eq("doms:notCurrentlyContentModel1"), anyLong())).thenReturn(profile);
 
-        assertFalse(fedora.isCurrentlyContentModel("doms:notCurrentlyContentModel1", new Date()));
+        assertFalse(fedora.isCurrentlyContentModel("doms:notCurrentlyContentModel1"));
         profile.setType(ObjectType.CONTENT_MODEL);
-        assertTrue(fedora.isCurrentlyContentModel("doms:notCurrentlyContentModel1", new Date()));
+        assertTrue(fedora.isCurrentlyContentModel("doms:notCurrentlyContentModel1"));
     }
 
     /**
@@ -82,7 +82,7 @@ public class ContentModelTest {
         FedoraRest fedoraRest = mock(FedoraRest.class);
         TripleStoreRest tripleStoreRest = mock(TripleStoreRest.class);
         ViewsImpl views = new ViewsImpl(tripleStoreRest, fedoraRest);
-        FedoraForUpdateTracker fedora = new FedoraForUpdateTracker(new EntryAngleCache(), fedoraRest, tripleStoreRest, views);
+        FedoraForUpdateTracker fedora = new FedoraForUpdateTracker(new EntryAngleCache(), fedoraRest, views);
 
         final ObjectProfile cmprofile = new ObjectProfile();
         cmprofile.setType(ObjectType.CONTENT_MODEL);
@@ -94,7 +94,7 @@ public class ContentModelTest {
         objectprofile.setContentModels(asList("doms:ContentModel1"));
         when(fedoraRest.getLimitedObjectProfile(eq("doms:Object1"), anyLong())).thenReturn(objectprofile);
 
-        assertTrue(fedora.isCurrentlyContentModel("doms:ContentModel1", new Date()));
+        assertTrue(fedora.isCurrentlyContentModel("doms:ContentModel1"));
         Collection<String> angles = fedora.getEntryAngles("doms:Object1", new Date());
         assertEquals(1,angles.size());
         assertEquals("SummaVisible",angles.iterator().next());

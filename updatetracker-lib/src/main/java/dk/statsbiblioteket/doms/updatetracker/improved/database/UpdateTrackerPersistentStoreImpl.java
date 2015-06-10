@@ -13,14 +13,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State.DELETED;
 
@@ -45,16 +40,11 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
 
     private FedoraForUpdateTracker fedora;
     private UpdateTrackerBackend backend;
-    private final ExecutorService threadPool;
 
-
-    public UpdateTrackerPersistentStoreImpl(FedoraForUpdateTracker fedora,
-                                            UpdateTrackerBackend backend,
-                                            DBFactory dbfac,
-                                            ExecutorService threadPool) {
+    public UpdateTrackerPersistentStoreImpl(FedoraForUpdateTracker fedora, UpdateTrackerBackend backend,
+                                            DBFactory dbfac) {
         this.fedora = fedora;
         this.backend = backend;
-        this.threadPool = threadPool;
         this.dbfac = dbfac;
 
     }
@@ -193,11 +183,9 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
         try {
             if (dsid != null) {
                 if ((dsid.equals("VIEW") || dsid.equals("RELS-EXT"))) {
-                    if (fedora.isCurrentlyContentModel(pid, timestamp)) {
+                    if (fedora.isCurrentlyContentModel(pid)) {
                         contentModelChangedLogging.warn("Content model {} changed, but records are not recalculated", pid);
                         fedora.invalidateContentModel(pid);
-                        //contentModelChanged(pid, timestamp, db);
-                        //TODO we should actually comment contentModelChanged in, and have the above lines (logging, invalidate) be done in this method
                     }
                     if (dsid.equals("RELS-EXT")) {
                         Set<String> collections = fedora.getCollections(pid, timestamp);
@@ -227,39 +215,6 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                                                     "' at date='" + timestamp.getTime() + "' and dsid='"+dsid+"'", e);
         }
     }
-
-    private void contentModelChanged(String contentModel, final Date timestamp, DB db) throws
-                                                                                                 FedoraFailedException
-    {
-        fedora.invalidateContentModel(contentModel);
-
-        ExecutorCompletionService<Set<Record>> progressTracker = new ExecutorCompletionService<>(threadPool);
-
-        final Set<String> objectsOfThisContentModel = fedora.getObjectsOfThisContentModel(contentModel);//TODO this set can be HUGE
-        Set<Future<Set<Record>>> results = new HashSet<>(objectsOfThisContentModel.size());
-
-        for (final String object : objectsOfThisContentModel) {
-            Callable<Set<Record>> reconnector = new ObjectOfContentModelReconnector(object, timestamp, dbfac);
-            results.add(progressTracker.submit(reconnector));
-        }
-        int records = 0;
-        for (int futureCount = 0; futureCount < objectsOfThisContentModel.size(); futureCount++) {
-            Set<Record> changedRecords;
-            changedRecords = getCompleted(contentModel, results, progressTracker);
-
-            for (Record changedRecord : changedRecords) { //We log progress on merge back, not on calc of view
-                log.debug("Working on object nr {} out of {} of content model {}",
-                          records++,
-                          objectsOfThisContentModel.size(),
-                          contentModel);
-                db.saveRecord(changedRecord);//Merge them to this session, and since they are changed, they will be changed in the commit
-                backend.updateDates(changedRecord.getEntryPid(), timestamp, db);
-            }
-
-        }
-    }
-
-
 
     /**
      * The object's relations changed. This can cause a recalculation of the viewStructure.
@@ -379,66 +334,6 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
             return db.getLatestKey();
         } finally {
             transaction.commit();
-        }
-    }
-
-    private class ObjectOfContentModelReconnector implements Callable<Set<Record>> {
-        private final String object;
-        private final Date timestamp;
-        private final DBFactory dbfac;
-
-        public ObjectOfContentModelReconnector(String object, Date timestamp, DBFactory dbfac) {
-            this.object = object;
-            this.timestamp = timestamp;
-            this.dbfac = dbfac;
-        }
-
-        @Override
-        public Set<Record> call() throws Exception {
-            DB session = dbfac.createReadonlyDBConnection();
-            //This is a threadlocal session. It will not see the uncommitted changes from the parent session
-            //but there should be none at this point
-            Transaction transaction = session.beginTransaction();
-            Set<Record> changedRecords = null;
-            try {
-                Set<String> collections = fedora.getCollections(object, timestamp);
-                State state = fedora.getState(object, timestamp);
-                changedRecords = backend.recalculateRecordsBasedOnThisPid(object,
-                                                                          timestamp,
-                                                                          session,
-                                                                          collections,
-                                                                          state);
-            } catch (FedoraFailedException | UpdateTrackerStorageException e) {
-                transaction.rollback(); //I do not know if readonly transactions should be rolled back
-                throw e;//yes, rethrow. I do not want to lose the type
-            }
-            transaction.commit();
-            return changedRecords;
-        }
-    }
-
-    public static <T> T getCompleted(String contentModel, Set<Future<T>> results,
-                                     ExecutorCompletionService<T> progressTracker) throws
-                                                                                   FedoraFailedException {
-        T changedRecords;
-        try {
-            Future<T> future = progressTracker.take();
-            changedRecords = future.get();
-        } catch (ExecutionException e) {
-            cancelPendingTasks(results);
-            throw new FedoraFailedException("Failed to calculate the changes caused by a change to content model '" +
-                                            contentModel + "'", e);
-        } catch (InterruptedException e) {
-            cancelPendingTasks(results);
-            throw new RuntimeException("Interrupted while waiting for results for recalculation of objects of '" +
-                                       contentModel + "'", e);
-        }
-        return changedRecords;
-    }
-
-    public static <T> void cancelPendingTasks(Set<Future<T>> results) {
-        for (Future<T> result : results) {
-            result.cancel(true);
         }
     }
 }
