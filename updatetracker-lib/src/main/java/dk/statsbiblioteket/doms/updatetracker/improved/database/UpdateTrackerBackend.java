@@ -11,10 +11,6 @@ import org.apache.commons.collections4.Predicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.persistence.Id;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
@@ -193,35 +189,9 @@ public class UpdateTrackerBackend {
 
     protected static String toKey(Record record, Date timestamp) {
         StringBuilder key = new StringBuilder();
-        for (Field field : Record.class.getDeclaredFields()) {
-            if (field.getAnnotation(Id.class) != null) {
-                try {
-                    String methodName = "get" + field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
-                    Method getterMethod = Record.class.getDeclaredMethod(methodName);
-                    Object value = getterMethod.invoke(record);
-                    key.append(value).append(",");
-                } catch (InvocationTargetException e) {
-                    throw new RuntimeException("Failed to resolve key of record "+record,e);
-                } catch (NoSuchMethodException | IllegalAccessException e) {
-                    try {
-                        key.append(field.get(record)).append(",");
-                    } catch (IllegalAccessException e1) {
-                        //No getter and not public, ignore
-                    }
-                }
-            }
-        }
-        for (Method method : Record.class.getMethods()){
-            if (method.getParameterTypes().length == 0){
-                if (method.getAnnotation(Id.class) != null){
-                    try {
-                        key.append(method.invoke(record)).append(",");
-                    } catch (IllegalAccessException | InvocationTargetException e) {
-                        throw new RuntimeException("Failed to resolve key of record "+record,e);
-                    }
-                }
-            }
-        }
+        key.append(record.getEntryPid()).append(",");
+        key.append(record.getViewAngle()).append(",");
+        key.append(record.getCollection()).append(",");
         key.append(timestamp.getTime());
         return key.toString();
     }
