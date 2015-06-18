@@ -11,21 +11,19 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InOrder;
 
-import java.util.Collections;
-import java.util.Date;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Executors;
 
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State.ACTIVE;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State.DELETED;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State.INACTIVE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class UpdateTrackerBackendTest {
 
@@ -54,6 +52,57 @@ public class UpdateTrackerBackendTest {
         when(dbfac.createDBConnection()).thenReturn(dbSession);
         when(dbSession.beginTransaction()).thenReturn(transaction);
 
+    }
+
+    @Test
+    public void testGetKey(){
+        Date dateKey = new Date(1000);
+        Record recordKey = new Record("entryPid", "viewAngle", "collection");
+        String key = UpdateTrackerBackend.toKey(recordKey, dateKey);
+        assertEquals("entryPid,viewAngle,collection,1000",key);
+    }
+
+    @Test
+    public void testGetKeyWithExtra(){
+        Date dateKey = new Date(1000);
+        Record recordKey = new Record(
+                "entryPid",
+                "viewAngle",
+                "collection",
+                new Date(),
+                new Date(),
+                new Date(),
+                new Date(),
+                new HashSet<>(Arrays.asList("1","2","dsafds")));
+        String key = UpdateTrackerBackend.toKey(recordKey, dateKey);
+        assertEquals("entryPid,viewAngle,collection,1000",key);
+    }
+
+
+    @Test
+    public void testGetViewBundleWithMutableKey() throws FedoraFailedException {
+        //This tests tests that the viewBundleCache is not affected by any of the
+        // possible modifications on Record.
+
+        //A NEW viewbundle object is returned on each invocation.
+        when(fcmock.calcViewBundle(anyString(),anyString(),any(Date.class))).thenReturn(new ViewBundle("viewBundleEntry","viewAngle"));
+        UpdateTrackerBackend backend = new UpdateTrackerBackend(fcmock, 10000L, null);
+        //Setup the keys
+        Date dateKey = new Date();
+        Record recordKey = new Record("entryPid", "viewAngle", "collection");
+
+        //Get the first view bundle
+        ViewBundle viewBundle = backend.getViewBundle(dateKey, recordKey);
+
+        //We now change the key. The premise here is that this change should not matter
+        recordKey.setActive(new Date());
+
+        //assert that the new key will NOT get us a new viewBundle
+        assertTrue(viewBundle == backend.getViewBundle(dateKey, recordKey));
+
+        //And verify that just one viewBundle was ever created
+        verify(fcmock).calcViewBundle("entryPid","viewAngle",dateKey);
+        verifyNoMoreInteractions(fcmock);
     }
 
     @Test
