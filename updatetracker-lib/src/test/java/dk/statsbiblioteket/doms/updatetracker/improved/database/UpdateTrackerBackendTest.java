@@ -9,16 +9,20 @@ import org.hibernate.Transaction;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.InOrder;
+import org.mockito.*;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.Executors;
 
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State.ACTIVE;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State.DELETED;
 import static dk.statsbiblioteket.doms.updatetracker.improved.database.datastructures.Record.State.INACTIVE;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
@@ -98,10 +102,10 @@ public class UpdateTrackerBackendTest {
         recordKey.setActive(new Date());
 
         //assert that the new key will NOT get us a new viewBundle
-        assertTrue(viewBundle == backend.getViewBundle(dateKey, recordKey));
+        assertSame(viewBundle,backend.getViewBundle(dateKey, recordKey));
 
         //And verify that just one viewBundle was ever created
-        verify(fcmock).calcViewBundle("entryPid","viewAngle",dateKey);
+        verify(fcmock,times(1)).calcViewBundle("entryPid","viewAngle",dateKey);
         verifyNoMoreInteractions(fcmock);
     }
 
