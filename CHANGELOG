@@ -1,3 +1,6 @@
+1.5
+Use newest ecm libs
+
 1.4
 Fixed the viewBundle cache to not use a mutable key
 
