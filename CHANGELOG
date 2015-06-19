@@ -1,3 +1,6 @@
+1.4
+Fixed the viewBundle cache to not use a mutable key
+
 1.3
 Do not trigger full recalculation on updating versionable or state of datastreams on RELS-EXT and VIEW
 
