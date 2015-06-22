@@ -8,14 +8,14 @@
 
     <groupId>dk.statsbiblioteket.doms.updatetracker</groupId>
     <artifactId>updatetracker</artifactId>
-    <version>1.6</version>
+    <version>1.7-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <scm>
         <connection>scm:git:git://github.com/statsbiblioteket/doms-update-tracker.git</connection>
         <developerConnection>scm:git:git@github.com:statsbiblioteket/doms-update-tracker.git</developerConnection>
         <url>https://github.com/statsbiblioteket/doms-update-tracker</url>
-      <tag>updatetracker-1.6</tag>
+      <tag>HEAD</tag>
   </scm>
 
 
@@ -126,7 +126,7 @@
             <dependency>
                 <groupId>dk.statsbiblioteket.doms.central</groupId>
                 <artifactId>ecmViews</artifactId>
-                <version>1.10</version>
+                <version>1.11-SNAPSHOT</version>
             </dependency>
 
             <dependency>
