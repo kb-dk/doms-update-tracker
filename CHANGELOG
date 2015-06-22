@@ -1,3 +1,7 @@
+1.6
+Do not list the entire list of records to update in the log, as this in itself can cause a
+OutOfMemory error
+
 1.5
 Use newest ecm libs
 
