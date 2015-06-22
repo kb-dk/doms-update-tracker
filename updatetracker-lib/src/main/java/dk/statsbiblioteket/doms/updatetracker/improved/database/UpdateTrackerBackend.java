@@ -271,7 +271,7 @@ public class UpdateTrackerBackend {
         Set<Record> records = new HashSet<>(db.getRecordsContainingThisPid(pid));
         //Since the database connection have not been flushed, the newly created records will not be found, so add them
         records.addAll(newRecords);
-        log.debug("Find all records {} containing {} ", records, pid);
+        log.debug("Find all {} records containing {} ", records.size(), pid);
         result.addAll(recalculateRecords(timestamp, records));
         return result;
     }
@@ -300,6 +300,7 @@ public class UpdateTrackerBackend {
 
         @Override
         public Record call() throws Exception {
+            log.debug("Starting RecordReconnector on {} for timestamp {}",record,timestamp);
             if (record.getState() != State.DELETED) {
                 Set<String> before = new HashSet<>(record.getObjects());
                 Set<String> after = new HashSet<>();
