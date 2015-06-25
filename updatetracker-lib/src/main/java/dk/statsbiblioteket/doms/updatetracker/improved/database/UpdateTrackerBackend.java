@@ -334,7 +334,7 @@ public class UpdateTrackerBackend {
                 Set<String> after = new HashSet<>();
                 ViewBundle bundle = getViewBundle(timestamp, record);
                 for (String viewObject : bundle.getContained()) {
-                    log.debug("Marking object {} as part of record");
+                    log.debug("Marking object {} as part of record",viewObject);
                     after.add(viewObject);
                 }
 
