@@ -66,15 +66,17 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      */
     @Override
     public void objectCreated(String pid, Date timestamp, long key) throws UpdateTrackerStorageException, FedoraFailedException {
+        log.info("ObjectCreated({},{}) Starting", pid, timestamp);
         DB db = dbfac.createDBConnection();
         Transaction transaction = db.beginTransaction();
-        log.debug("ObjectCreated({},{}) Starting",pid,timestamp);
         try {
             Set<String> collections = fedora.getCollections(pid, timestamp);
             State ingestState = fedora.getState(pid, timestamp);
+            log.debug("Found collections {} and state {}  for pid {} at timestamp {}",ingestState,collections,pid,timestamp);
             for (String collection : collections) {
                 backend.modifyState(pid, timestamp, collection, ingestState, db);
             }
+            log.debug("Starting recalculation of records from pid {} for timestamp {}",pid,timestamp);
             Set<Record> changedRecords = backend.recalculateRecordsBasedOnThisPid(pid,
                                                                                   timestamp,
                                                                                   db,
@@ -126,9 +128,9 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
      */
     @Override
     public void objectDeleted(String pid, Date timestamp, long key) throws UpdateTrackerStorageException, FedoraFailedException {
+        log.info("ObjectDeleted({},{}) Starting", pid, timestamp);
         DB db = dbfac.createDBConnection();
         Transaction transaction = db.beginTransaction();
-        log.debug("ObjectDeleted({},{}) Starting", pid, timestamp);
         try {
             backend.modifyState(pid, timestamp, null, DELETED, db);
             backend.updateDates(pid, timestamp, db);
@@ -176,10 +178,11 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     @Override
     public void datastreamChanged(String pid, Date timestamp, String dsid, long key) throws
                                                                       UpdateTrackerStorageException,
-                                                                      FedoraFailedException {
+            FedoraFailedException {
+
+        log.info("DatastreamChanged({},{},{}) Starting", pid, timestamp,dsid);
         DB db = dbfac.createDBConnection();
         Transaction transaction = db.beginTransaction();
-        log.debug("DatastreamChanged({},{},{}) Starting", pid, timestamp,dsid);
         try {
             if (dsid != null) {
                 if ((dsid.equals("VIEW") || dsid.equals("RELS-EXT"))) {
@@ -190,6 +193,7 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
                     if (dsid.equals("RELS-EXT")) {
                         Set<String> collections = fedora.getCollections(pid, timestamp);
                         State state = fedora.getState(pid, timestamp);
+                        log.debug("Found collections {} and state {} for pid {} at timestamp {}",collections,state,pid,timestamp);
                         Set<Record> changedRecords = backend.recalculateRecordsBasedOnThisPid(pid,
                                                                                               timestamp,
                                                                                               db,
@@ -268,12 +272,12 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
     public void objectStateChanged(String pid, Date timestamp, String newstate, long key) throws
                                                                            UpdateTrackerStorageException,
                                                                            FedoraFailedException {
-
+        log.info("objectStateChanged({},{},{}) Starting", pid, timestamp, newstate);
         DB db = dbfac.createDBConnection();
         Transaction transaction = db.beginTransaction();
-        log.debug("objectStateChanged({},{},{}) Starting", pid, timestamp, newstate);
         try {
             Set<String> collections = fedora.getCollections(pid, timestamp);
+            log.debug("Found collections {} for pid {} at timestamp {}",collections,pid,timestamp);
             for (String collection : collections) {
                 backend.modifyState(pid, timestamp, collection, State.fromName(newstate), db);
             }
@@ -294,12 +298,12 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
 
     @Override
     public List<Record> lookup(Date since, String viewAngle, int offset, int limit, String state, String collection) throws UpdateTrackerStorageException {
+        log.info("lookup({},{},{},{},{},{}) Starting", since,viewAngle,offset,limit,state,collection);
         DB db = dbfac.createReadonlyDBConnection();
         Transaction transaction = db.beginTransaction();
         try {
-            log.info("lookup({},{},{},{},{},{}) Starting", since,viewAngle,offset,limit,state,collection);
             final List<Record> entries = backend.lookup(since, viewAngle, offset, limit, state, collection, db);
-            log.debug("lookup({},{},{},{},{},{}) Completed", since, viewAngle, offset, limit, state, collection);
+            log.info("lookup({},{},{},{},{},{}) Completed, found {} records", since, viewAngle, offset, limit, state, collection,entries.size());
             return entries;
         } catch (HibernateException e) {
             throw new UpdateTrackerStorageException("Failed to query for since='"+since.getTime()+"', viewAngle='"+viewAngle+"', offset='"+offset+"', limit="+limit+"', state='"+state+"', collection='"+collection+"'", e);
@@ -310,10 +314,13 @@ public class UpdateTrackerPersistentStoreImpl implements UpdateTrackerPersistent
 
     @Override
     public Date lastChanged(String viewangle, String collection) throws UpdateTrackerStorageException {
+        log.info("LastChanged called with viewAngle {} and collection {}",viewangle,collection);
         DB db = dbfac.createReadonlyDBConnection();
         Transaction transaction = db.beginTransaction();
         try {
-            return backend.lastChanged(db, viewangle, collection);
+            Date result = backend.lastChanged(db, viewangle, collection);
+            log.info("LastChanged called with viewAngle {} and collection {} returns {}",viewangle,collection,result);
+            return result;
         } catch (HibernateException e) {
             throw new UpdateTrackerStorageException("Failed to query for last changed object", e);
         } finally {

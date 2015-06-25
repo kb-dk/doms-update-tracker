@@ -74,9 +74,9 @@ public class UpdateTrackingSystem implements Closeable {
     }
 
     private ExecutorService initialiseThreadPool(Integer viewBundleThreadCount) {
-        final ThreadFactory threadFactory = new ThreadFactory() {
-            final ThreadFactory fac = Executors.defaultThreadFactory();
 
+        final ThreadFactory threadFactory = new ThreadFactory() {
+            private final ThreadFactory fac = Executors.defaultThreadFactory();
             @Override //Hack to make the threads daemon threads so they do not block shutdown
             public Thread newThread(Runnable r) {
                 Thread thread = fac.newThread(r);

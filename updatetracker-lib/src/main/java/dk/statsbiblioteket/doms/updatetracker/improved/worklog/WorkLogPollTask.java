@@ -42,8 +42,9 @@ public class WorkLogPollTask extends TimerTask {
     public void run() {
 
         try {
+            log.debug("Starting worklog polling");
             Long latestKey = updateTrackerPersistentStore.getLatestKey();
-
+            log.debug("Found {} as latest worklog key",latestKey);
             List<WorkLogUnit> events = getEvents(latestKey);
 
             for (WorkLogUnit event : events) {
@@ -86,10 +87,10 @@ public class WorkLogPollTask extends TimerTask {
     private void handleEvent(WorkLogUnit event) throws UpdateTrackerStorageException, FedoraFailedException {
         long key = event.getKey();
         final String pid = event.getPid();
-            final Date date = event.getDate();
-            final String param = event.getParam();
-            final String method = event.getMethod();
-            log.debug("Registering the event '{}'", event);
+        final Date date = event.getDate();
+        final String param = event.getParam();
+        final String method = event.getMethod();
+        log.debug("Handling the event '{}'", event);
 
         switch (method) {
             case "ingest":
@@ -133,5 +134,6 @@ public class WorkLogPollTask extends TimerTask {
                 log.warn("Got unknown event '{}' from worklog", event);
                 break;
         }
+        log.debug("Handling of event {} done",event);
     }
 }

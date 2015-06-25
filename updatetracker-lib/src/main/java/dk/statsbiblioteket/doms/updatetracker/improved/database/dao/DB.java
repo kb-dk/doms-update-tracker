@@ -8,6 +8,8 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.util.Collection;
@@ -25,6 +27,7 @@ import static org.hibernate.criterion.Restrictions.not;
  */
 public class DB implements Closeable{
 
+    private static Logger log = LoggerFactory.getLogger(DB.class);
     private final Session session;
     private final boolean readonly;
 
@@ -64,6 +67,7 @@ public class DB implements Closeable{
      * @param newRecord the record to save
      */
     public void saveRecord(Record newRecord) {
+        log.debug("Saving record {} to database",newRecord);
         session.saveOrUpdate(newRecord);
     }
 
@@ -133,6 +137,7 @@ public class DB implements Closeable{
      * @param key the new value of the key
      */
     public void setLatestKey(long key) {
+        log.debug("Setting latest key to {}",key);
         session.saveOrUpdate(new LatestKey(key));
 
     }
