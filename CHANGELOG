@@ -1,5 +1,9 @@
 1.7
+Worklog events with age below "update tracker delay" are ignored. This should stop the short
+  inconsistent states that DOMS can have.
+More log statements
 Thread pool now names threads correctly
+Fixed dependencies so that log4j can mail on errors
 
 1.6
 Do not list the entire list of records to update in the log, as this in itself can cause a
