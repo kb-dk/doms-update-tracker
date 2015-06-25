@@ -97,10 +97,11 @@ public class WorkLogPollDAO implements Closeable {
      * The key is an autoincrementing long, so start from 0 if you want to start at the beginning
      * @param lastRegisteredKey the highest key not to include
      * @param limit the max amount of worklog units to retrieve
+     * @param delay delay (in seconds) before a task is eligible for working on
      * @return a list of worklog units, at most limit long
      * @throws IOException on any database communication problems
      */
-    public List<WorkLogUnit> getFedoraEvents(Long lastRegisteredKey, int limit) throws IOException {
+    public List<WorkLogUnit> getFedoraEvents(Long lastRegisteredKey, int limit, int delay) throws IOException {
 
         ArrayList<WorkLogUnit> result = new ArrayList<>(limit);
 
@@ -109,10 +110,12 @@ public class WorkLogPollDAO implements Closeable {
                 try (PreparedStatement statement = conn.prepareStatement("SELECT key,pid,happened,method,param " +
                                                                          "FROM updateTrackerLogs " +
                                                                          "WHERE key > ? " +
+                                                                         "AND happened < NOW() - INTERVAL '? seconds'" +
                                                                          "ORDER BY happened ASC " +
                                                                          "LIMIT ?")) {
                     statement.setLong(1, lastRegisteredKey);
                     statement.setInt(2, limit);
+                    statement.setInt(3, delay);
                     statement.execute();
                     ResultSet resultSet = statement.getResultSet();
                     while (resultSet.next()) {

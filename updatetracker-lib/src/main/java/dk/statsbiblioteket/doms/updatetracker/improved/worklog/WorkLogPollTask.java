@@ -22,17 +22,20 @@ public class WorkLogPollTask extends TimerTask {
     private final WorkLogPollDAO workLogPollDAO;
     private final UpdateTrackerPersistentStore updateTrackerPersistentStore;
     private int limit;
+    private int delay;
 
     /**
      * @param workLogPollDAO
      * @param updateTrackerPersistentStore
      * @param limit                        the amount of work units to retrieve in each invocation
+     * @param delay                        the age (in seconds) of tasks before they are eligible for working on.
      */
     public WorkLogPollTask(WorkLogPollDAO workLogPollDAO, UpdateTrackerPersistentStore updateTrackerPersistentStore,
-                           int limit) {
+                           int limit, int delay) {
         this.workLogPollDAO = workLogPollDAO;
         this.updateTrackerPersistentStore = updateTrackerPersistentStore;
         this.limit = limit;
+        this.delay = delay;
     }
 
     @Override
@@ -72,7 +75,7 @@ public class WorkLogPollTask extends TimerTask {
         List<WorkLogUnit> events = new ArrayList<>();
         try {
             log.debug("Starting query for events since '{}'", lastRegisteredKey);
-            events = workLogPollDAO.getFedoraEvents(lastRegisteredKey, limit);
+            events = workLogPollDAO.getFedoraEvents(lastRegisteredKey, limit, delay);
             log.info("Looking for events since '{}'. Found '{}", lastRegisteredKey, events.size());
         } catch (IOException e) {
             log.error("Failed to get Fedora events.", e);
