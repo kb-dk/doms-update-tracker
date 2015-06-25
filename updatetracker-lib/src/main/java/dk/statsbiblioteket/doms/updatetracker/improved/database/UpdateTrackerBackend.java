@@ -120,7 +120,7 @@ public class UpdateTrackerBackend {
             log.debug("Switching on states for pid {}, got the Deleted branch", pid);
 
             final Collection<Record> records = db.getRecordsContainingThisPid(pid);
-            log.debug("Found {} containing pid {}",records,pid);
+            log.debug("Found {} records containing pid {}",records.size(),pid);
 
             Set<Record> otherRecordsThanThisWhichThisObjectIsPart = getRecordsWithoutThisPidAsEntry(pid, records);
             Set<Record> changes = recalculateRecords(timestamp, otherRecordsThanThisWhichThisObjectIsPart);
@@ -175,7 +175,7 @@ public class UpdateTrackerBackend {
                 throw new FedoraFailedException("Failed while getting view bundles", e);
             }
             if (record != null) {
-                log.debug("Updated record {} have been retrieved from threadpool",record);
+                log.debug("Updated record {} has been retrieved from threadpool",record);
                 result.add(record);
             }
         }
@@ -306,14 +306,14 @@ public class UpdateTrackerBackend {
     private class RecordReconnector implements Callable<Record> {
         private final Record record;
         private final Date timestamp;
-        private final Date callableCreationTime;
+        private final long callableCreationTime;
 
 
         public RecordReconnector(Record record, Date timestamp) {
             this.record = record;
             this.timestamp = timestamp;
             log.debug("Created RecordReconnector on {} for timestamp {}",record,timestamp);
-            callableCreationTime = new Date();
+            callableCreationTime = System.currentTimeMillis();
         }
 
         @Override
@@ -328,7 +328,7 @@ public class UpdateTrackerBackend {
         }
 
         private Record recalcRecord() throws FedoraFailedException {
-            log.debug("Starting RecordReconnector after {} ms in thread queue",new Date().getTime()-callableCreationTime.getTime());
+            log.debug("Starting RecordReconnector after {} ms in thread queue",System.currentTimeMillis()-callableCreationTime);
             if (record.getState() != State.DELETED) {
                 Set<String> before = new HashSet<>(record.getObjects());
                 Set<String> after = new HashSet<>();
