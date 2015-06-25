@@ -75,8 +75,10 @@ public class UpdateTrackerBackend {
          */
         if ( state != State.DELETED) {
             Collection<Record> allRecordsWithThisEntryPid = db.getAllRecordsWithThisEntryPid(pid);
+            log.debug("Found these records {} for entrypid {}",allRecordsWithThisEntryPid,pid);
             if (allRecordsWithThisEntryPid.isEmpty()){
                 Collection<String> entryAngles = fedora.getEntryAngles(pid, timestamp);
+                log.debug("Pid {} at timestamp {} have viewangles: {}",pid,timestamp,entryAngles);
                 for (String entryAngle : entryAngles) {
                     log.debug("Pid {} is an entry for viewangle {}", pid, entryAngle);
 
@@ -118,6 +120,7 @@ public class UpdateTrackerBackend {
             log.debug("Switching on states for pid {}, got the Deleted branch", pid);
 
             final Collection<Record> records = db.getRecordsContainingThisPid(pid);
+            log.debug("Found {} containing pid {}",records,pid);
 
             Set<Record> otherRecordsThanThisWhichThisObjectIsPart = getRecordsWithoutThisPidAsEntry(pid, records);
             Set<Record> changes = recalculateRecords(timestamp, otherRecordsThanThisWhichThisObjectIsPart);
@@ -161,6 +164,7 @@ public class UpdateTrackerBackend {
         for (final Record record : records) {
             Callable<Record> reconnector = new RecordReconnector(record, timestamp);
             recordsToSave.add(viewBundleThreadPool.submit(reconnector));
+            log.debug("Record {} is being scheduled for recalculation",record);
         }
         Set<Record> result = new HashSet<>();
         for (Future<Record> recordFuture : recordsToSave) {
@@ -171,6 +175,7 @@ public class UpdateTrackerBackend {
                 throw new FedoraFailedException("Failed while getting view bundles", e);
             }
             if (record != null) {
+                log.debug("Updated record {} have been retrieved from threadpool",record);
                 result.add(record);
             }
         }
@@ -179,10 +184,13 @@ public class UpdateTrackerBackend {
 
     protected ViewBundle getViewBundle(Date timestamp, Record record) throws FedoraFailedException {
         final String key = toKey(record, timestamp);
+        log.debug("Getting viewbundle for key {}",key);
         ViewBundle bundle = viewBundleCache.get(key);
         if (bundle == null){
+            log.debug("Viewbundle for key {} not found in cache, starting calculation",key);
             bundle = fedora.calcViewBundle(record.getEntryPid(), record.getViewAngle(), timestamp);
             viewBundleCache.put(key,bundle);
+            log.debug("Viewbundle for key {} calculated",key);
         }
         return bundle;
     }
@@ -211,7 +219,7 @@ public class UpdateTrackerBackend {
                                                         Collection<String> collections, State state) throws
                                                                  FedoraFailedException,
                                                                  UpdateTrackerStorageException {
-        Set<Record> result = new HashSet<>();
+        log.debug("starting recalculateRecordsBasedOnThisPid({},{})",pid,timestamp);
         /*
         Get the view Information about this object (Which viewAngles is this object entry for)
         get the Collection information about this object (which collections is it in)
@@ -226,12 +234,13 @@ public class UpdateTrackerBackend {
             update OBJECTS
          */
 
-        log.debug("starting reconnectObjects({},{})",pid,timestamp);
 
+        Set<Record> result = new HashSet<>();
         //Store the new records so that we do not need to flush the database to find them again
         Set<Record> newRecords = new HashSet<>();
         //Create new Records
         final Collection<String> entryViewAngles = fedora.getEntryAngles(pid, timestamp);
+        log.debug("Found {} entryangles for {} at timestamp {}",entryViewAngles,pid,timestamp);
         for (String entryViewAngle : entryViewAngles) {
             for (String collection : collections) {
                 Record record = new Record(pid, entryViewAngle, collection);
@@ -243,6 +252,9 @@ public class UpdateTrackerBackend {
                     if (state == State.ACTIVE) {
                         record.setActive(timestamp);
                     }
+                    log.debug("Creating new record: {}",record);
+                } else {
+                    log.debug("Record {} already known",record);
                 }
                 newRecords.add(record);
             }
@@ -252,6 +264,7 @@ public class UpdateTrackerBackend {
         Collection<Record> previousRecords = db.getRecordsNotInTheseCollectionsAndViewAngles(pid, entryViewAngles, collections);
 
         for (Record previousRecord : previousRecords) {
+            log.debug("Removing record {}",previousRecord);
             previousRecord.setDeleted(timestamp);
             previousRecord.setInactive(null);
             previousRecord.setActive(null);
@@ -259,7 +272,7 @@ public class UpdateTrackerBackend {
             result.add(previousRecord);
         }
 
-        log.debug("Recalculating view for {}", pid);
+        log.debug("Recalculating view for {} at timestamp {}", pid,timestamp);
         /*
         for each Record this object is part of (query OBJECTS with objectPid = this pid)
             remove all Objects relating to this Record from OBJECTS
@@ -277,6 +290,7 @@ public class UpdateTrackerBackend {
     }
 
     public void updateDates(String pid, Date timestamp, DB db) {
+        log.debug("Updating dates for pid {} at timestamp {}",pid,timestamp);
         db.updateDates(pid, timestamp);
     }
 
@@ -292,29 +306,40 @@ public class UpdateTrackerBackend {
     private class RecordReconnector implements Callable<Record> {
         private final Record record;
         private final Date timestamp;
+        private final Date callableCreationTime;
+
 
         public RecordReconnector(Record record, Date timestamp) {
             this.record = record;
             this.timestamp = timestamp;
+            log.debug("Created RecordReconnector on {} for timestamp {}",record,timestamp);
+            callableCreationTime = new Date();
         }
 
         @Override
         public Record call() throws Exception {
-            log.debug("Starting RecordReconnector on {} for timestamp {}",record,timestamp);
+            String threadOrigName = Thread.currentThread().getName();
+            try {
+                Thread.currentThread().setName(threadOrigName+"-Reconnector-"+record.getEntryPid()+"-"+record.getCollection()+"-"+record.getViewAngle()+"-"+timestamp);
+                return recalcRecord();
+            } finally {
+                Thread.currentThread().setName(threadOrigName);
+            }
+        }
+
+        private Record recalcRecord() throws FedoraFailedException {
+            log.debug("Starting RecordReconnector after {} ms in thread queue",new Date().getTime()-callableCreationTime.getTime());
             if (record.getState() != State.DELETED) {
                 Set<String> before = new HashSet<>(record.getObjects());
                 Set<String> after = new HashSet<>();
                 ViewBundle bundle = getViewBundle(timestamp, record);
                 for (String viewObject : bundle.getContained()) {
-                    log.debug("Marking object {} as part of record {},{},{}",
-                              viewObject,
-                              record.getEntryPid(),
-                              record.getViewAngle(),
-                              record.getCollection());
+                    log.debug("Marking object {} as part of record");
                     after.add(viewObject);
                 }
 
                 if (!before.equals(after)) {
+                    log.debug("Contained objects changed, so perform update");
                     record.getObjects().clear();
                     record.getObjects().addAll(after);
                     if (record.getInactive() != null &&
@@ -324,6 +349,8 @@ public class UpdateTrackerBackend {
                     }
                     record.setInactive(timestamp);
                     return record;
+                } else {
+                    log.debug("No change in viewbundle, so no update");
                 }
             }
             return null;//This marks that no update should be done
