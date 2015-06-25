@@ -21,8 +21,8 @@ public class WorkLogPollTask extends TimerTask {
 
     private final WorkLogPollDAO workLogPollDAO;
     private final UpdateTrackerPersistentStore updateTrackerPersistentStore;
-    private int limit;
-    private int delay;
+    private final int limit;
+    private final int delay;
 
     /**
      * @param workLogPollDAO

@@ -39,7 +39,7 @@ public class UpdateTrackingConfig {
     protected static final String FEDORA_WORKLOG_DATABASE_PASSWORD = "fedora.worklog.database.password";
     /**
      * The delay in starting polling the worklog when starting this service, in
-     * milliseconds. Default 1000ms
+     * milliseconds. Default 1000ms. Also the minimum age of events to work on.
      */
     protected static final String FEDORA_UPDATETRACKER_DELAY = "fedora.updatetracker.delay";
     /**
