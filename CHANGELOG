@@ -1,3 +1,7 @@
+1.8
+"Worklog events with age below \"update tracker delay\" are ignored" should now not crash
+ the update tracker. The SQL have been fixed and there is now an automated test
+
 1.7
 Worklog events with age below "update tracker delay" are ignored. This should stop the short
   inconsistent states that DOMS can have.
