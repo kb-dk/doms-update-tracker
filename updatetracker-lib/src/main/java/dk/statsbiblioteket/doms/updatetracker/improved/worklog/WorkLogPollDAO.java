@@ -110,7 +110,7 @@ public class WorkLogPollDAO implements Closeable {
                 try (PreparedStatement statement = conn.prepareStatement("SELECT key,pid,happened,method,param " +
                                                                          "FROM updateTrackerLogs " +
                                                                          "WHERE key > ? " +
-                                                                         "AND happened < NOW() - INTERVAL '? milliseconds' " +
+                                                                         "AND happened < NOW() - (? || ' milliseconds')::INTERVAL " +
                                                                          "ORDER BY happened ASC " +
                                                                          "LIMIT ?")) {
                     statement.setLong(1, lastRegisteredKey);
