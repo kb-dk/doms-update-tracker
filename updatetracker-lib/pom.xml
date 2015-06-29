@@ -143,35 +143,6 @@
             </testResource>
         </testResources>
         <plugins>
-
-            <plugin>
-                <groupId>org.jvnet.jaxb2.maven2</groupId>
-                <artifactId>maven-jaxb2-plugin</artifactId>
-                <version>0.10.0</version>
-                <executions>
-                    <execution>
-                        <id>fedoratypes</id>
-                        <configuration>
-                            <generatePackage>dk.statsbiblioteket.doms.updatetracker.improved.fedora.generated</generatePackage>
-                            <schemaIncludes>
-                                <include>viewDatastream.xml2.xsd</include>
-                                <include>objectprofile.xsd</include>
-                            </schemaIncludes>
-                            <specVersion>2.1</specVersion>
-                        </configuration>
-                        <goals>
-                            <goal>generate</goal>
-                        </goals>
-
-                    </execution>
-
-
-                </executions>
-                <configuration>
-                    <forceRegenerate>true</forceRegenerate>
-                </configuration>
-
-            </plugin>
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.18</version>
