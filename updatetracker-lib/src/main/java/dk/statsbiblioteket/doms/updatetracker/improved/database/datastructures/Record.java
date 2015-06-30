@@ -361,7 +361,7 @@ public class Record extends LastModifiable implements Serializable {
                ", active=" + active +
                ", inactive=" + inactive +
                ", deleted=" + deleted +
-               ", objects=" + objects +
+               ", objects=" + objects.size() +
                '}';
     }
 }
