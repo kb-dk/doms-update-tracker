@@ -272,7 +272,7 @@ public class UpdateTrackerBackend {
             result.add(previousRecord);
         }
 
-        log.debug("Recalculating view for {} at timestamp {}", pid,timestamp);
+        log.info("Recalculating view for {} at timestamp {}", pid,timestamp);
         /*
         for each Record this object is part of (query OBJECTS with objectPid = this pid)
             remove all Objects relating to this Record from OBJECTS
@@ -281,11 +281,10 @@ public class UpdateTrackerBackend {
 
          */
 
-        Set<Record> records = new HashSet<>(db.getRecordsContainingThisPid(pid));
         //Since the database connection have not been flushed, the newly created records will not be found, so add them
-        records.addAll(newRecords);
-        log.debug("Find all {} records containing {} ", records.size(), pid);
-        result.addAll(recalculateRecords(timestamp, records));
+        newRecords.addAll(db.getRecordsContainingThisPid(pid));
+        log.debug("Recalculate all {} records containing {} ", newRecords.size(), pid);
+        result.addAll(recalculateRecords(timestamp, newRecords));
         return result;
     }
 
