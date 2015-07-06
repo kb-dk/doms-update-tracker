@@ -1,3 +1,8 @@
+1.9
+Avoid excessive logging of records
+Do not bundle duplicate classes (except in fedora dependencies, which are a mess)
+Some minor simplifications
+
 1.8
 "Worklog events with age below \"update tracker delay\" are ignored" should now not crash
  the update tracker. The SQL have been fixed and there is now an automated test
