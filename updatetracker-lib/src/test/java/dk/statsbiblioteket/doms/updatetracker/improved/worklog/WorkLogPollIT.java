@@ -83,7 +83,7 @@ public class WorkLogPollIT {
                 config.getFedoraDatabasePassword());
         Database.executeSQL(new File(Thread.currentThread().getContextClassLoader().getResource("updatetrackerLogs.ddl").toURI()));
 
-        //Notice that we use a different ordering for key and happened here. This have been known to happen with
+        //Notice that we use a different ordering for key and happened here. This have been known to happen with ingest operations
         Database.executeSQL(
                 "INSERT INTO public.updatetrackerlogs (key, pid, happened, method, param) VALUES (3, 'doms:testpid', NOW(), 'ingest', NULL);\n");
         Thread.sleep(1000);
@@ -110,7 +110,7 @@ public class WorkLogPollIT {
         pollTask.run();
         InOrder order = inOrder(persistentStore);
         verify(persistentStore).getLatestKey();
-        //This time we expect the event to be found
+        //Verify that the operations are found in order, even when the happened is out of order
         order.verify(persistentStore).datastreamChanged(eq("doms:testpid"), any(Date.class), eq("EVENTS"), eq(1L));
         order.verify(persistentStore).datastreamChanged(eq("doms:testpid"), any(Date.class), eq("EVENTS"), eq(2L));
         order.verify(persistentStore).objectCreated(eq("doms:testpid"), any(Date.class), eq(3L));
