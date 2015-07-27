@@ -3,7 +3,6 @@ package dk.statsbiblioteket.doms.updatetracker.improved.worklog;
 import java.io.BufferedReader;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 
 import java.io.IOException;
@@ -45,7 +44,15 @@ public class Database {
     }
 
     public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(url, user, password);
+        try {
+            Connection connection = DriverManager.getConnection(url, user, password);
+            return connection;
+        } catch (SQLException e){
+            if (e.getSQLState().equals("57P03")){ //This means the database is still starting up
+                return getConnection();
+            }
+            throw e;
+        }
     }
 
     public static void executeSQL(File sqlFile) throws SQLException, IOException {
@@ -60,21 +67,25 @@ public class Database {
             sb.append(line);
         }
         br.close();
+        executeSQL(sb.toString());
+    }
 
+    public static void executeSQL(String sql) throws SQLException {
         // here is our splitter ! We use ";" as a delimiter for each request
         // then we are sure to have well formed statements
-        String[] inst = sb.toString().split(";");
+        String[] inst = sql.split(";");
 
-        Connection c = Database.getConnection();
-        Statement st = c.createStatement();
+        try (Connection c = Database.getConnection();  Statement st = c.createStatement();) {
 
-        for (String anInst : inst) {
-            // we ensure that there is no spaces before or after the request string
-            // in order to not execute empty statements
-            if (!anInst.trim().equals("")) {
-                st.executeUpdate(anInst);
-                System.out.println(">>" + anInst);
+            for (String anInst : inst) {
+                // we ensure that there is no spaces before or after the request string
+                // in order to not execute empty statements
+                if (!anInst.trim().equals("")) {
+                    st.executeUpdate(anInst);
+                    System.out.println(">>" + anInst);
+                }
             }
+
         }
     }
 }

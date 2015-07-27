@@ -110,12 +110,10 @@ public class WorkLogPollDAO implements Closeable {
                 try (PreparedStatement statement = conn.prepareStatement("SELECT key,pid,happened,method,param " +
                                                                          "FROM updateTrackerLogs " +
                                                                          "WHERE key > ? " +
-                                                                         "AND happened < NOW() - (? || ' milliseconds')::INTERVAL " +
-                                                                         "ORDER BY happened ASC " +
+                                                                         "ORDER BY key ASC " +
                                                                          "LIMIT ?")) {
                     statement.setLong(1, lastRegisteredKey);
-                    statement.setInt(2, delay);
-                    statement.setInt(3, limit);
+                    statement.setInt(2, limit);
                     statement.execute();
                     ResultSet resultSet = statement.getResultSet();
                     while (resultSet.next()) {
@@ -124,6 +122,11 @@ public class WorkLogPollDAO implements Closeable {
                         String method = resultSet.getString("method");
                         String param = resultSet.getString("param");
                         Timestamp timestamp = resultSet.getTimestamp("happened", tzUTC);
+                        //As we cannot trust the results to come in order of timestamps, break when we find the first
+                        // which is not to old enough.
+                        if (timestamp.getTime()+delay >= System.currentTimeMillis()){
+                            break;
+                        }
                         result.add(new WorkLogUnit(key, method, new Date(timestamp.getTime()), pid, param));
                     }
                     return result;

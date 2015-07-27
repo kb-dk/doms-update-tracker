@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS updatetrackerlogs;
 CREATE TABLE updatetrackerlogs
 (
     key SERIAL PRIMARY KEY NOT NULL,
@@ -9,4 +10,3 @@ CREATE TABLE updatetrackerlogs
 CREATE INDEX updatetrackerlogs_happened ON updatetrackerlogs (happened);
 CREATE INDEX updatetrackerlogs_pid ON updatetrackerlogs (pid);
 
-INSERT INTO public.updatetrackerlogs (key, pid, happened, method, param) VALUES (1, 'doms:testpid', NOW(), 'modifyDatastreamByReference', 'EVENTS');
