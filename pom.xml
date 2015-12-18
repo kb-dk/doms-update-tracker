@@ -138,7 +138,7 @@
             <dependency>
                 <groupId>dk.statsbiblioteket.doms.central</groupId>
                 <artifactId>ecmViews</artifactId>
-                <version>1.12-SNAPSHOT</version>
+                <version>1.13-SNAPSHOT</version>
             </dependency>
 
             <dependency>

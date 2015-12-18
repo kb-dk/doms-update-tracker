@@ -1,3 +1,6 @@
+1.11
+Updated to version 1.12 of doms-ecm-libs
+
 1.10
 Events are always processed in KEY order, not in HAPPENED order. This fixes the bug where ingest events caused the
 update tracker to skip other events.
