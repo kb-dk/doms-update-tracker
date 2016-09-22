@@ -618,7 +618,7 @@ public class UpdateTrackerPersistentStoreIT {
         init();
         //Forcibly create an entries in the database that happen before daylight savings hour,
         //during daylight savings hour and after daylight savings hour.
-        Connection connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/docker?user=docker&password=docker");
+        Connection connection = DriverManager.getConnection("jdbc:hsqldb:target/testdb");
         connection.setAutoCommit(false);
         PreparedStatement preparedStatement1 = connection.prepareStatement(
                 "INSERT INTO RECORDS (viewangle, entrypid, collection, lastmodified, active, deleted, inactive) VALUES(?, ?, ?, ?, ?, ?, ?)");

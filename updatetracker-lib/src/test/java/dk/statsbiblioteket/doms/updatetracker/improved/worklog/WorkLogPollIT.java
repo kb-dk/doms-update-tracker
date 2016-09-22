@@ -31,7 +31,7 @@ public class WorkLogPollIT {
                 config.getFedoraDatabaseUsername(),
                 config.getFedoraDatabasePassword());
         Database.executeSQL(new File(Thread.currentThread().getContextClassLoader().getResource("updatetrackerLogs.ddl").toURI()));
-        Database.executeSQL("INSERT INTO public.updatetrackerlogs (key, pid, happened, method, param) VALUES (1, 'doms:testpid', NOW(), 'modifyDatastreamByReference', 'EVENTS');");
+        Database.executeSQL("INSERT INTO updatetrackerlogs (key, pid, happened, method, param) VALUES (1, 'doms:testpid', CURRENT_TIMESTAMP, 'modifyDatastreamByReference', 'EVENTS');");
 
         //Mock the thing that the workLogpoller calls
         UpdateTrackerPersistentStore persistentStore = mock(UpdateTrackerPersistentStoreImpl.class);

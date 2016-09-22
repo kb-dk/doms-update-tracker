@@ -88,7 +88,7 @@ import java.util.Set;
                                         "           ELSE ACTIVE " +
                                         "       END " +
                                         "   ), " +
-                                        "   LASTMODIFIED=clock_timestamp() " +
+                                        "   LASTMODIFIED=CURRENT_TIMESTAMP " +
                                         "WHERE " +
                                         "   (r.ENTRYPID,r.VIEWANGLE,r.COLLECTION) in " +
                                         "       (" +

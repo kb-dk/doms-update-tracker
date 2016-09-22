@@ -12,7 +12,7 @@
     <packaging>jar</packaging>
     <profiles>
         <profile>
-            <id>dockerintegrationtests</id>
+            <id>integrationtests</id>
             <activation>
                 <activeByDefault>true</activeByDefault>
             </activation>
@@ -34,6 +34,18 @@
                             </execution>
                         </executions>
                     </plugin>
+
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>dockerpostgres</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+
 
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
@@ -218,6 +230,14 @@
             <artifactId>mockito-core</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.hsqldb</groupId>
+            <artifactId>hsqldb</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+
 
         <dependency>
             <groupId>dk.statsbiblioteket.doms.updatetracker</groupId>
