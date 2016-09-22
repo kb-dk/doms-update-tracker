@@ -121,10 +121,15 @@ public class WorkLogPollDAO implements Closeable {
                         String pid = Connector.toPid(resultSet.getString("pid"));
                         String method = resultSet.getString("method");
                         String param = resultSet.getString("param");
-                        Timestamp timestamp = resultSet.getTimestamp("happened", tzUTC);
+                        Timestamp timestamp = resultSet.getTimestamp("happened");
                         //As we cannot trust the results to come in order of timestamps, break when we find the first
                         // which is not to old enough.
-                        if (timestamp.getTime()+delay >= System.currentTimeMillis()){
+                        long l = timestamp.getTime() + delay;
+                        Date ld = new Date(l);
+                        long l1 = System.currentTimeMillis();
+
+                        Date ld1 = new Date(l1);
+                        if (l >= l1){
                             break;
                         }
                         result.add(new WorkLogUnit(key, method, new Date(timestamp.getTime()), pid, param));
